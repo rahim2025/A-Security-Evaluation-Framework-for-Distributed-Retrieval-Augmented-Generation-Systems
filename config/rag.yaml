@@ -1,0 +1,16 @@
+log_level: DEBUG  # DEBUG, INFO, WARNING, ERROR, etc.
+rag:
+  random_seed: 0
+  log_every_n_steps: 10
+  test_mode: True
+  network_type: 'DRAG'  # DRAG (Distributed RAG), CRAG (Centralized RAG), or NoRAG (No RAG)
+  num_peers: 20
+  num_peer_attachments: 4  # barabasi_albert_graph: Number of edges to attach from a new node to existing nodes
+  search_algorithm: 'TARW'  # TARW (Topic-Aware Random Walk), RW (Random Walk), or FL (Flooding)
+  query_confidence_threshold: 0.8  # The confidence threshold required for an answer to be accepted
+  num_query_neighbor: 4  # topic-based search: The maximum number of neighbors to query at each hop
+  query_ttl: 6  # The time-to-live for the query (maximum number of hops).
+  filter_out_topic_ratio: 0.0  # The ratio of topics to be filtered out for retrieval
+  filter_out_qa_ratio: 0.0  # The ratio of question-answer to be filtered out for retrieval
+  #defense_config: "config/defense.yaml"  # Path to defense configuration file
+  replication_factor: 3  # Number of peers per topic

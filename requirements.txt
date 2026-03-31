@@ -1,0 +1,15 @@
+datasets==3.1.0
+jsonargparse==4.34.0
+levenshtein==0.26.1
+loguru==0.7.2
+matplotlib==3.10.0
+nltk==3.9.1
+numpy==1.26.4
+ollama==0.4.7
+pydantic==2.9.2
+rouge-score==0.1.2
+seaborn==0.13.2
+sentence-transformers==3.3.0
+torch==2.5.1
+tqdm==4.67.0
+transformers==4.46.2
