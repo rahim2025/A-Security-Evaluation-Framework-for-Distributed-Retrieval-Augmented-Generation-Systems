@@ -1,0 +1,11 @@
+data:
+  load:
+    path: heegyu/news-category-dataset
+    name: default
+    split: train
+  # task_type: mcqa for Multiple Choice Question Answering; ogqa for Open Generative Question Answering
+  task_type: ogqa
+  topic_path: category
+  question_path: headline
+  answer_path: authors
+  num_samples: 10000

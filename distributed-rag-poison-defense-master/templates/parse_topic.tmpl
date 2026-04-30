@@ -1,0 +1,10 @@
+Question:
+{{ question }}
+
+Topics:
+{% for item in topics %}
+- {{ item }}
+{% endfor %}
+
+Select the most relevant topic for the question. 
+Respond concisely in JSON format with the key `topic`.
