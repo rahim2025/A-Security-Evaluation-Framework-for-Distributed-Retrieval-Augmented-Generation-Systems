@@ -1,5 +1,4 @@
 import random
-import json
 from typing import Dict, Any, List, Set, Tuple
 from loguru import logger
 from sentence_transformers import SentenceTransformer
@@ -667,7 +666,7 @@ class KnowledgeBaseExtractionAttack(BaseAttack):
                     max_ttl=6  # Deep traversal
                 )
                 
-                if answer.relevant_knowledge:
+                if answer.answer and answer.is_query_hit:
                     # REJECT answers from attacker itself (no god mode - we can see num_hops)
                     if answer.num_hops == 0:
                         logger.debug(f"Query answered by attacker itself, REJECTING (no network extraction)")
@@ -678,26 +677,21 @@ class KnowledgeBaseExtractionAttack(BaseAttack):
                             "hops": 0
                         })
                     else:
-                        # Parse the relevant_knowledge JSON
-                        try:
-                            dp_dict = json.loads(answer.relevant_knowledge)
-                            extracted_dp = Datapoint(**dp_dict)
-                            self.extracted_datapoints.append(extracted_dp)
-                            
-                            self.query_log.append({
-                                "query": query,
-                                "extracted": True,
-                                "hops": answer.num_hops,
-                                "score": answer.relevant_score
-                            })
-                            logger.debug(f"Extracted from peer at {answer.num_hops} hops")
-                        except json.JSONDecodeError:
-                            logger.debug(f"Failed to parse: {answer.relevant_knowledge}")
-                            self.query_log.append({
-                                "query": query,
-                                "extracted": False,
-                                "reason": "parse_error"
-                            })
+                        extracted_dp = Datapoint(
+                            question=query,
+                            answer=answer.answer,
+                            topic="unknown",
+                            choices=[]
+                        )
+                        self.extracted_datapoints.append(extracted_dp)
+
+                        self.query_log.append({
+                            "query": query,
+                            "extracted": True,
+                            "hops": answer.num_hops,
+                            "score": answer.relevant_score
+                        })
+                        logger.debug(f"Extracted answer from peer at {answer.num_hops} hops")
                 else:
                     self.query_log.append({
                         "query": query,
@@ -752,42 +746,31 @@ class KnowledgeBaseExtractionAttack(BaseAttack):
                     skip_query_peer=True  # Don't query attacker's own peer
                 )
                 
-                if answer.relevant_knowledge:
-                    # Parse the extracted knowledge
-                    try:
-                        dp_dict = json.loads(answer.relevant_knowledge)
-                        extracted_dp = Datapoint(**dp_dict)
-                        self.extracted_datapoints.append(extracted_dp)
-                        
-                        # Check if we extracted the exact target datapoint
-                        is_exact_match = (
-                            extracted_dp.question == query_dp.question and
-                            extracted_dp.answer == query_dp.answer
-                        )
-                        
-                        self.query_log.append({
-                            "query": question,
-                            "target_topic": query_dp.topic,
-                            "extracted_topic": extracted_dp.topic,
-                            "extracted": True,
-                            "exact_match": is_exact_match,
-                            "hops": answer.num_hops,
-                            "score": answer.relevant_score
-                        })
-                        
-                        if is_exact_match:
-                            logger.debug(f"  ✓ EXACT MATCH extracted at {answer.num_hops} hops")
-                        else:
-                            logger.debug(f"  ✓ Extracted from topic '{extracted_dp.topic}' at {answer.num_hops} hops")
-                            
-                    except json.JSONDecodeError as e:
-                        logger.debug(f"  Failed to parse response: {e}")
-                        self.query_log.append({
-                            "query": question,
-                            "target_topic": query_dp.topic,
-                            "extracted": False,
-                            "reason": "parse_error"
-                        })
+                if answer.answer and answer.is_query_hit:
+                    extracted_dp = Datapoint(
+                        question=query_dp.question,
+                        answer=answer.answer,
+                        topic=query_dp.topic,
+                        choices=[]
+                    )
+                    self.extracted_datapoints.append(extracted_dp)
+
+                    is_exact_match = extracted_dp.answer.strip() == query_dp.answer.strip()
+
+                    self.query_log.append({
+                        "query": question,
+                        "target_topic": query_dp.topic,
+                        "extracted_topic": extracted_dp.topic,
+                        "extracted": True,
+                        "exact_match": is_exact_match,
+                        "hops": answer.num_hops,
+                        "score": answer.relevant_score
+                    })
+
+                    if is_exact_match:
+                        logger.debug(f"  ✓ EXACT MATCH extracted at {answer.num_hops} hops")
+                    else:
+                        logger.debug(f"  ✓ Extracted answer from topic '{query_dp.topic}' at {answer.num_hops} hops")
                 else:
                     logger.debug(f"  No answer found")
                     self.query_log.append({
@@ -836,21 +819,22 @@ class KnowledgeBaseExtractionAttack(BaseAttack):
         for idx, query_dp in enumerate(query_datapoints):
             try:
                 # Direct peer access (insider mode)
-                answer, relevant_knowledge, score, is_hit = network.peers[self.attacker_peer_id].query(
+                answer_text, _, score, is_hit = network.peers[self.attacker_peer_id].query(
                     query_dp.question,
                     query_confidence_threshold=0.0
                 )
-                
-                if relevant_knowledge:
-                    dp_dict = json.loads(relevant_knowledge)
-                    extracted_dp = Datapoint(**dp_dict)
-                    self.extracted_datapoints.append(extracted_dp)
-                    
-                    is_exact_match = (
-                        extracted_dp.question == query_dp.question and
-                        extracted_dp.answer == query_dp.answer
+
+                if answer_text and is_hit:
+                    extracted_dp = Datapoint(
+                        question=query_dp.question,
+                        answer=answer_text,
+                        topic=query_dp.topic,
+                        choices=[]
                     )
-                    
+                    self.extracted_datapoints.append(extracted_dp)
+
+                    is_exact_match = extracted_dp.answer.strip() == query_dp.answer.strip()
+
                     self.query_log.append({
                         "query": query_dp.question,
                         "target_topic": query_dp.topic,
@@ -880,16 +864,20 @@ class KnowledgeBaseExtractionAttack(BaseAttack):
         for query in queries:
             try:
                 # Direct peer access
-                answer, relevant_knowledge, score, is_hit = network.peers[self.attacker_peer_id].query(
+                answer_text, _, score, is_hit = network.peers[self.attacker_peer_id].query(
                     query,
                     query_confidence_threshold=0.0
                 )
-                
-                if relevant_knowledge:
-                    dp_dict = json.loads(relevant_knowledge)
-                    extracted_dp = Datapoint(**dp_dict)
+
+                if answer_text and is_hit:
+                    extracted_dp = Datapoint(
+                        question=query,
+                        answer=answer_text,
+                        topic="unknown",
+                        choices=[]
+                    )
                     self.extracted_datapoints.append(extracted_dp)
-                    
+
                     self.query_log.append({
                         "query": query,
                         "extracted": True,

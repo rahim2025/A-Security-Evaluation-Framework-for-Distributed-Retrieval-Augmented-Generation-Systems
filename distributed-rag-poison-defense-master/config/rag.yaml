@@ -13,9 +13,9 @@ rag:
   filter_out_topic_ratio: 0.0  # The ratio of topics to be filtered out for retrieval
   filter_out_qa_ratio: 0.0  # The ratio of question-answer to be filtered out for retrieval
   #defense_config: "config/defense.yaml"  # Path to defense configuration file
-  replication_factor: 3  # Number of peers per topic
+  replication_factor: 1  # Number of peers per topic
   target_peers: []
-  enable_node_attack: true
+  enable_node_attack: false
   node_attack_type: node_removal
   node_attack_ratio: 0.3
   node_attack_iterations: 3

@@ -8,12 +8,12 @@ security:
   question_variants: 2  # question variants
 
   # Knowledge Base Extraction Attack
-  enable_extraction: false
+  enable_extraction: true
   extraction_attacker_peer: null  # null = random selection
   extraction_queries_per_topic: 5  # Keep low for efficiency
   extraction_attack_type: 'external'  # 'external' or 'insider'
   extraction_use_topic_inference: false
-  extraction_use_dataset_questions: false  # NEW - Use dataset questions (RECOMMENDED)
+  extraction_use_dataset_questions: true  # NEW - Use dataset questions (RECOMMENDED)
 
 
   # Membership Inference Attack
