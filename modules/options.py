@@ -61,8 +61,10 @@ def parse_args():
     parser.add_argument("--security.extraction_use_topic_inference", type=bool)
     parser.add_argument("--security.extraction_use_dataset_questions", type=bool)  # NEW
 
-    # Defense arguments
+    # Defense arguments — master switch
     parser.add_argument("--defense.enabled", type=bool)
+
+    # Cross-peer validation (poisoning defense)
     parser.add_argument("--defense.cross_peer_validation.enabled", type=bool)
     parser.add_argument("--defense.cross_peer_validation.min_agreement_ratio", type=float)
     parser.add_argument("--defense.cross_peer_validation.voting_method", type=str)
@@ -70,6 +72,25 @@ def parse_args():
     parser.add_argument("--defense.cross_peer_validation.use_similarity_matching", type=bool)
     parser.add_argument("--defense.cross_peer_validation.similarity_threshold", type=float)
     parser.add_argument("--defense.cross_peer_validation.max_additional_hops", type=int)
+
+    # Query Rate Limiter (KBE defense)
+    parser.add_argument("--defense.query_rate_limiter.enabled", type=bool)
+    parser.add_argument("--defense.query_rate_limiter.max_queries_per_window", type=int)
+    parser.add_argument("--defense.query_rate_limiter.time_window_seconds", type=int)
+    parser.add_argument("--defense.query_rate_limiter.block_duration_seconds", type=int)
+
+    # Response Perturbation (KBE defense)
+    parser.add_argument("--defense.response_perturbation.enabled", type=bool)
+    parser.add_argument("--defense.response_perturbation.perturbation_level", type=float)
+    parser.add_argument("--defense.response_perturbation.mode", type=str)
+
+    # Extraction Anomaly Detector (KBE defense)
+    parser.add_argument("--defense.extraction_anomaly_detector.enabled", type=bool)
+    parser.add_argument("--defense.extraction_anomaly_detector.max_queries_threshold", type=int)
+    parser.add_argument("--defense.extraction_anomaly_detector.max_unique_topics_threshold", type=int)
+    parser.add_argument("--defense.extraction_anomaly_detector.topic_diversity_threshold", type=float)
+    parser.add_argument("--defense.extraction_anomaly_detector.min_queries_for_detection", type=int)
+    parser.add_argument("--defense.extraction_anomaly_detector.action", type=str)
 
     cfg = parser.parse_args()
     return cfg
