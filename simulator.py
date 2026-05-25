@@ -431,6 +431,40 @@ def run_simulation(cfg: Namespace):
             json.dump(extraction_results, f, indent=2)
         logger.info(f"Detailed extraction results saved to: {extraction_output_path}")
 
+        # ── Log KBE defense statistics ────────────────────────────────────
+        kbe_stats = rag_net.get_kbe_defense_stats()
+        if kbe_stats:
+            logger.info("\n" + "-" * 80)
+            logger.info("KBE DEFENSE STATISTICS:")
+            rl = kbe_stats.get('rate_limiter', {})
+            if rl:
+                logger.info(
+                    f"  Rate Limiter   — allowed: {rl.get('allowed_count', 0)}, "
+                    f"blocked: {rl.get('blocked_count', 0)}, "
+                    f"block_rate: {rl.get('block_rate', 0):.2%}, "
+                    f"peers_ever_blocked: {rl.get('peers_ever_blocked', [])}"
+                )
+            rp = kbe_stats.get('response_perturbation', {})
+            if rp:
+                logger.info(
+                    f"  Perturbation   — perturbed: {rp.get('perturbed_count', 0)}, "
+                    f"skipped: {rp.get('skipped_count', 0)}, "
+                    f"rate: {rp.get('perturbation_rate', 0):.2%}"
+                )
+            ad = kbe_stats.get('anomaly_detector', {})
+            if ad:
+                logger.info(
+                    f"  Anomaly Detect — checks: {ad.get('total_checks', 0)}, "
+                    f"flagged_queries: {ad.get('flagged_query_count', 0)}, "
+                    f"peers_flagged: {ad.get('new_peers_flagged', 0)}, "
+                    f"flagged: {list(ad.get('flagged_peers', {}).keys())}"
+                )
+            logger.info("-" * 80)
+            kbe_stats_path = f"{exp_logger.experiment_dir}/kbe_defense_stats.json"
+            with open(kbe_stats_path, 'w') as f:
+                json.dump(kbe_stats, f, indent=2)
+            logger.info(f"KBE defense stats saved to: {kbe_stats_path}")
+
         if cfg.security.enable_extraction:
             logger.info("=" * 80)
             logger.info("EXTRACTION ATTACK COMPLETE - Skipping normal evaluation")

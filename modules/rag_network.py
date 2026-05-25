@@ -35,61 +35,79 @@ class DRAGNetwork:
         self.topic_peers: Dict[str, List[int]] = {}
         self.all_topics: List[str] = []
 
-        # Initialize defense mechanism
-        self.defense_enabled = False
-        self.defense_mechanism = None
+        # Defense mechanism attributes (set properly by _initialize_defense)
+        self.defense_enabled    = False
+        self.defense_mechanism  = None
+        self.max_additional_hops = 0
+        self.rate_limiter       = None
+        self.resp_perturbation  = None
+        self.anomaly_detector   = None
         self._initialize_defense()
 
-    # NEW
     def _initialize_defense(self):
-        """Initialize defense mechanism if configured."""
+        """Initialize all defense mechanisms from config/defense.yaml."""
         try:
-            from modules.defenses import CrossPeerValidation
-            
+            from modules.defenses import (
+                CrossPeerValidation,
+                QueryRateLimiter,
+                ResponsePerturbation,
+                ExtractionAnomalyDetector,
+            )
+
             defense_config_path = Path("config/defense.yaml")
-            
+
             if not defense_config_path.exists():
                 logger.info("No defense configuration file found, defenses disabled")
-                self.defense_enabled = False
-                self.defense_mechanism = None
-                self.max_additional_hops = 0
+                self._reset_defenses()
                 return
-            
-            # Load defense configuration
+
             with open(defense_config_path, 'r') as f:
                 defense_config = yaml.safe_load(f)
-            
-            # Check if defense is enabled in config
-            if defense_config and defense_config.get('defense', {}).get('enabled', False):
-                self.defense_enabled = True
-                cpv_config = defense_config['defense'].get('cross_peer_validation', {})
-                self.defense_mechanism = CrossPeerValidation(cpv_config)
-                self.max_additional_hops = cpv_config.get('max_additional_hops', 0)
 
-                # Show defense banner - THIS IS THE NEW PART
-                logger.info("=" * 60)
-                logger.info("DEFENSE MECHANISM ENABLED")
-                logger.info("=" * 60)
-                logger.info(f"Defense Type: Cross-Peer Validation")
-                logger.info(f"Min Agreement Ratio: {cpv_config.get('min_agreement_ratio', 0.6)}")
-                logger.info(f"Min Peers Required: {cpv_config.get('min_peers_for_validation', 3)}")
-                logger.info(f"Max Additional Hops: {self.max_additional_hops}")
-                logger.info(f"Voting Method: {cpv_config.get('voting_method', 'majority')}")
-                logger.info(f"Similarity Matching: {cpv_config.get('use_similarity_matching', True)}")
-                logger.info(f"Similarity Threshold: {cpv_config.get('similarity_threshold', 0.85)}")
-                logger.info("=" * 60)
-            else:
-                self.defense_enabled = False
-                self.defense_mechanism = None
-                self.max_additional_hops = 0
+            if not (defense_config and defense_config.get('defense', {}).get('enabled', False)):
                 logger.info("Defense mechanism disabled in configuration")
-                
+                self._reset_defenses()
+                return
+
+            d_cfg = defense_config['defense']
+            self.defense_enabled = True
+
+            # ── Cross-Peer Validation (poisoning defense) ─────────────────
+            cpv_config = d_cfg.get('cross_peer_validation', {})
+            self.defense_mechanism = CrossPeerValidation(cpv_config)
+            self.max_additional_hops = cpv_config.get('max_additional_hops', 0)
+
+            # ── KBE defenses ──────────────────────────────────────────────
+            rl_cfg  = d_cfg.get('query_rate_limiter', {})
+            rp_cfg  = d_cfg.get('response_perturbation', {})
+            ead_cfg = d_cfg.get('extraction_anomaly_detector', {})
+
+            self.rate_limiter       = QueryRateLimiter(rl_cfg)  if rl_cfg.get('enabled', False)  else None
+            self.resp_perturbation  = ResponsePerturbation(rp_cfg) if rp_cfg.get('enabled', False)  else None
+            self.anomaly_detector   = ExtractionAnomalyDetector(ead_cfg) if ead_cfg.get('enabled', False) else None
+
+            logger.info("=" * 60)
+            logger.info("DEFENSE MECHANISMS ENABLED")
+            logger.info("=" * 60)
+            logger.info(f"  Cross-Peer Validation  : {cpv_config.get('enabled', False)}")
+            logger.info(f"  Query Rate Limiter     : {rl_cfg.get('enabled', False)}")
+            logger.info(f"  Response Perturbation  : {rp_cfg.get('enabled', False)}")
+            logger.info(f"  Anomaly Detector       : {ead_cfg.get('enabled', False)}")
+            logger.info("=" * 60)
+
         except Exception as e:
-            logger.error(f"Failed to initialize defense mechanism: {e}")
+            logger.error(f"Failed to initialize defense mechanisms: {e}")
             logger.exception(e)
-            self.defense_enabled = False
-            self.defense_mechanism = None
-            self.max_additional_hops = 0
+            self._reset_defenses()
+
+    def _reset_defenses(self):
+        """Set all defense attributes to their disabled defaults."""
+        self.defense_enabled    = False
+        self.defense_mechanism  = None
+        self.max_additional_hops = 0
+        self.rate_limiter       = None
+        self.resp_perturbation  = None
+        self.anomaly_detector   = None
 
 
     # NEW
@@ -170,6 +188,39 @@ class DRAGNetwork:
         
         return final_answer, defense_info
 
+    def _check_kbe_defenses(self, query_peer_id: int, question_topic: Optional[str]) -> tuple:
+        """
+        Run KBE-specific defenses (rate limiter + anomaly detector) for a query peer.
+
+        Returns:
+            (is_blocked: bool, reason: str)
+        """
+        # ── Rate limiter ──────────────────────────────────────────────────
+        if self.rate_limiter is not None:
+            allowed, reason = self.rate_limiter.check_and_record(query_peer_id)
+            if not allowed:
+                logger.warning(f"[KBEDefense] Rate limiter BLOCKED peer {query_peer_id}: {reason}")
+                return True, f"rate_limiter:{reason}"
+
+        # ── Anomaly detector ──────────────────────────────────────────────
+        if self.anomaly_detector is not None:
+            allowed, reason = self.anomaly_detector.check_and_record(query_peer_id, question_topic)
+            if not allowed:
+                logger.warning(f"[KBEDefense] Anomaly detector BLOCKED peer {query_peer_id}: {reason}")
+                return True, f"anomaly_detector:{reason}"
+
+        return False, "allowed"
+
+    def get_kbe_defense_stats(self) -> dict:
+        """Return aggregated statistics for all KBE defense components."""
+        stats = {}
+        if self.rate_limiter is not None:
+            stats['rate_limiter'] = self.rate_limiter.get_stats()
+        if self.resp_perturbation is not None:
+            stats['response_perturbation'] = self.resp_perturbation.get_stats()
+        if self.anomaly_detector is not None:
+            stats['anomaly_detector'] = self.anomaly_detector.get_stats()
+        return stats
 
     # Modified with replication_factor
     def init_knowledge(self, data_points: List[Datapoint], replication_factor: int = 1):
@@ -247,6 +298,24 @@ class DRAGNetwork:
         # Determine the topic of the question first
         question_topic = self.peers[query_peer_id].parse_topic(question, self.all_topics)
         logger.debug(f"Parsed question topic: {question_topic}")
+
+        # ── KBE Defense: rate limiting + anomaly detection ────────────────
+        if self.defense_enabled:
+            is_blocked, block_reason = self._check_kbe_defenses(query_peer_id, question_topic)
+            if is_blocked:
+                return RAGAnswer(
+                    answer="",
+                    relevant_knowledge="",
+                    relevant_score=0.0,
+                    num_hops=0,
+                    num_messages=0,
+                    is_query_hit=False,
+                    defense_info={
+                        'defense_enabled': True,
+                        'kbe_blocked': True,
+                        'reason': block_reason,
+                    }
+                )
 
         # Keep track of visited peers and their answers
         visited_ids = {query_peer_id}
@@ -356,16 +425,21 @@ class DRAGNetwork:
         if candidate_answer is not None:
             logger.debug(f"Answer found at peer {candidate_peer_id} after {first_answer_hop} hops")
             logger.debug(f"Total messages sent: {num_messages}")
-            
-            # Apply defense validation using cached answers
+
+            # Apply defense validation using cached answers (cross-peer validation)
             final_answer, defense_info = self._validate_with_defense(
                 question, str(candidate_answer), candidate_peer_id, peer_answers_cache,
                 query_confidence_threshold
             )
-            
+
+            # ── KBE Defense: perturb relevant_knowledge JSON ──────────────
+            relevant_knowledge = candidate_data[0]
+            if self.defense_enabled and self.resp_perturbation is not None:
+                relevant_knowledge = self.resp_perturbation.perturb(relevant_knowledge)
+
             return RAGAnswer(
                 answer=final_answer,
-                relevant_knowledge=candidate_data[0],
+                relevant_knowledge=relevant_knowledge,
                 relevant_score=candidate_data[1],
                 num_hops=first_answer_hop,
                 num_messages=num_messages,

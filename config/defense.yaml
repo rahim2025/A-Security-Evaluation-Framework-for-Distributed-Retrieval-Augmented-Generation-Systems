@@ -1,21 +1,72 @@
 # Defense Configuration for DRAG Security Framework
+# Defenses against Knowledge Base Extraction (KBE) attacks
 
 defense:
-  enabled: false  # Set to true to enable defense mechanisms
-  
-  # Cross-Peer Answer Validation Settings
+  enabled: true   # Master switch — must be true for any sub-defense to activate
+
+  # ── 1. Cross-Peer Answer Validation (poisoning defense) ─────────────────
+  # Validates QA answers by majority vote across multiple peers.
+  # Primary target: data-poisoning attacks.
   cross_peer_validation:
-    enabled: false  # Enable cross-peer answer validation
-    min_agreement_ratio: 0.6  # Minimum ratio of peers that must agree (60%)
-    voting_method: "majority"  # Options: majority, weighted
-    min_peers_for_validation: 3  # Minimum number of peers needed for validation
-    use_similarity_matching: true  # Use fuzzy matching for answer comparison
-    similarity_threshold: 0.85  # Threshold for considering answers as "same"
-    max_additional_hops: 2  # Maximum additional hops to collect peers for validation (only when defense enabled)
-    
-  # Logging and Monitoring
-  #logging:
-    #log_filtered_answers: true
-    #log_voting_details: true
-    #save_defense_metrics: true
-    #defense_log_dir: "logs"
+    enabled: false
+    min_agreement_ratio: 0.6
+    voting_method: "majority"
+    min_peers_for_validation: 3
+    use_similarity_matching: true
+    similarity_threshold: 0.85
+    max_additional_hops: 2
+
+  # ── 2. Query Rate Limiter (KBE defense) ─────────────────────────────────
+  # Blocks peers that send more than max_queries_per_window queries within
+  # time_window_seconds.  Directly caps how many datapoints the attacker can
+  # extract in one session.
+  #
+  # Tuning guidance:
+  #   max_queries_per_window  — set below the attacker's expected query volume
+  #                             (attacker sent 44; set to 20 to cut extraction
+  #                             rate by ~half)
+  #   time_window_seconds     — sliding window length
+  #   block_duration_seconds  — how long the peer stays blocked after exceeding
+  query_rate_limiter:
+    enabled: true
+    max_queries_per_window: 20    # Cap per peer per window (attacker used 44)
+    time_window_seconds: 300      # 5-minute sliding window
+    block_duration_seconds: 600   # Block for 10 min after limit exceeded
+
+  # ── 3. Response Perturbation (KBE defense) ──────────────────────────────
+  # Introduces controlled noise into the ``answer`` field of the Datapoint
+  # JSON returned in relevant_knowledge.  The end-user's LLM-generated answer
+  # is NOT affected — only the raw JSON payload the attacker parses.
+  #
+  # Effect on attack metrics:
+  #   exact_matches           : 26  → 0   (any character change breaks it)
+  #   avg_ss_extracted_only   : 1.0 → <0.7
+  #   avg_eed_extracted_only  : 0.0 → >0.15
+  #   crr                     : 0.52 → <0.3
+  #
+  # Tuning guidance:
+  #   perturbation_level  — fraction of answer characters to alter (0.0–1.0)
+  #   mode                — 'noise' (random chars) | 'mask' ('*') | 'truncate'
+  response_perturbation:
+    enabled: true
+    perturbation_level: 0.15    # 15% of answer characters replaced
+    mode: "noise"               # noise | mask | truncate
+
+  # ── 4. Extraction Anomaly Detector (KBE defense) ─────────────────────────
+  # Profiles per-peer query behaviour and flags peers showing extraction
+  # patterns: high volume, broad topic coverage, or high topic-diversity ratio.
+  # Flagged peers are blocked (action: block) or just logged (action: log_only).
+  #
+  # Detection heuristics (any one triggers a flag):
+  #   max_queries_threshold        — total query count exceeds this
+  #   max_unique_topics_threshold  — unique topics queried exceeds this
+  #   topic_diversity_threshold    — unique_topics/total_queries exceeds this
+  #
+  # min_queries_for_detection  — grace period; no flagging before this many queries
+  extraction_anomaly_detector:
+    enabled: true
+    max_queries_threshold: 20         # Flag after >20 total queries
+    max_unique_topics_threshold: 6    # Flag if querying >6 distinct topics
+    topic_diversity_threshold: 0.6    # Flag if unique_topics/total > 60%
+    min_queries_for_detection: 10     # Only start checking after 10 queries
+    action: "block"                   # block | log_only
