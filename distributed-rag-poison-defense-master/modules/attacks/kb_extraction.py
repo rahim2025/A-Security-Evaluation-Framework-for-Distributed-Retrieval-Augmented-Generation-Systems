@@ -1207,7 +1207,7 @@ class KnowledgeBaseExtractionAttack(BaseAttack):
         # Check each ground truth chunk
         for gt_idx, gt_dp in enumerate(ground_truth):
             gt_key = (gt_dp.question, gt_dp.answer)
-            gt_chunk = f"{gt_dp.question} {gt_dp.answer}"
+            gt_chunk = gt_dp.answer
             norm_gt_q = gt_dp.question.strip().lower()
             
             # Check for exact match first (question + answer)
@@ -1241,8 +1241,8 @@ class KnowledgeBaseExtractionAttack(BaseAttack):
                 best_ext_dp = None
                 
                 for ext_dp in matching_extracted:  # Only compare same-question chunks
-                    ext_chunk = f"{ext_dp.question} {ext_dp.answer}"
-                    
+                    ext_chunk = ext_dp.answer
+
                     # Calculate SS and EED
                     ss = self._calculate_ss(ext_chunk, gt_chunk)
                     eed = self._calculate_eed(ext_chunk, gt_chunk)

@@ -2,7 +2,7 @@ log_level: DEBUG  # DEBUG, INFO, WARNING, ERROR, etc.
 rag:
   random_seed: 0
   log_every_n_steps: 10
-  test_mode: True
+  test_mode: False
   network_type: 'DRAG'  # DRAG (Distributed RAG), CRAG (Centralized RAG), or NoRAG (No RAG)
   num_peers: 20
   num_peer_attachments: 4  # barabasi_albert_graph: Number of edges to attach from a new node to existing nodes

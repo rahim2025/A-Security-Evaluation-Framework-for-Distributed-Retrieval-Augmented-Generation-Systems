@@ -19,24 +19,18 @@ from modules.rag_network import DRAGNetwork, CRAGNetwork, NoRAGNetwork
 from modules.evaluator import QAEvaluator
 from modules.options import parse_args
 
-# new
 from modules.attacks import (
     DataPoisoningAttack,
     KnowledgeBaseExtractionAttack,
     MembershipInferenceAttack,
+    RoutingManipulationAttack,
 )
+from modules.Select_Attack.node_attack import SelectiveForwardingAttack
 
 
 def get_nested_value(data_dict: dict, dot_key_path: str):
     """
     Retrieves a nested value from a dictionary using a dot-separated key path.
-
-    Args:
-        data_dict: The dictionary to retrieve the value from.
-        dot_key_path: A string representing the nested keys separated by dots (e.g., "key1.key2.key3").
-
-    Returns:
-        The value at the specified path in the dictionary.
     """
     keys = dot_key_path.split(".")
     value = data_dict
@@ -73,17 +67,6 @@ def _get_node_attack_value(cfg, key, default=None):
 # ==============================================================================
 
 def run_node_availability_attack(cfg: Namespace, rag_network, dataset_type: str):
-    """
-    Run node availability attack to test system resilience.
-
-    Args:
-        cfg: Configuration namespace
-        rag_network: The RAG network to attack
-        dataset_type: Type of dataset being used
-
-    Returns:
-        Dictionary containing attack results
-    """
     print("\n" + "="*70)
     print("NODE AVAILABILITY ATTACK - TESTING SYSTEM RESILIENCE")
     print("="*70)
@@ -106,7 +89,6 @@ def run_node_availability_attack(cfg: Namespace, rag_network, dataset_type: str)
         sys.stdout.flush()
         return {}
 
-    # Import node attack modules
     drag_root = os.path.dirname(os.path.abspath(__file__))
     attacks_dir = os.path.join(drag_root, 'modules', 'attacks')
     if attacks_dir not in sys.path:
@@ -270,7 +252,6 @@ def apply_node_attack_damage(rag_network, node_attack_results: dict):
     attack_type = node_attack_results['attack_type']
     print(f"Attack type: {attack_type}")
 
-    # Collect all disabled node indices from all iterations
     disabled_indices = set()
     for iteration_result in node_attack_results.get('iterations', []):
         attack_result = iteration_result.get('attack_result', {})
@@ -284,7 +265,6 @@ def apply_node_attack_damage(rag_network, node_attack_results: dict):
         sys.stdout.flush()
         return
 
-    # Physically set peers to None
     peers = rag_network.peers
     actually_disabled = 0
     for idx in disabled_indices:
@@ -386,6 +366,8 @@ def run_simulation(cfg: Namespace):
     # === ATTACK SIMULATION ===
     attack_results = None
     mia_results = None
+    _sfa_attack = None
+
     if cfg.security.enable_attack:
         logger.info("=" * 50)
         logger.info("ATTACK SIMULATION ENABLED")
@@ -429,6 +411,50 @@ def run_simulation(cfg: Namespace):
                 f"MIA executed: Accuracy={mia_results['attack_accuracy']:.2%}, "
                 f"Privacy Risk={mia_results['privacy_risk']}"
             )
+
+    # Execute routing manipulation attack if enabled
+    routing_manipulation_results = None
+    if cfg.security.get('enable_routing_manipulation', False):
+        logger.info("=" * 50)
+        logger.info("ROUTING MANIPULATION ATTACK ENABLED")
+        logger.info("=" * 50)
+        if cfg.rag.network_type != "DRAG":
+            logger.warning("Routing manipulation attack is only supported for DRAG networks. Skipping.")
+        else:
+            attacker_peer = cfg.security.get('routing_attacker_peer', None)
+            routing_attack = RoutingManipulationAttack(
+                attacker_peer_id=attacker_peer,
+                attacker_ratio=cfg.security.get('routing_attacker_ratio', 0.1),
+                attack_strategy=cfg.security.get('routing_attack_strategy', 'random'),
+                response_type=cfg.security.get('routing_response_type', 'fabricated'),
+                topic_claim_ratio=cfg.security.get('routing_topic_claim_ratio', 1.0),
+            )
+            routing_manipulation_results = routing_attack.execute(rag_net, filtered_data_points)
+
+            routing_logger = exp_logger.get_yaml_logger("routing_manipulation_config")
+            routing_logger.log(routing_manipulation_results)
+            routing_logger.save()
+
+            logger.info(
+                f"Routing manipulation executed: {routing_manipulation_results['num_attacker_peers']} "
+                f"attacker peer(s), {routing_manipulation_results['topics_hijacked']} topics hijacked"
+            )
+
+    # === SELECTIVE FORWARDING ATTACK ===
+    if cfg.security.get('enable_selective_forwarding', False) and cfg.rag.network_type == "DRAG":
+        sfa_ratio    = cfg.security.get('sfa_ratio', 0.3)
+        sfa_strategy = cfg.security.get('sfa_strategy', 'high_connectivity')
+        logger.info("=" * 50)
+        logger.info("SELECTIVE FORWARDING ATTACK ENABLED")
+        logger.info(f"  ratio={sfa_ratio}  strategy={sfa_strategy}")
+        logger.info("=" * 50)
+        _sfa_attack = SelectiveForwardingAttack(
+            attack_ratio=sfa_ratio,
+            seed=cfg.rag.random_seed
+        )
+        sfa_info = _sfa_attack.apply(rag_net, strategy=sfa_strategy)
+        logger.info(f"  Compromised peers : {sfa_info['compromised_ids']}")
+        logger.info(f"  Avg degree (hub)  : {sfa_info.get('avg_degree_compromised', 'N/A')}")
 
     # Execute knowledge base extraction attack if enabled
     if cfg.security.enable_extraction:
@@ -491,11 +517,10 @@ def run_simulation(cfg: Namespace):
     # =======================================================================
     # NODE AVAILABILITY ATTACK (PHASE 1: baseline → attack → post-attack)
     # =======================================================================
-    eval_results = {}  # BUG FIX 1: always defined — prevents UnboundLocalError at bottom
+    eval_results = {}
 
     enable_node_attack = getattr(cfg.rag, 'enable_node_attack', False)
     if enable_node_attack:
-        # Determine dataset type from config file path
         config_file_path = getattr(cfg, 'config', None)
         if config_file_path:
             config_file_str = str(config_file_path).lower()
@@ -612,7 +637,7 @@ def run_simulation(cfg: Namespace):
         logger.info("PHASE 4: POST-ATTACK EVALUATION")
         qa_evaluator_post = QAEvaluator()
         failed_queries = 0
-        successful_queries = 0  # BUG FIX 2: track successful queries — fixes N/A in summary
+        successful_queries = 0
 
         for idx, data_point in enumerate(tqdm(data_points, desc=f"Post-attack evaluation on {len(data_points)} test case(s)")):
             try:
@@ -659,14 +684,13 @@ def run_simulation(cfg: Namespace):
                     is_query_hit=rag_answer.is_query_hit
                 )
 
-                # Check if this is a Byzantine response
                 if rag_answer.answer.startswith("INCORRECT_BYZANTINE_RESPONSE_"):
                     logger.warning(f"Post-attack query {idx} received Byzantine response: {rag_answer.answer}")
                     test_case.actual_output = "BYZANTINE_INCORRECT_ANSWER"
                     test_case.relevant_score = 0.0
                     test_case.is_query_hit = False
 
-                successful_queries += 1  # BUG FIX 2: count successful queries
+                successful_queries += 1
 
             except AttributeError as e:
                 if "'NoneType' object has no attribute" in str(e):
@@ -697,7 +721,7 @@ def run_simulation(cfg: Namespace):
         post_attack_results = qa_evaluator_post.get_results()
         post_attack_results['evaluation_phase'] = 'post_attack'
         post_attack_results['failed_queries'] = failed_queries
-        post_attack_results['successful_queries'] = successful_queries  # BUG FIX 2: store count
+        post_attack_results['successful_queries'] = successful_queries
         post_attack_results['query_failure_rate'] = failed_queries / len(data_points) if len(data_points) > 0 else 0
         metrics_logger.log(post_attack_results)
         metrics_logger.save()
@@ -726,9 +750,6 @@ def run_simulation(cfg: Namespace):
                 'degradation_pct': degradation_pct
             }
 
-        # ================================================================
-        # PRINT CLEAN TERMINAL SUMMARY
-        # ================================================================
         attack_type  = getattr(cfg.rag, 'node_attack_type', 'none')
         attack_ratio = getattr(cfg.rag, 'node_attack_ratio', 0.0)
         total_queries = len(data_points)
@@ -769,7 +790,6 @@ def run_simulation(cfg: Namespace):
         print("=" * 70 + "\n")
         sys.stdout.flush()
 
-        # Save comparison JSON
         comparison_file = os.path.join(exp_logger.experiment_dir, "node_attack_impact_comparison.json")
         with open(comparison_file, 'w') as f:
             json.dump({
@@ -781,7 +801,7 @@ def run_simulation(cfg: Namespace):
             }, f, indent=2)
         logger.info(f"Comparison report saved to: {comparison_file}")
 
-        eval_results = post_attack_results  # BUG FIX 3: set for downstream defense/attack logging
+        eval_results = post_attack_results
 
     else:
         # =======================================================================
@@ -846,6 +866,32 @@ def run_simulation(cfg: Namespace):
         metrics_logger.log(eval_results)
         metrics_logger.save()
 
+    # =======================================================================
+    # SELECTIVE FORWARDING ATTACK: collect metrics and save results
+    # (runs after eval_results is finalized, works for both paths above)
+    # =======================================================================
+    if _sfa_attack is not None:
+        sfa_metrics = {
+            'hit_rate':            eval_results.get('avg_query_hit', 0.0),
+            'avg_hops_per_query':  eval_results.get('avg_num_hops', 0.0),
+            'ttl_exhaustion_rate': 1.0 - eval_results.get('avg_query_hit', 0.0),
+            'dropped_queries':     _sfa_attack.dropped_queries,
+            'compromised_peers':   list(_sfa_attack.compromised_ids),
+            'sfa_ratio':           cfg.security.get('sfa_ratio', 0.3),
+            'sfa_strategy':        cfg.security.get('sfa_strategy', 'high_connectivity'),
+        }
+        logger.info("=" * 50)
+        logger.info("SELECTIVE FORWARDING ATTACK RESULTS")
+        logger.info(f"  hit_rate:            {sfa_metrics['hit_rate']:.3f}")
+        logger.info(f"  avg_hops_per_query:  {sfa_metrics['avg_hops_per_query']:.2f}")
+        logger.info(f"  ttl_exhaustion_rate: {sfa_metrics['ttl_exhaustion_rate']:.3f}")
+        logger.info(f"  dropped_queries:     {sfa_metrics['dropped_queries']}")
+        logger.info("=" * 50)
+        sfa_logger = exp_logger.get_yaml_logger("sfa_results")
+        sfa_logger.log(sfa_metrics)
+        sfa_logger.save()
+        _sfa_attack.revert(rag_net)
+
     # Log defense statistics if enabled
     if cfg.rag.network_type == "DRAG" and rag_net.defense_enabled and rag_net.defense_mechanism:
         defense_stats = rag_net.defense_mechanism.get_stats()
@@ -905,22 +951,51 @@ def run_simulation(cfg: Namespace):
         mia_eval_logger.save()
         logger.info(f"\nMIA Evaluation:\n{json.dumps(mia_eval, indent=2)}\n")
 
+    if routing_manipulation_results is not None:
+        logger.info("=" * 50)
+        logger.info("EVALUATING ROUTING MANIPULATION ATTACK IMPACT")
+        logger.info("=" * 50)
+
+        routing_metrics_logger = exp_logger.get_csv_logger("routing_manipulation_metrics")
+        routing_metrics_logger.log({
+            "num_attacker_peers":  routing_manipulation_results["num_attacker_peers"],
+            "topics_hijacked":     routing_manipulation_results["topics_hijacked"],
+            "response_type":       routing_manipulation_results["response_type"],
+            "topic_claim_ratio":   routing_manipulation_results["topic_claim_ratio"],
+            "f1_score":            eval_results.get("f1", 0.0),
+            "exact_match":         eval_results.get("exact_match", 0.0),
+            "hit_rate":            eval_results.get("avg_query_hit", 0.0),
+            "semantic_similarity": eval_results.get("semantic_similarity", 0.0),
+            "avg_hops":            eval_results.get("avg_hops", 0.0),
+        })
+        routing_metrics_logger.save()
+
+        routing_eval_logger = exp_logger.get_yaml_logger("routing_manipulation_evaluation")
+        routing_eval_logger.log({
+            "attack_config":    routing_manipulation_results,
+            "attacked_metrics": eval_results,
+        })
+        routing_eval_logger.save()
+
+        logger.info(
+            f"Routing manipulation impact — "
+            f"Hit rate: {eval_results.get('avg_query_hit', 0.0):.4f} | "
+            f"F1: {eval_results.get('f1', 0.0):.4f} | "
+            f"Avg hops: {eval_results.get('avg_hops', 0.0):.2f}"
+        )
+
     logger.info(f"\nFinal Evaluation Results:\n{json.dumps(eval_results)}\n")
 
 
 def main():
-    # parse arguments
     cfg = parse_args()
 
-    # Initialize random seeds
     random.seed(cfg.rag.random_seed)
     np.random.seed(cfg.rag.random_seed)
 
-    # Changing the level of the logger
-    logger.remove()  # Remove default handler.
+    logger.remove()
     logger.add(sys.stderr, level=cfg.log_level)
 
-    # run evaluation
     run_simulation(cfg)
 
 

@@ -8,4 +8,4 @@ data:
   topic_path: symptoms
   question_path: question
   answer_path: answer
-  num_samples: 10000
+  num_samples: 100

@@ -175,6 +175,11 @@ cython_debug/
 # PDFs
 Distributed RAG.pdf
 T2520777_PreThesis2.pdf
+Distributed RAG.md
+T2520777_PreThesis2.md
+
+#env
+env/
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

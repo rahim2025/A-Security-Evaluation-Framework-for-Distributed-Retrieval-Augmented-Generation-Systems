@@ -1,0 +1,40 @@
+# Selective Forwarding Attack configuration
+# Use with: run_selective_forwarding.py (mock simulation, no LLM needed)
+# Or integrate with simulator.py for full LLM-backed runs.
+
+selective_forwarding:
+  # Fraction of peers to compromise (0.0 = baseline, 1.0 = all peers)
+  attack_ratio: 0.3
+
+  # Targeting strategy:
+  #   random            - compromise a uniformly random fraction
+  #   high_connectivity - compromise hub (highest-degree) peers first;
+  #                       adversarially optimal — maximises hit-rate drop
+  #                       per compromised peer
+  strategy: high_connectivity
+
+  # RNG seed for reproducibility
+  seed: 42
+
+# Sweep configuration for run_selective_forwarding.py
+sweep:
+  ratios: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+  strategies: [random, high_connectivity]
+
+# Network / query parameters (mirrors rag.yaml defaults)
+network:
+  num_peers: 20
+  num_attachments: 4        # Barabasi-Albert m parameter
+  num_query_neighbor: 4     # max neighbours queried per hop (TARW)
+  query_ttl: 6              # max hops before a query is declared exhausted
+  query_confidence_threshold: 0.5
+
+# Simulation-only (mock, no LLM)
+simulation:
+  num_queries: 100
+  peer_hit_prob: 0.4        # probability a healthy peer answers a given query
+  seed: 0
+
+# Output
+output:
+  csv_path: logs/selective_forwarding/results.csv
