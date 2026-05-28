@@ -1,0 +1,11 @@
+step,newly_targeted_client,total_targeted_clients,fraction_targeted,nodes_exposed_no_defense,nodes_exposed_with_defense,exposure_pct_no_defense,exposure_pct_with_defense
+1,5,1,0.1,20,16,10.0,8.0
+2,9,2,0.2,40,31,20.0,15.5
+3,0,3,0.3,60,46,30.0,23.0
+4,3,4,0.4,80,61,40.0,30.5
+5,4,5,0.5,100,76,50.0,38.0
+6,6,6,0.6,120,92,60.0,46.0
+7,1,7,0.7,140,107,70.0,53.5
+8,8,8,0.8,160,122,80.0,61.0
+9,7,9,0.9,180,137,90.0,68.5
+10,2,10,1.0,200,152,100.0,76.0

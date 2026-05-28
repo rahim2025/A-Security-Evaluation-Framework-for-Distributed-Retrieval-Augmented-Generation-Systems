@@ -1,0 +1,5 @@
+Attack,Baseline EM,Post-Attack EM,Defended EM,Delta EM,Baseline F1,Post-Attack F1,Defended F1,Delta F1,Baseline BLEU,Post-Attack BLEU,Defended BLEU,Delta BLEU,Membership Acc,KB Recovery %,Runtime (s),Defended Membership Acc,Defended KB Recovery %,Availability Before %,Availability After %
+Data Poisoning,1.0,0.84,0.8,-0.16000000000000003,1.0,0.84,0.8,-0.16000000000000003,1.0,0.84,0.8,-0.16000000000000003,,,0.24894349100031832,,,,
+Membership Inference,,,,,,,,,,,,,1.0,,0.0025274300005548866,0.5,,,
+Knowledge Extraction,,,,,,,,,,,,,,100.0,0.004545316000076127,,45.0,,
+Node Availability (node_removal),1.0,0.7,0.75,-0.30000000000000004,1.0,0.7,0.75,-0.30000000000000004,1.0,0.7,0.73,,,,2.2264001017902046e-05,,,100.0,70.0

@@ -1,0 +1,100 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+  "black>=24.10.0",
+  "codespell>=2.3.0",
+  "fire>=0.7.0",
+  "ipykernel>=6.29.5",
+  "isort>=5.13.2",
+  "mypy>=1.14.1",
+  "pillow>=9.0.0",
+  "pre-commit>=4.1.0",
+  "pylint>=3.3.3",
+  "pytest>=8.3.4",
+  "pytest-asyncio>=0.25.2",
+  "pytest-cov>=6.0.0",
+  "pytest-mock>=3.14.0",
+  "ruff>=0.9.2"
+]
+docs = [
+  "mkdocs>=1.6.1",
+  "mkdocs-jupyter>=0.25.1",
+  "mkdocs-material>=9.6.10",
+  "mkdocstrings[python]>=0.29.0"
+]
+
+[project]
+name = "fed-rag"
+version = "0.0.27"
+description = "Simplified fine-tuning of retrieval-augmented generation (RAG) systems."
+license = "Apache-2.0"
+keywords = ["machine learning", "federated learning", "deep learning", "llms", "rag", "retrieval", "semantic search"]
+authors = [
+  {name = "Andrei Fajardo", email = "andrei.fajardo@vectorinstitute.ai"},
+  {name = "David Emerson", email = "david.emerson@vectorinstitute.ai"}
+]
+maintainers = [
+  {name = "Andrei Fajardo", email = "andrei.fajardo@vectorinstitute.ai"},
+  {name = "Izuki Matsuba", email = "Izukimat@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10,<4.0"
+dependencies = [
+  "accelerate>=1.10.1",
+  "datasets>=3.1.0",
+  "flwr>=1.18.0",
+  "mcp[cli]>=1.9.1",
+  "pyarrow>=19.0.1",
+  "pydantic>=2.10.5",
+  "pydantic-settings>=2.7.1",
+  "torch>=2.5.1",
+  "torchvision>=0.20.1",
+  "typing-extensions>=4.12.2"
+]
+
+[project.optional-dependencies]
+huggingface = [
+  "peft>=0.14.0",
+  "transformers>=4.49.0",
+  "sentence-transformers>=3.4.1"
+]
+qdrant = [
+  "grpcio>=1.71.0",
+  "qdrant-client[fastembed]>=1.14.2"
+]
+llama-index = [
+  "llama-index-core>=0.12.35"
+]
+langchain = [
+  "langchain-core>=0.3.62"
+]
+huggingface-evals = [
+  "datasets>=3.1.0"
+]
+unsloth = [
+  "unsloth>=2024.8",
+  "peft>=0.14.0",
+  "transformers>=4.49.0",
+  "sentence-transformers>=3.4.1"
+]
+
+[project.urls]
+Documentation = "https://vectorinstitute.github.io/fed-rag/"
+Repository = "https://github.com/VectorInstitute/fed-rag"
+Issues = "https://github.com/VectorInstitute/fed-rag/issues"
+Changelog = "https://github.com/VectorInstitute/fed-rag/blob/main/CHANGELOG.md"
+
+[tool.coverage.run]
+omit = [
+  "*/fed_rag/utils/notebook.py"
+]
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src", "tests"] # keep build small, exclude examples
+
+[tool.uv.workspace]
+members = ["examples/quick-start", "examples/knowledge_stores/ra-dit"]
+exclude = ["examples/ra-dit"]

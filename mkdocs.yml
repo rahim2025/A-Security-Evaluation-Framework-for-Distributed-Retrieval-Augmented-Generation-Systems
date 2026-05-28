@@ -1,0 +1,227 @@
+extra_css:
+  - stylesheets/extra.css
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/5GMpSCFbTe
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/vector-institute/
+    - icon: fontawesome/brands/bluesky
+      link: https://web-cdn.bsky.app/profile/vectorinstitute.ai
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/vectorinst
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+markdown_extensions:
+  - attr_list
+  - admonition
+  - footnotes
+  - md_in_html
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.details
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+nav:
+  - Home: index.md
+  - Getting started:
+    - Essentials: getting_started/essentials.md
+    - Quick Starts:
+      - getting_started/quick_starts/index.md
+      - Centralized to Federated: getting_started/quick_starts/federated.md
+      - Build a RAG System: getting_started/quick_starts/rag_inference.md
+      - Fine-tune a RAG System: getting_started/quick_starts/rag_finetuning.md
+      - Benchmark a RAG System: getting_started/quick_starts/benchmark_mmlu.md
+    - Installation: getting_started/installation.md
+    - Standard Usage: getting_started/standard_usage.md
+    - Import Patterns: getting_started/import_patterns.md
+    - Tutorials:
+      - getting_started/tutorials/index.md
+      - Retriever Fine-tuning with LSR: getting_started/tutorials/lsr.md
+      - Generator Fine-tuning with RALT: getting_started/tutorials/ralt.md
+    - Integrations: getting_started/integrations.md
+  - Case Studies:
+    - examples/index.md
+    - RA-DIT:
+      - examples/ra_dit/index.md
+      - Build a Qdrant Knowledge Store: examples/ra_dit/qdrant_knowledge_store_wikipedia.md
+      - Fine-tuning with QA Datasets: examples/ra_dit/finetune.md
+      - Evaluate with Benchmarks: examples/ra_dit/benchmarking.md
+      - Federated Fine-tuning: examples/ra_dit/federated_finetune.md
+  - Notebooks:
+    - notebooks/basic_starter_hf.ipynb
+    - notebooks/rag_benchmarking_hf_mmlu.ipynb
+    - notebooks/no_encode_rag_with_mcp.ipynb
+    - notebooks/basic_fl.ipynb
+    - Integrations:
+      - notebooks/integrations/llama_index.ipynb
+      - notebooks/integrations/langchain.ipynb
+      - notebooks/integrations/qdrant.ipynb
+      - notebooks/integrations/qdrant_async.ipynb
+      - notebooks/integrations/unsloth.ipynb
+  - API Reference:
+    - api_reference/index.md
+    - Bridges:
+      - api_reference/bridges/index.md
+      - LlamaIndex: api_reference/bridges/llamaindex.md
+      - LangChain: api_reference/bridges/langchain.md
+    - Data Collators:
+      - api_reference/data_collators/index.md
+      - api_reference/data_collators/huggingface.md
+    - Data Structures:
+      - Bridge: api_reference/data_structures/bridge.md
+      - Evals: api_reference/data_structures/evals.md
+      - Knowledge Node: api_reference/data_structures/knowledge_node.md
+      - RAG: api_reference/data_structures/rag.md
+      - Results: api_reference/data_structures/results.md
+    - Decorators:
+      - api_reference/decorators/index.md
+    - Evals:
+      - api_reference/evals/index.md
+      - Benchmarker: api_reference/evals/benchmarker.md
+      - Benchmarks:
+        - HuggingFace:
+          - api_reference/evals/benchmarks/huggingface/mmlu.md
+          - api_reference/evals/benchmarks/huggingface/pubmedqa.md
+          - api_reference/evals/benchmarks/huggingface/hotpotqa.md
+          - api_reference/evals/benchmarks/huggingface/natural_questions.md
+          - api_reference/evals/benchmarks/huggingface/squad_v2.md
+          - api_reference/evals/benchmarks/huggingface/boolq.md
+          - api_reference/evals/benchmarks/huggingface/hellaswag.md
+      - Metrics:
+        - Exact Match: api_reference/evals/metrics/exact_match.md
+    - Exceptions:
+      - api_reference/exceptions/index.md
+      - Bridge: api_reference/exceptions/bridge.md
+      - Data Collator: api_reference/exceptions/data_collator.md
+      - Evals: api_reference/exceptions/evals.md
+      - FL Task: api_reference/exceptions/fl_tasks.md
+      - Generator: api_reference/exceptions/generator.md
+      - Inspector: api_reference/exceptions/inspectors.md
+      - Knowledge Store: api_reference/exceptions/knowledge_stores.md
+      - Loss: api_reference/exceptions/loss.md
+      - RAG Trainer Manager: api_reference/exceptions/rag_trainer.md
+      - Retriever: api_reference/exceptions/retriever.md
+      - Trainer: api_reference/exceptions/trainer.md
+      - Tokenizer: api_reference/exceptions/tokenizer.md
+    - Finetuning Datasets:
+      - api_reference/finetuning_datasets/index.md
+      - api_reference/finetuning_datasets/pytorch.md
+      - api_reference/finetuning_datasets/huggingface.md
+    - FL Tasks:
+      - api_reference/fl_tasks/index.md
+      - api_reference/fl_tasks/pytorch.md
+      - api_reference/fl_tasks/huggingface.md
+    - Generators:
+      - api_reference/generators/index.md
+      - api_reference/generators/huggingface.md
+      - api_reference/generators/unsloth.md
+    - Inspectors:
+      - api_reference/inspectors/index.md
+      - api_reference/inspectors/pytorch.md
+      - api_reference/inspectors/huggingface.md
+    - Knowledge Nodes:
+      - api_reference/knowledge_nodes/index.md
+    - Knowledge Stores:
+      - api_reference/knowledge_stores/index.md
+      - InMemory: api_reference/knowledge_stores/in_memory.md
+      - Qdrant: api_reference/knowledge_stores/qdrant.md
+      - Mixins: api_reference/knowledge_stores/mixins.md
+    - Loss:
+      - api_reference/loss/pytorch.md
+    - RAG System:
+      - api_reference/rag_system/index.md
+    - RAG Trainer Managers:
+      - api_reference/trainer_managers/index.md
+      - api_reference/trainer_managers/pytorch.md
+      - api_reference/trainer_managers/huggingface.md
+    - Retrievers:
+      - api_reference/retrievers/index.md
+      - api_reference/retrievers/huggingface.md
+    - Tokenizers:
+      - api_reference/tokenizers/index.md
+      - api_reference/tokenizers/huggingface.md
+    - Trainers:
+      - api_reference/trainers/index.md
+      - api_reference/trainers/pytorch.md
+      - api_reference/trainers/huggingface.md
+  - Community:
+    - Contributing:
+      - community/contributing/index.md
+      - Ask a Question: community/contributing/ask_question.md
+      - Submitting an Issue: community/contributing/submit_issue.md
+      - Submitting a Pull Request: community/contributing/submit_pr.md
+    - Changelog: community/changelog.md
+    - Resources:
+      - AI Pocket References: community/resources/pocket_references.md
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            members_order: source
+            separate_signature: true
+            show_overloads: true
+            show_submodules: true
+            show_root_heading: false
+            show_root_full_path: true
+            show_root_toc_entry: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+  - mkdocs-jupyter:
+      execute: false
+repo_url: https://github.com/VectorInstitute/fed-rag
+repo_name: VectorInsitute/fed-rag
+site_name: FedRAG
+theme:
+  custom_dir: docs/overrides
+  favicon: assets/favicon-48x48.svg
+  features:
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.tabs
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+  logo_dark_mode: assets/logo-dark.svg
+  logo_light_mode: assets/logo.svg
+  logo_footer: assets/vector-logo.svg
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: vector
+      accent: vector-teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: vector-teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode

@@ -1,0 +1,11 @@
+data:
+  load:
+    path: sarus-tech/medical_extended
+    name: default
+    split: train
+  # task_type: mcqa for Multiple Choice Question Answering; ogqa for Open Generative Question Answering
+  task_type: ogqa
+  topic_path: symptoms
+  question_path: question
+  answer_path: answer
+  num_samples: 10000

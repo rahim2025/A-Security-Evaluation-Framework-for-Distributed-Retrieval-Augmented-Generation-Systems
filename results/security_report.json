@@ -1,0 +1,314 @@
+{
+  "timestamp": "2026-05-27T14:17:27.288739+00:00",
+  "simulator": {
+    "num_clients": 10,
+    "num_examples": 200,
+    "seed": 0,
+    "embedding_dim": 32,
+    "client_sizes": [
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20
+    ],
+    "topics": [
+      "cryptography",
+      "medicine",
+      "finance",
+      "biology",
+      "law",
+      "networking",
+      "history",
+      "physics",
+      "privacy",
+      "safety",
+      "databases",
+      "governance"
+    ]
+  },
+  "data_poisoning": {
+    "attack": "Data Poisoning",
+    "malicious_clients": [
+      6,
+      9
+    ],
+    "poisoning_ratio": 0.8,
+    "poison_type": "wrong_answer",
+    "mode": "replace",
+    "total_poisoned_records": 32,
+    "baseline": {
+      "em": 1.0,
+      "f1": 1.0,
+      "bleu": 1.0
+    },
+    "attacked": {
+      "em": 0.84,
+      "f1": 0.84,
+      "bleu": 0.84
+    },
+    "defended": {
+      "em": 0.8,
+      "f1": 0.8,
+      "bleu": 0.8
+    },
+    "delta_em": -0.16000000000000003,
+    "delta_f1": -0.16000000000000003,
+    "delta_bleu": -0.16000000000000003,
+    "runtime_s": 0.24894349100031832,
+    "defense_enabled": true,
+    "defense_stats": {
+      "quarantined_clients": [
+        6,
+        9
+      ],
+      "inspections": [
+        {
+          "client_id": 0,
+          "risk_score": 0.0,
+          "quarantined": false,
+          "poisoned_markers": 0
+        },
+        {
+          "client_id": 1,
+          "risk_score": 0.0,
+          "quarantined": false,
+          "poisoned_markers": 0
+        },
+        {
+          "client_id": 2,
+          "risk_score": 0.0,
+          "quarantined": false,
+          "poisoned_markers": 0
+        },
+        {
+          "client_id": 3,
+          "risk_score": 0.0,
+          "quarantined": false,
+          "poisoned_markers": 0
+        },
+        {
+          "client_id": 4,
+          "risk_score": 0.0,
+          "quarantined": false,
+          "poisoned_markers": 0
+        },
+        {
+          "client_id": 5,
+          "risk_score": 0.0,
+          "quarantined": false,
+          "poisoned_markers": 0
+        },
+        {
+          "client_id": 6,
+          "risk_score": 0.8,
+          "quarantined": true,
+          "poisoned_markers": 16
+        },
+        {
+          "client_id": 7,
+          "risk_score": 0.0,
+          "quarantined": false,
+          "poisoned_markers": 0
+        },
+        {
+          "client_id": 8,
+          "risk_score": 0.0,
+          "quarantined": false,
+          "poisoned_markers": 0
+        },
+        {
+          "client_id": 9,
+          "risk_score": 0.8,
+          "quarantined": true,
+          "poisoned_markers": 16
+        }
+      ]
+    },
+    "per_client_breakdown": {
+      "0": {
+        "malicious": false,
+        "baseline_f1": 0.1,
+        "attacked_f1": 0.1,
+        "defended_f1": 0.1,
+        "delta_f1": 0.0,
+        "defense_recovery_f1": 0.0
+      },
+      "1": {
+        "malicious": false,
+        "baseline_f1": 0.1,
+        "attacked_f1": 0.1,
+        "defended_f1": 0.1,
+        "delta_f1": 0.0,
+        "defense_recovery_f1": 0.0
+      },
+      "2": {
+        "malicious": false,
+        "baseline_f1": 0.1,
+        "attacked_f1": 0.1,
+        "defended_f1": 0.1,
+        "delta_f1": 0.0,
+        "defense_recovery_f1": 0.0
+      },
+      "3": {
+        "malicious": false,
+        "baseline_f1": 0.1,
+        "attacked_f1": 0.1,
+        "defended_f1": 0.1,
+        "delta_f1": 0.0,
+        "defense_recovery_f1": 0.0
+      },
+      "4": {
+        "malicious": false,
+        "baseline_f1": 0.1,
+        "attacked_f1": 0.1,
+        "defended_f1": 0.1,
+        "delta_f1": 0.0,
+        "defense_recovery_f1": 0.0
+      },
+      "5": {
+        "malicious": false,
+        "baseline_f1": 0.1,
+        "attacked_f1": 0.1,
+        "defended_f1": 0.1,
+        "delta_f1": 0.0,
+        "defense_recovery_f1": 0.0
+      },
+      "6": {
+        "malicious": true,
+        "baseline_f1": 0.1,
+        "attacked_f1": 0.02,
+        "defended_f1": 0.0,
+        "delta_f1": -0.08,
+        "defense_recovery_f1": -0.02
+      },
+      "7": {
+        "malicious": false,
+        "baseline_f1": 0.1,
+        "attacked_f1": 0.1,
+        "defended_f1": 0.1,
+        "delta_f1": 0.0,
+        "defense_recovery_f1": 0.0
+      },
+      "8": {
+        "malicious": false,
+        "baseline_f1": 0.1,
+        "attacked_f1": 0.1,
+        "defended_f1": 0.1,
+        "delta_f1": 0.0,
+        "defense_recovery_f1": 0.0
+      },
+      "9": {
+        "malicious": true,
+        "baseline_f1": 0.1,
+        "attacked_f1": 0.02,
+        "defended_f1": 0.0,
+        "delta_f1": -0.08,
+        "defense_recovery_f1": -0.02
+      }
+    }
+  },
+  "membership_inference": {
+    "attack": "Membership Inference",
+    "target_client": 6,
+    "threshold": 0.8,
+    "num_members_tested": 20,
+    "num_non_members_tested": 20,
+    "attacked": {
+      "accuracy": 1.0,
+      "tpr": 1.0,
+      "fpr": 0.0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "defended": {
+      "accuracy": 0.5,
+      "tpr": 0.0,
+      "fpr": 0.0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    "runtime_s": 0.0025274300005548866,
+    "defense_enabled": true,
+    "score_mask_value": 0.5
+  },
+  "knowledge_extraction": {
+    "attack": "Knowledge Extraction",
+    "target_client": 6,
+    "top_k": 3,
+    "total_queries": 75,
+    "attacked": {
+      "recovered_nodes": 20,
+      "total_nodes": 20,
+      "recovery_ratio": 1.0,
+      "queries_issued": 75
+    },
+    "defended": {
+      "recovered_nodes": 9,
+      "total_nodes": 20,
+      "recovery_ratio": 0.45,
+      "queries_issued": 9
+    },
+    "runtime_s": 0.004545316000076127,
+    "defense_enabled": true,
+    "defense_info": {
+      "rate_limiter": {
+        "allowed_count": 20,
+        "blocked_count": 55,
+        "block_rate": 0.7333333333333333,
+        "max_queries_per_client": 20
+      },
+      "anomaly_detector": {
+        "allowed_count": 9,
+        "blocked_count": 66,
+        "block_rate": 0.88,
+        "flagged_clients": {
+          "6": "high_topic_diversity"
+        }
+      },
+      "queries_allowed": 9,
+      "queries_blocked": 66
+    }
+  },
+  "node_availability": {
+    "attack": "Node Availability (node_removal)",
+    "attack_type": "node_removal",
+    "attack_ratio": 0.3,
+    "total_nodes": 10,
+    "affected_nodes": [
+      0,
+      6,
+      9
+    ],
+    "availability_before": 1.0,
+    "availability_after": 0.7,
+    "baseline": {
+      "em": 1.0,
+      "f1": 1.0,
+      "bleu": 1.0
+    },
+    "attacked": {
+      "em": 0.7,
+      "f1": 0.7,
+      "bleu": 0.7
+    },
+    "defended": {
+      "em": 0.75,
+      "f1": 0.75,
+      "bleu": 0.73
+    },
+    "delta_em": -0.30000000000000004,
+    "delta_f1": -0.30000000000000004,
+    "runtime_s": 2.2264001017902046e-05,
+    "defense_enabled": true,
+    "defense_info": {
+      "cross_peer_validation": true,
+      "validator_result": "(True, 0.5, {'reason': 'no_clear_majority', 'agreement_ratio': 0.3, 'distribution': {'verified-safety-answer-9': 2, 'verified-databases-answer-142': 1, 'verified-finance-answer-134': 1, 'verified-governance-answer-59': 3, 'verified-privacy-answer-188': 3}, 'candidate_accepted_by_default': True, 'num_peers': 10})"
+    }
+  }
+}
