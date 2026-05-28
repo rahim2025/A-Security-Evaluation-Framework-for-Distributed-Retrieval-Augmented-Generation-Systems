@@ -1,0 +1,12 @@
+data:
+  load:
+    path: cais/mmlu
+    name: all
+    split: test
+  # task_type: mcqa for Multiple Choice Question Answering; ogqa for Open Generative Question Answering
+  task_type: mcqa
+  topic_path: subject
+  question_path: question
+  choices_path: choices
+  answer_path: answer
+  num_samples: 50

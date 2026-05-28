@@ -1,0 +1,16 @@
+security:
+  enable_attack: False
+  poisoning_ratio: 0.3  # % of malicious peers
+  attack_strategy: 'high_degree'  # 'random', 'data_rich', 'high_degree', 'replica_aware'
+  poison_type: 'answer_swap'
+  target_peer_ids: []  # Specifically target peer
+  amplification_factor: 5  # copies of each poison
+  question_variants: 3  # question variants
+
+  # Knowledge Base Extraction Attack
+  enable_extraction: true
+  extraction_attacker_peer: null  # null = random selection
+  extraction_queries_per_topic: 5  # Keep low for efficiency
+  extraction_attack_type: 'external'  # 'external' or 'insider'
+  extraction_use_topic_inference: false
+  extraction_use_dataset_questions: false  # NEW - Use dataset questions (RECOMMENDED)
