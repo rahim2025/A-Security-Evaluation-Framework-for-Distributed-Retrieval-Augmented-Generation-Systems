@@ -1,0 +1,109 @@
+{
+  "timestamp": "2026-05-30T22:11:02.323787",
+  "config": {
+    "num_nodes": 150,
+    "num_examples": 1500,
+    "malicious_ratio": 0.33,
+    "poisoning_ratio": 0.4,
+    "attack_ratio": 0.3,
+    "node_attack_type": "hub_targeted",
+    "num_attachments": 2,
+    "confidence_threshold": 0.5,
+    "max_hops": 3,
+    "attack": "all",
+    "no_defense": false,
+    "seed": 0,
+    "output": "drag_vs_fedrag_results.json"
+  },
+  "drag_config": {
+    "num_peers": 150,
+    "num_attachments": 2,
+    "confidence_threshold": 0.5,
+    "max_hops": 3
+  },
+  "fedrag_config": {
+    "num_clients": 150,
+    "topology": "star"
+  },
+  "results": [
+    {
+      "attack": "data_poisoning",
+      "drag": {
+        "baseline_em": 0.32,
+        "post_attack_em": 0.26,
+        "defended_em": 0.0,
+        "em_drop": 0.06,
+        "em_recovery": -0.26,
+        "malicious_peers": 49,
+        "nodes_poisoned": 196,
+        "defense": "CrossPeerValidation (majority vote)",
+        "quarantined": 0
+      },
+      "fedrag": {
+        "baseline_em": 1.0,
+        "post_attack_em": 0.88,
+        "defended_em": 0.62,
+        "em_drop": 0.12,
+        "em_recovery": -0.26,
+        "malicious_clients": 49,
+        "nodes_poisoned": 196,
+        "defense": "Quarantine (poison marker density)",
+        "quarantined": 49
+      }
+    },
+    {
+      "attack": "membership_inference",
+      "drag": {
+        "score_gap": 0.6948,
+        "precision": 1.0,
+        "recall": 1.0,
+        "leakage_risk": "HIGH",
+        "note": "DRAG: attacker must route through P2P graph to reach target peer"
+      },
+      "fedrag": {
+        "score_gap": 0.7118,
+        "precision": 1.0,
+        "recall": 1.0,
+        "leakage_risk": "HIGH",
+        "note": "FedRAG: server can directly target any client's store via fan-out"
+      }
+    },
+    {
+      "attack": "knowledge_extraction",
+      "drag": {
+        "extraction_score": 0.4,
+        "extracted_count": 6,
+        "kb_size": 10,
+        "messages_sent": 2835,
+        "note": "DRAG: multi-hop routing means attacker sees many peers, not just target"
+      },
+      "fedrag": {
+        "extraction_score": 0.1,
+        "extracted_count": 1,
+        "kb_size": 10,
+        "messages_sent": 60,
+        "note": "FedRAG: server can isolate and probe any single client directly"
+      }
+    },
+    {
+      "attack": "node_availability",
+      "attack_type": "hub_targeted",
+      "drag": {
+        "baseline_em": 0.3,
+        "post_attack_em": 0.02,
+        "em_drop": 0.28,
+        "removed": 45,
+        "network_connectivity": 0.0095,
+        "note": "DRAG: hub removal in BA graph causes disproportionate connectivity loss"
+      },
+      "fedrag": {
+        "baseline_em": 1.0,
+        "post_attack_em": 0.74,
+        "em_drop": 0.26,
+        "removed": 45,
+        "coverage_remaining": 0.7,
+        "note": "FedRAG: star topology \u2014 removing clients linearly reduces coverage only"
+      }
+    }
+  ]
+}

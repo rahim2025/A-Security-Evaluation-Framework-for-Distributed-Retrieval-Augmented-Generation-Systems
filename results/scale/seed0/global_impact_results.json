@@ -1,0 +1,1209 @@
+{
+  "simulator": {
+    "num_clients": 20,
+    "num_examples": 500,
+    "seed": 0,
+    "embedding_dim": 32,
+    "client_sizes": [
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25,
+      25
+    ],
+    "topics": [
+      "cryptography",
+      "medicine",
+      "finance",
+      "biology",
+      "law",
+      "networking",
+      "history",
+      "physics",
+      "privacy",
+      "safety",
+      "databases",
+      "governance"
+    ]
+  },
+  "scenarios": [
+    {
+      "attack": "Data Poisoning",
+      "intensity": "light",
+      "num_clients": 20,
+      "affected_clients": 2,
+      "affected_ratio": 0.1,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 0.952,
+        "f1": 0.952,
+        "bleu": 0.952
+      },
+      "defended": {
+        "em": 0.952,
+        "f1": 0.952,
+        "bleu": 0.952
+      },
+      "defense": "ClientDataPoisoningDefense",
+      "delta_f1": -0.04800000000000004,
+      "delta_em": -0.04800000000000004,
+      "delta_bleu": -0.04800000000000004,
+      "recovery_f1": 0.0,
+      "runtime_s": 2.790364573000261,
+      "kb_exposure_before": null,
+      "kb_exposure_after": null,
+      "availability_before": null,
+      "availability_after": null,
+      "notes": "poison_type=wrong_answer; malicious_clients=[12, 13]; total_poisoned_records=24; quarantined=[]"
+    },
+    {
+      "attack": "Data Poisoning",
+      "intensity": "medium",
+      "num_clients": 20,
+      "affected_clients": 6,
+      "affected_ratio": 0.3,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 0.856,
+        "f1": 0.856,
+        "bleu": 0.856
+      },
+      "defended": {
+        "em": 0.856,
+        "f1": 0.856,
+        "bleu": 0.856
+      },
+      "defense": "ClientDataPoisoningDefense",
+      "delta_f1": -0.14400000000000002,
+      "delta_em": -0.14400000000000002,
+      "delta_bleu": -0.14400000000000002,
+      "recovery_f1": 0.0,
+      "runtime_s": 2.6564064779995533,
+      "kb_exposure_before": null,
+      "kb_exposure_after": null,
+      "availability_before": null,
+      "availability_after": null,
+      "notes": "poison_type=wrong_answer; malicious_clients=[1, 8, 12, 14, 15, 16]; total_poisoned_records=72; quarantined=[]"
+    },
+    {
+      "attack": "Data Poisoning",
+      "intensity": "heavy",
+      "num_clients": 20,
+      "affected_clients": 10,
+      "affected_ratio": 0.5,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 0.76,
+        "f1": 0.76,
+        "bleu": 0.76
+      },
+      "defended": {
+        "em": 0.76,
+        "f1": 0.76,
+        "bleu": 0.76
+      },
+      "defense": "ClientDataPoisoningDefense",
+      "delta_f1": -0.24,
+      "delta_em": -0.24,
+      "delta_bleu": -0.24,
+      "recovery_f1": 0.0,
+      "runtime_s": 2.5340387590003957,
+      "kb_exposure_before": null,
+      "kb_exposure_after": null,
+      "availability_before": null,
+      "availability_after": null,
+      "notes": "poison_type=wrong_answer; malicious_clients=[1, 2, 4, 6, 9, 11, 12, 15, 18, 19]; total_poisoned_records=120; quarantined=[]"
+    },
+    {
+      "attack": "KB Extraction",
+      "intensity": "light",
+      "num_clients": 20,
+      "affected_clients": 2,
+      "affected_ratio": 0.1,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "defended": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "defense": "QueryRateLimiter + ExtractionAnomalyDetector",
+      "delta_f1": 0.0,
+      "delta_em": 0.0,
+      "delta_bleu": 0.0,
+      "recovery_f1": 0.0,
+      "runtime_s": 0.01342617199770757,
+      "kb_exposure_before": 1.0,
+      "kb_exposure_after": 0.3,
+      "availability_before": null,
+      "availability_after": null,
+      "notes": "targeted_clients=[4, 18]; total_attack_queries=170; nodes_exposed_before_defense=50/50 (100.0%); nodes_exposed_after_defense=15/50 (30.0%)"
+    },
+    {
+      "attack": "KB Extraction",
+      "intensity": "medium",
+      "num_clients": 20,
+      "affected_clients": 6,
+      "affected_ratio": 0.3,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "defended": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "defense": "QueryRateLimiter + ExtractionAnomalyDetector",
+      "delta_f1": 0.0,
+      "delta_em": 0.0,
+      "delta_bleu": 0.0,
+      "recovery_f1": 0.0,
+      "runtime_s": 0.043638875999022275,
+      "kb_exposure_before": 1.0,
+      "kb_exposure_after": 0.2866666666666667,
+      "availability_before": null,
+      "availability_after": null,
+      "notes": "targeted_clients=[2, 3, 7, 8, 14, 15]; total_attack_queries=528; nodes_exposed_before_defense=150/150 (100.0%); nodes_exposed_after_defense=43/150 (28.7%)"
+    },
+    {
+      "attack": "KB Extraction",
+      "intensity": "heavy",
+      "num_clients": 20,
+      "affected_clients": 10,
+      "affected_ratio": 0.5,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "defended": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "defense": "QueryRateLimiter + ExtractionAnomalyDetector",
+      "delta_f1": 0.0,
+      "delta_em": 0.0,
+      "delta_bleu": 0.0,
+      "recovery_f1": 0.0,
+      "runtime_s": 0.07042177499897662,
+      "kb_exposure_before": 1.0,
+      "kb_exposure_after": 0.292,
+      "availability_before": null,
+      "availability_after": null,
+      "notes": "targeted_clients=[0, 3, 6, 9, 12, 13, 14, 15, 18, 19]; total_attack_queries=874; nodes_exposed_before_defense=250/250 (100.0%); nodes_exposed_after_defense=73/250 (29.2%)"
+    },
+    {
+      "attack": "Node Availability (node_removal)",
+      "intensity": "light",
+      "num_clients": 20,
+      "affected_clients": 2,
+      "affected_ratio": 0.1,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 0.9,
+        "f1": 0.9,
+        "bleu": 0.9
+      },
+      "defended": {
+        "em": 0.9,
+        "f1": 0.9,
+        "bleu": 0.9
+      },
+      "defense": "CrossPeerValidation",
+      "delta_f1": -0.09999999999999998,
+      "delta_em": -0.09999999999999998,
+      "delta_bleu": -0.09999999999999998,
+      "recovery_f1": 0.0,
+      "runtime_s": 1.2524069309984043,
+      "kb_exposure_before": null,
+      "kb_exposure_after": null,
+      "availability_before": 1.0,
+      "availability_after": 0.9,
+      "notes": "attack_type=node_removal; affected_nodes=[12, 13]; availability=1.00\u21920.90"
+    },
+    {
+      "attack": "Node Availability (node_removal)",
+      "intensity": "medium",
+      "num_clients": 20,
+      "affected_clients": 6,
+      "affected_ratio": 0.3,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 0.7,
+        "f1": 0.7,
+        "bleu": 0.7
+      },
+      "defended": {
+        "em": 0.7,
+        "f1": 0.7,
+        "bleu": 0.7
+      },
+      "defense": "CrossPeerValidation",
+      "delta_f1": -0.30000000000000004,
+      "delta_em": -0.30000000000000004,
+      "delta_bleu": -0.30000000000000004,
+      "recovery_f1": 0.0,
+      "runtime_s": 0.9750661200014292,
+      "kb_exposure_before": null,
+      "kb_exposure_after": null,
+      "availability_before": 1.0,
+      "availability_after": 0.7,
+      "notes": "attack_type=node_removal; affected_nodes=[1, 6, 8, 12, 13, 15]; availability=1.00\u21920.70"
+    },
+    {
+      "attack": "Node Availability (node_removal)",
+      "intensity": "heavy",
+      "num_clients": 20,
+      "affected_clients": 10,
+      "affected_ratio": 0.5,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 0.5,
+        "f1": 0.5,
+        "bleu": 0.5
+      },
+      "defended": {
+        "em": 0.5,
+        "f1": 0.5,
+        "bleu": 0.5
+      },
+      "defense": "CrossPeerValidation",
+      "delta_f1": -0.5,
+      "delta_em": -0.5,
+      "delta_bleu": -0.5,
+      "recovery_f1": 0.0,
+      "runtime_s": 0.6920470769982785,
+      "kb_exposure_before": null,
+      "kb_exposure_after": null,
+      "availability_before": 1.0,
+      "availability_after": 0.5,
+      "notes": "attack_type=node_removal; affected_nodes=[1, 4, 5, 6, 7, 8, 12, 13, 15, 19]; availability=1.00\u21920.50"
+    },
+    {
+      "attack": "Node Availability (byzantine)",
+      "intensity": "light",
+      "num_clients": 20,
+      "affected_clients": 2,
+      "affected_ratio": 0.1,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 0.9,
+        "f1": 0.9666666666666677,
+        "bleu": 0.95
+      },
+      "defended": {
+        "em": 0.95,
+        "f1": 0.9833333333333337,
+        "bleu": 0.975
+      },
+      "defense": "CrossPeerValidation",
+      "delta_f1": -0.03333333333333233,
+      "delta_em": -0.09999999999999998,
+      "delta_bleu": -0.050000000000000044,
+      "recovery_f1": 0.016666666666666052,
+      "runtime_s": 1.3926513099977456,
+      "kb_exposure_before": null,
+      "kb_exposure_after": null,
+      "availability_before": 1.0,
+      "availability_after": 1.0,
+      "notes": "attack_type=byzantine; affected_nodes=[12, 13]; availability=1.00\u21921.00"
+    },
+    {
+      "attack": "Node Availability (byzantine)",
+      "intensity": "medium",
+      "num_clients": 20,
+      "affected_clients": 6,
+      "affected_ratio": 0.3,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 0.7,
+        "f1": 0.9000000000000022,
+        "bleu": 0.85
+      },
+      "defended": {
+        "em": 0.9,
+        "f1": 0.9666666666666675,
+        "bleu": 0.95
+      },
+      "defense": "CrossPeerValidation",
+      "delta_f1": -0.09999999999999776,
+      "delta_em": -0.30000000000000004,
+      "delta_bleu": -0.15000000000000002,
+      "recovery_f1": 0.06666666666666521,
+      "runtime_s": 1.383470293996652,
+      "kb_exposure_before": null,
+      "kb_exposure_after": null,
+      "availability_before": 1.0,
+      "availability_after": 1.0,
+      "notes": "attack_type=byzantine; affected_nodes=[1, 6, 8, 12, 13, 15]; availability=1.00\u21921.00"
+    },
+    {
+      "attack": "Node Availability (byzantine)",
+      "intensity": "heavy",
+      "num_clients": 20,
+      "affected_clients": 10,
+      "affected_ratio": 0.5,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 0.5,
+        "f1": 0.8333333333333358,
+        "bleu": 0.75
+      },
+      "defended": {
+        "em": 0.85,
+        "f1": 0.9500000000000011,
+        "bleu": 0.925
+      },
+      "defense": "CrossPeerValidation",
+      "delta_f1": -0.1666666666666642,
+      "delta_em": -0.5,
+      "delta_bleu": -0.25,
+      "recovery_f1": 0.11666666666666525,
+      "runtime_s": 1.382353017997957,
+      "kb_exposure_before": null,
+      "kb_exposure_after": null,
+      "availability_before": 1.0,
+      "availability_after": 1.0,
+      "notes": "attack_type=byzantine; affected_nodes=[1, 4, 5, 6, 7, 8, 12, 13, 15, 19]; availability=1.00\u21921.00"
+    },
+    {
+      "attack": "Node Availability (ddos)",
+      "intensity": "light",
+      "num_clients": 20,
+      "affected_clients": 2,
+      "affected_ratio": 0.1,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 0.9,
+        "f1": 0.9,
+        "bleu": 0.9
+      },
+      "defended": {
+        "em": 0.9,
+        "f1": 0.9,
+        "bleu": 0.9
+      },
+      "defense": "CrossPeerValidation",
+      "delta_f1": -0.09999999999999998,
+      "delta_em": -0.09999999999999998,
+      "delta_bleu": -0.09999999999999998,
+      "recovery_f1": 0.0,
+      "runtime_s": 1.2410957309984951,
+      "kb_exposure_before": null,
+      "kb_exposure_after": null,
+      "availability_before": 1.0,
+      "availability_after": 0.9,
+      "notes": "attack_type=ddos; affected_nodes=[12, 13]; availability=1.00\u21920.90"
+    },
+    {
+      "attack": "Node Availability (ddos)",
+      "intensity": "medium",
+      "num_clients": 20,
+      "affected_clients": 6,
+      "affected_ratio": 0.3,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 0.7,
+        "f1": 0.7,
+        "bleu": 0.7
+      },
+      "defended": {
+        "em": 0.7,
+        "f1": 0.7,
+        "bleu": 0.7
+      },
+      "defense": "CrossPeerValidation",
+      "delta_f1": -0.30000000000000004,
+      "delta_em": -0.30000000000000004,
+      "delta_bleu": -0.30000000000000004,
+      "recovery_f1": 0.0,
+      "runtime_s": 0.9686310120014241,
+      "kb_exposure_before": null,
+      "kb_exposure_after": null,
+      "availability_before": 1.0,
+      "availability_after": 0.7,
+      "notes": "attack_type=ddos; affected_nodes=[1, 6, 8, 12, 13, 15]; availability=1.00\u21920.70"
+    },
+    {
+      "attack": "Node Availability (ddos)",
+      "intensity": "heavy",
+      "num_clients": 20,
+      "affected_clients": 10,
+      "affected_ratio": 0.5,
+      "baseline": {
+        "em": 1.0,
+        "f1": 1.0,
+        "bleu": 1.0
+      },
+      "attacked": {
+        "em": 0.5,
+        "f1": 0.5,
+        "bleu": 0.5
+      },
+      "defended": {
+        "em": 0.5,
+        "f1": 0.5,
+        "bleu": 0.5
+      },
+      "defense": "CrossPeerValidation",
+      "delta_f1": -0.5,
+      "delta_em": -0.5,
+      "delta_bleu": -0.5,
+      "recovery_f1": 0.0,
+      "runtime_s": 0.6941724380012602,
+      "kb_exposure_before": null,
+      "kb_exposure_after": null,
+      "availability_before": 1.0,
+      "availability_after": 0.5,
+      "notes": "attack_type=ddos; affected_nodes=[1, 4, 5, 6, 7, 8, 12, 13, 15, 19]; availability=1.00\u21920.50"
+    }
+  ],
+  "cascade_tables": {
+    "data_poisoning": [
+      {
+        "step": 1,
+        "newly_poisoned_client": 8,
+        "total_poisoned_clients": 1,
+        "fraction_poisoned": 0.05,
+        "global_f1": 0.976,
+        "global_em": 0.976,
+        "global_bleu": 0.976,
+        "delta_f1_from_baseline": -0.02400000000000002,
+        "pct_degradation": 2.400000000000002
+      },
+      {
+        "step": 2,
+        "newly_poisoned_client": 11,
+        "total_poisoned_clients": 2,
+        "fraction_poisoned": 0.1,
+        "global_f1": 0.952,
+        "global_em": 0.952,
+        "global_bleu": 0.952,
+        "delta_f1_from_baseline": -0.04800000000000004,
+        "pct_degradation": 4.800000000000004
+      },
+      {
+        "step": 3,
+        "newly_poisoned_client": 9,
+        "total_poisoned_clients": 3,
+        "fraction_poisoned": 0.15,
+        "global_f1": 0.928,
+        "global_em": 0.928,
+        "global_bleu": 0.928,
+        "delta_f1_from_baseline": -0.07199999999999995,
+        "pct_degradation": 7.199999999999996
+      },
+      {
+        "step": 4,
+        "newly_poisoned_client": 6,
+        "total_poisoned_clients": 4,
+        "fraction_poisoned": 0.2,
+        "global_f1": 0.904,
+        "global_em": 0.904,
+        "global_bleu": 0.904,
+        "delta_f1_from_baseline": -0.09599999999999997,
+        "pct_degradation": 9.599999999999998
+      },
+      {
+        "step": 5,
+        "newly_poisoned_client": 0,
+        "total_poisoned_clients": 5,
+        "fraction_poisoned": 0.25,
+        "global_f1": 0.88,
+        "global_em": 0.88,
+        "global_bleu": 0.88,
+        "delta_f1_from_baseline": -0.12,
+        "pct_degradation": 12.0
+      },
+      {
+        "step": 6,
+        "newly_poisoned_client": 4,
+        "total_poisoned_clients": 6,
+        "fraction_poisoned": 0.3,
+        "global_f1": 0.856,
+        "global_em": 0.856,
+        "global_bleu": 0.856,
+        "delta_f1_from_baseline": -0.14400000000000002,
+        "pct_degradation": 14.400000000000002
+      },
+      {
+        "step": 7,
+        "newly_poisoned_client": 7,
+        "total_poisoned_clients": 7,
+        "fraction_poisoned": 0.35,
+        "global_f1": 0.832,
+        "global_em": 0.832,
+        "global_bleu": 0.832,
+        "delta_f1_from_baseline": -0.16800000000000004,
+        "pct_degradation": 16.800000000000004
+      },
+      {
+        "step": 8,
+        "newly_poisoned_client": 14,
+        "total_poisoned_clients": 8,
+        "fraction_poisoned": 0.4,
+        "global_f1": 0.808,
+        "global_em": 0.808,
+        "global_bleu": 0.808,
+        "delta_f1_from_baseline": -0.19199999999999995,
+        "pct_degradation": 19.199999999999996
+      },
+      {
+        "step": 9,
+        "newly_poisoned_client": 3,
+        "total_poisoned_clients": 9,
+        "fraction_poisoned": 0.45,
+        "global_f1": 0.784,
+        "global_em": 0.784,
+        "global_bleu": 0.784,
+        "delta_f1_from_baseline": -0.21599999999999997,
+        "pct_degradation": 21.599999999999998
+      },
+      {
+        "step": 10,
+        "newly_poisoned_client": 1,
+        "total_poisoned_clients": 10,
+        "fraction_poisoned": 0.5,
+        "global_f1": 0.76,
+        "global_em": 0.76,
+        "global_bleu": 0.76,
+        "delta_f1_from_baseline": -0.24,
+        "pct_degradation": 24.0
+      },
+      {
+        "step": 11,
+        "newly_poisoned_client": 13,
+        "total_poisoned_clients": 11,
+        "fraction_poisoned": 0.55,
+        "global_f1": 0.736,
+        "global_em": 0.736,
+        "global_bleu": 0.736,
+        "delta_f1_from_baseline": -0.264,
+        "pct_degradation": 26.400000000000002
+      },
+      {
+        "step": 12,
+        "newly_poisoned_client": 5,
+        "total_poisoned_clients": 12,
+        "fraction_poisoned": 0.6,
+        "global_f1": 0.712,
+        "global_em": 0.712,
+        "global_bleu": 0.712,
+        "delta_f1_from_baseline": -0.28800000000000003,
+        "pct_degradation": 28.800000000000004
+      },
+      {
+        "step": 13,
+        "newly_poisoned_client": 10,
+        "total_poisoned_clients": 13,
+        "fraction_poisoned": 0.65,
+        "global_f1": 0.688,
+        "global_em": 0.688,
+        "global_bleu": 0.688,
+        "delta_f1_from_baseline": -0.31200000000000006,
+        "pct_degradation": 31.200000000000006
+      },
+      {
+        "step": 14,
+        "newly_poisoned_client": 12,
+        "total_poisoned_clients": 14,
+        "fraction_poisoned": 0.7,
+        "global_f1": 0.664,
+        "global_em": 0.664,
+        "global_bleu": 0.664,
+        "delta_f1_from_baseline": -0.33599999999999997,
+        "pct_degradation": 33.599999999999994
+      },
+      {
+        "step": 15,
+        "newly_poisoned_client": 19,
+        "total_poisoned_clients": 15,
+        "fraction_poisoned": 0.75,
+        "global_f1": 0.64,
+        "global_em": 0.64,
+        "global_bleu": 0.64,
+        "delta_f1_from_baseline": -0.36,
+        "pct_degradation": 36.0
+      },
+      {
+        "step": 16,
+        "newly_poisoned_client": 16,
+        "total_poisoned_clients": 16,
+        "fraction_poisoned": 0.8,
+        "global_f1": 0.616,
+        "global_em": 0.616,
+        "global_bleu": 0.616,
+        "delta_f1_from_baseline": -0.384,
+        "pct_degradation": 38.4
+      },
+      {
+        "step": 17,
+        "newly_poisoned_client": 15,
+        "total_poisoned_clients": 17,
+        "fraction_poisoned": 0.85,
+        "global_f1": 0.592,
+        "global_em": 0.592,
+        "global_bleu": 0.592,
+        "delta_f1_from_baseline": -0.40800000000000003,
+        "pct_degradation": 40.800000000000004
+      },
+      {
+        "step": 18,
+        "newly_poisoned_client": 17,
+        "total_poisoned_clients": 18,
+        "fraction_poisoned": 0.9,
+        "global_f1": 0.568,
+        "global_em": 0.568,
+        "global_bleu": 0.568,
+        "delta_f1_from_baseline": -0.43200000000000005,
+        "pct_degradation": 43.2
+      },
+      {
+        "step": 19,
+        "newly_poisoned_client": 18,
+        "total_poisoned_clients": 19,
+        "fraction_poisoned": 0.95,
+        "global_f1": 0.544,
+        "global_em": 0.544,
+        "global_bleu": 0.544,
+        "delta_f1_from_baseline": -0.45599999999999996,
+        "pct_degradation": 45.599999999999994
+      },
+      {
+        "step": 20,
+        "newly_poisoned_client": 2,
+        "total_poisoned_clients": 20,
+        "fraction_poisoned": 1.0,
+        "global_f1": 0.52,
+        "global_em": 0.52,
+        "global_bleu": 0.52,
+        "delta_f1_from_baseline": -0.48,
+        "pct_degradation": 48.0
+      }
+    ],
+    "kb_extraction": [
+      {
+        "step": 1,
+        "newly_targeted_client": 1,
+        "total_targeted_clients": 1,
+        "fraction_targeted": 0.05,
+        "nodes_exposed_no_defense": 25,
+        "nodes_exposed_with_defense": 15,
+        "exposure_pct_no_defense": 5.0,
+        "exposure_pct_with_defense": 3.0
+      },
+      {
+        "step": 2,
+        "newly_targeted_client": 9,
+        "total_targeted_clients": 2,
+        "fraction_targeted": 0.1,
+        "nodes_exposed_no_defense": 50,
+        "nodes_exposed_with_defense": 30,
+        "exposure_pct_no_defense": 10.0,
+        "exposure_pct_with_defense": 6.0
+      },
+      {
+        "step": 3,
+        "newly_targeted_client": 14,
+        "total_targeted_clients": 3,
+        "fraction_targeted": 0.15,
+        "nodes_exposed_no_defense": 75,
+        "nodes_exposed_with_defense": 45,
+        "exposure_pct_no_defense": 15.0,
+        "exposure_pct_with_defense": 9.0
+      },
+      {
+        "step": 4,
+        "newly_targeted_client": 6,
+        "total_targeted_clients": 4,
+        "fraction_targeted": 0.2,
+        "nodes_exposed_no_defense": 100,
+        "nodes_exposed_with_defense": 60,
+        "exposure_pct_no_defense": 20.0,
+        "exposure_pct_with_defense": 12.0
+      },
+      {
+        "step": 5,
+        "newly_targeted_client": 16,
+        "total_targeted_clients": 5,
+        "fraction_targeted": 0.25,
+        "nodes_exposed_no_defense": 125,
+        "nodes_exposed_with_defense": 75,
+        "exposure_pct_no_defense": 25.0,
+        "exposure_pct_with_defense": 15.0
+      },
+      {
+        "step": 6,
+        "newly_targeted_client": 12,
+        "total_targeted_clients": 6,
+        "fraction_targeted": 0.3,
+        "nodes_exposed_no_defense": 150,
+        "nodes_exposed_with_defense": 90,
+        "exposure_pct_no_defense": 30.0,
+        "exposure_pct_with_defense": 18.0
+      },
+      {
+        "step": 7,
+        "newly_targeted_client": 4,
+        "total_targeted_clients": 7,
+        "fraction_targeted": 0.35,
+        "nodes_exposed_no_defense": 175,
+        "nodes_exposed_with_defense": 106,
+        "exposure_pct_no_defense": 35.0,
+        "exposure_pct_with_defense": 21.2
+      },
+      {
+        "step": 8,
+        "newly_targeted_client": 0,
+        "total_targeted_clients": 8,
+        "fraction_targeted": 0.4,
+        "nodes_exposed_no_defense": 200,
+        "nodes_exposed_with_defense": 122,
+        "exposure_pct_no_defense": 40.0,
+        "exposure_pct_with_defense": 24.4
+      },
+      {
+        "step": 9,
+        "newly_targeted_client": 2,
+        "total_targeted_clients": 9,
+        "fraction_targeted": 0.45,
+        "nodes_exposed_no_defense": 225,
+        "nodes_exposed_with_defense": 137,
+        "exposure_pct_no_defense": 45.0,
+        "exposure_pct_with_defense": 27.400000000000002
+      },
+      {
+        "step": 10,
+        "newly_targeted_client": 7,
+        "total_targeted_clients": 10,
+        "fraction_targeted": 0.5,
+        "nodes_exposed_no_defense": 250,
+        "nodes_exposed_with_defense": 152,
+        "exposure_pct_no_defense": 50.0,
+        "exposure_pct_with_defense": 30.4
+      },
+      {
+        "step": 11,
+        "newly_targeted_client": 10,
+        "total_targeted_clients": 11,
+        "fraction_targeted": 0.55,
+        "nodes_exposed_no_defense": 275,
+        "nodes_exposed_with_defense": 167,
+        "exposure_pct_no_defense": 55.00000000000001,
+        "exposure_pct_with_defense": 33.4
+      },
+      {
+        "step": 12,
+        "newly_targeted_client": 11,
+        "total_targeted_clients": 12,
+        "fraction_targeted": 0.6,
+        "nodes_exposed_no_defense": 300,
+        "nodes_exposed_with_defense": 183,
+        "exposure_pct_no_defense": 60.0,
+        "exposure_pct_with_defense": 36.6
+      },
+      {
+        "step": 13,
+        "newly_targeted_client": 8,
+        "total_targeted_clients": 13,
+        "fraction_targeted": 0.65,
+        "nodes_exposed_no_defense": 325,
+        "nodes_exposed_with_defense": 198,
+        "exposure_pct_no_defense": 65.0,
+        "exposure_pct_with_defense": 39.6
+      },
+      {
+        "step": 14,
+        "newly_targeted_client": 3,
+        "total_targeted_clients": 14,
+        "fraction_targeted": 0.7,
+        "nodes_exposed_no_defense": 350,
+        "nodes_exposed_with_defense": 214,
+        "exposure_pct_no_defense": 70.0,
+        "exposure_pct_with_defense": 42.8
+      },
+      {
+        "step": 15,
+        "newly_targeted_client": 13,
+        "total_targeted_clients": 15,
+        "fraction_targeted": 0.75,
+        "nodes_exposed_no_defense": 375,
+        "nodes_exposed_with_defense": 229,
+        "exposure_pct_no_defense": 75.0,
+        "exposure_pct_with_defense": 45.800000000000004
+      },
+      {
+        "step": 16,
+        "newly_targeted_client": 19,
+        "total_targeted_clients": 16,
+        "fraction_targeted": 0.8,
+        "nodes_exposed_no_defense": 400,
+        "nodes_exposed_with_defense": 244,
+        "exposure_pct_no_defense": 80.0,
+        "exposure_pct_with_defense": 48.8
+      },
+      {
+        "step": 17,
+        "newly_targeted_client": 18,
+        "total_targeted_clients": 17,
+        "fraction_targeted": 0.85,
+        "nodes_exposed_no_defense": 425,
+        "nodes_exposed_with_defense": 260,
+        "exposure_pct_no_defense": 85.0,
+        "exposure_pct_with_defense": 52.0
+      },
+      {
+        "step": 18,
+        "newly_targeted_client": 17,
+        "total_targeted_clients": 18,
+        "fraction_targeted": 0.9,
+        "nodes_exposed_no_defense": 450,
+        "nodes_exposed_with_defense": 275,
+        "exposure_pct_no_defense": 90.0,
+        "exposure_pct_with_defense": 55.00000000000001
+      },
+      {
+        "step": 19,
+        "newly_targeted_client": 15,
+        "total_targeted_clients": 19,
+        "fraction_targeted": 0.95,
+        "nodes_exposed_no_defense": 475,
+        "nodes_exposed_with_defense": 291,
+        "exposure_pct_no_defense": 95.0,
+        "exposure_pct_with_defense": 58.199999999999996
+      },
+      {
+        "step": 20,
+        "newly_targeted_client": 5,
+        "total_targeted_clients": 20,
+        "fraction_targeted": 1.0,
+        "nodes_exposed_no_defense": 500,
+        "nodes_exposed_with_defense": 307,
+        "exposure_pct_no_defense": 100.0,
+        "exposure_pct_with_defense": 61.4
+      }
+    ],
+    "node_availability": [
+      {
+        "step": 1,
+        "newly_dropped_client": 17,
+        "total_dropped_clients": 1,
+        "active_clients": 19,
+        "fraction_dropped": 0.05,
+        "global_f1": 0.95,
+        "global_em": 0.95,
+        "global_bleu": 0.95,
+        "delta_f1_from_baseline": -0.050000000000000044,
+        "pct_degradation": 5.000000000000004
+      },
+      {
+        "step": 2,
+        "newly_dropped_client": 2,
+        "total_dropped_clients": 2,
+        "active_clients": 18,
+        "fraction_dropped": 0.1,
+        "global_f1": 0.9,
+        "global_em": 0.9,
+        "global_bleu": 0.9,
+        "delta_f1_from_baseline": -0.09999999999999998,
+        "pct_degradation": 9.999999999999998
+      },
+      {
+        "step": 3,
+        "newly_dropped_client": 12,
+        "total_dropped_clients": 3,
+        "active_clients": 17,
+        "fraction_dropped": 0.15,
+        "global_f1": 0.85,
+        "global_em": 0.85,
+        "global_bleu": 0.85,
+        "delta_f1_from_baseline": -0.15000000000000002,
+        "pct_degradation": 15.000000000000002
+      },
+      {
+        "step": 4,
+        "newly_dropped_client": 4,
+        "total_dropped_clients": 4,
+        "active_clients": 16,
+        "fraction_dropped": 0.2,
+        "global_f1": 0.8,
+        "global_em": 0.8,
+        "global_bleu": 0.8,
+        "delta_f1_from_baseline": -0.19999999999999996,
+        "pct_degradation": 19.999999999999996
+      },
+      {
+        "step": 5,
+        "newly_dropped_client": 6,
+        "total_dropped_clients": 5,
+        "active_clients": 15,
+        "fraction_dropped": 0.25,
+        "global_f1": 0.75,
+        "global_em": 0.75,
+        "global_bleu": 0.75,
+        "delta_f1_from_baseline": -0.25,
+        "pct_degradation": 25.0
+      },
+      {
+        "step": 6,
+        "newly_dropped_client": 0,
+        "total_dropped_clients": 6,
+        "active_clients": 14,
+        "fraction_dropped": 0.3,
+        "global_f1": 0.7,
+        "global_em": 0.7,
+        "global_bleu": 0.7,
+        "delta_f1_from_baseline": -0.30000000000000004,
+        "pct_degradation": 30.000000000000004
+      },
+      {
+        "step": 7,
+        "newly_dropped_client": 11,
+        "total_dropped_clients": 7,
+        "active_clients": 13,
+        "fraction_dropped": 0.35,
+        "global_f1": 0.65,
+        "global_em": 0.65,
+        "global_bleu": 0.65,
+        "delta_f1_from_baseline": -0.35,
+        "pct_degradation": 35.0
+      },
+      {
+        "step": 8,
+        "newly_dropped_client": 7,
+        "total_dropped_clients": 8,
+        "active_clients": 12,
+        "fraction_dropped": 0.4,
+        "global_f1": 0.6,
+        "global_em": 0.6,
+        "global_bleu": 0.6,
+        "delta_f1_from_baseline": -0.4,
+        "pct_degradation": 40.0
+      },
+      {
+        "step": 9,
+        "newly_dropped_client": 16,
+        "total_dropped_clients": 9,
+        "active_clients": 11,
+        "fraction_dropped": 0.45,
+        "global_f1": 0.55,
+        "global_em": 0.55,
+        "global_bleu": 0.55,
+        "delta_f1_from_baseline": -0.44999999999999996,
+        "pct_degradation": 44.99999999999999
+      },
+      {
+        "step": 10,
+        "newly_dropped_client": 10,
+        "total_dropped_clients": 10,
+        "active_clients": 10,
+        "fraction_dropped": 0.5,
+        "global_f1": 0.5,
+        "global_em": 0.5,
+        "global_bleu": 0.5,
+        "delta_f1_from_baseline": -0.5,
+        "pct_degradation": 50.0
+      },
+      {
+        "step": 11,
+        "newly_dropped_client": 1,
+        "total_dropped_clients": 11,
+        "active_clients": 9,
+        "fraction_dropped": 0.55,
+        "global_f1": 0.45,
+        "global_em": 0.45,
+        "global_bleu": 0.45,
+        "delta_f1_from_baseline": -0.55,
+        "pct_degradation": 55.00000000000001
+      },
+      {
+        "step": 12,
+        "newly_dropped_client": 13,
+        "total_dropped_clients": 12,
+        "active_clients": 8,
+        "fraction_dropped": 0.6,
+        "global_f1": 0.4,
+        "global_em": 0.4,
+        "global_bleu": 0.4,
+        "delta_f1_from_baseline": -0.6,
+        "pct_degradation": 60.0
+      },
+      {
+        "step": 13,
+        "newly_dropped_client": 18,
+        "total_dropped_clients": 13,
+        "active_clients": 7,
+        "fraction_dropped": 0.65,
+        "global_f1": 0.35,
+        "global_em": 0.35,
+        "global_bleu": 0.35,
+        "delta_f1_from_baseline": -0.65,
+        "pct_degradation": 65.0
+      },
+      {
+        "step": 14,
+        "newly_dropped_client": 3,
+        "total_dropped_clients": 14,
+        "active_clients": 6,
+        "fraction_dropped": 0.7,
+        "global_f1": 0.3,
+        "global_em": 0.3,
+        "global_bleu": 0.3,
+        "delta_f1_from_baseline": -0.7,
+        "pct_degradation": 70.0
+      },
+      {
+        "step": 15,
+        "newly_dropped_client": 15,
+        "total_dropped_clients": 15,
+        "active_clients": 5,
+        "fraction_dropped": 0.75,
+        "global_f1": 0.25,
+        "global_em": 0.25,
+        "global_bleu": 0.25,
+        "delta_f1_from_baseline": -0.75,
+        "pct_degradation": 75.0
+      },
+      {
+        "step": 16,
+        "newly_dropped_client": 5,
+        "total_dropped_clients": 16,
+        "active_clients": 4,
+        "fraction_dropped": 0.8,
+        "global_f1": 0.2,
+        "global_em": 0.2,
+        "global_bleu": 0.2,
+        "delta_f1_from_baseline": -0.8,
+        "pct_degradation": 80.0
+      },
+      {
+        "step": 17,
+        "newly_dropped_client": 8,
+        "total_dropped_clients": 17,
+        "active_clients": 3,
+        "fraction_dropped": 0.85,
+        "global_f1": 0.15,
+        "global_em": 0.15,
+        "global_bleu": 0.15,
+        "delta_f1_from_baseline": -0.85,
+        "pct_degradation": 85.0
+      },
+      {
+        "step": 18,
+        "newly_dropped_client": 9,
+        "total_dropped_clients": 18,
+        "active_clients": 2,
+        "fraction_dropped": 0.9,
+        "global_f1": 0.1,
+        "global_em": 0.1,
+        "global_bleu": 0.1,
+        "delta_f1_from_baseline": -0.9,
+        "pct_degradation": 90.0
+      },
+      {
+        "step": 19,
+        "newly_dropped_client": 19,
+        "total_dropped_clients": 19,
+        "active_clients": 1,
+        "fraction_dropped": 0.95,
+        "global_f1": 0.05,
+        "global_em": 0.05,
+        "global_bleu": 0.05,
+        "delta_f1_from_baseline": -0.95,
+        "pct_degradation": 95.0
+      },
+      {
+        "step": 20,
+        "newly_dropped_client": 14,
+        "total_dropped_clients": 20,
+        "active_clients": 0,
+        "fraction_dropped": 1.0,
+        "global_f1": 0.0,
+        "global_em": 0.0,
+        "global_bleu": 0.0,
+        "delta_f1_from_baseline": -1.0,
+        "pct_degradation": 100.0
+      }
+    ]
+  }
+}

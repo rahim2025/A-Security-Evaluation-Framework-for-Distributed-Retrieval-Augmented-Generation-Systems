@@ -1,0 +1,59 @@
+{
+  "results": [
+    {
+      "attack_type": "untargeted",
+      "malicious_clients": [
+        0,
+        6,
+        9
+      ],
+      "poisoning_scale": 5.0,
+      "baseline_f1": 1.0,
+      "attacked_f1": 0.6690020333627458,
+      "delta_f1": -0.3309979666372542,
+      "inversion_exposure": 0.0,
+      "backdoor_success_rate": 0.0,
+      "num_rounds": 5
+    },
+    {
+      "attack_type": "targeted",
+      "malicious_clients": [
+        0,
+        6,
+        9
+      ],
+      "poisoning_scale": 5.0,
+      "baseline_f1": 1.0,
+      "attacked_f1": 0.99358669377817,
+      "delta_f1": -0.006413306221830006,
+      "inversion_exposure": 0.0,
+      "backdoor_success_rate": 1.0,
+      "num_rounds": 5
+    },
+    {
+      "attack_type": "inversion",
+      "malicious_clients": [
+        0,
+        6,
+        9
+      ],
+      "poisoning_scale": 5.0,
+      "baseline_f1": 1.0,
+      "attacked_f1": 1.0,
+      "delta_f1": 0.0,
+      "inversion_exposure": 0.8999999999999999,
+      "backdoor_success_rate": 0.0,
+      "num_rounds": 5
+    }
+  ],
+  "config": {
+    "num_clients": 10,
+    "num_examples": 200,
+    "seed": 0,
+    "malicious_ratio": 0.3,
+    "attack_type": "all",
+    "scale": 5.0,
+    "num_rounds": 5,
+    "output_dir": "results/gradient"
+  }
+}

@@ -1,0 +1,4 @@
+llm:
+  base_url: http://localhost:11434
+  name: gemma2:2b
+  num_ctx: 4096
