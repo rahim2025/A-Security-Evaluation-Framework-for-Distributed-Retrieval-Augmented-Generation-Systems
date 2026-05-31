@@ -1,0 +1,188 @@
+{
+  "num_clients": 10,
+  "malicious_client_ids": [
+    0,
+    2
+  ],
+  "client_sizes": [
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8
+  ],
+  "poisoning_inspections": [
+    {
+      "client_id": 0,
+      "total_examples": 8,
+      "poisoned_marker_count": 2,
+      "duplicate_query_count": 0,
+      "conflicting_answer_count": 0,
+      "risk_score": 0.25,
+      "quarantined": false
+    },
+    {
+      "client_id": 1,
+      "total_examples": 8,
+      "poisoned_marker_count": 0,
+      "duplicate_query_count": 0,
+      "conflicting_answer_count": 0,
+      "risk_score": 0.0,
+      "quarantined": false
+    },
+    {
+      "client_id": 2,
+      "total_examples": 8,
+      "poisoned_marker_count": 2,
+      "duplicate_query_count": 0,
+      "conflicting_answer_count": 0,
+      "risk_score": 0.25,
+      "quarantined": false
+    },
+    {
+      "client_id": 3,
+      "total_examples": 8,
+      "poisoned_marker_count": 0,
+      "duplicate_query_count": 0,
+      "conflicting_answer_count": 0,
+      "risk_score": 0.0,
+      "quarantined": false
+    },
+    {
+      "client_id": 4,
+      "total_examples": 8,
+      "poisoned_marker_count": 0,
+      "duplicate_query_count": 0,
+      "conflicting_answer_count": 0,
+      "risk_score": 0.0,
+      "quarantined": false
+    },
+    {
+      "client_id": 5,
+      "total_examples": 8,
+      "poisoned_marker_count": 0,
+      "duplicate_query_count": 0,
+      "conflicting_answer_count": 0,
+      "risk_score": 0.0,
+      "quarantined": false
+    },
+    {
+      "client_id": 6,
+      "total_examples": 8,
+      "poisoned_marker_count": 0,
+      "duplicate_query_count": 0,
+      "conflicting_answer_count": 0,
+      "risk_score": 0.0,
+      "quarantined": false
+    },
+    {
+      "client_id": 7,
+      "total_examples": 8,
+      "poisoned_marker_count": 0,
+      "duplicate_query_count": 0,
+      "conflicting_answer_count": 0,
+      "risk_score": 0.0,
+      "quarantined": false
+    },
+    {
+      "client_id": 8,
+      "total_examples": 8,
+      "poisoned_marker_count": 0,
+      "duplicate_query_count": 0,
+      "conflicting_answer_count": 0,
+      "risk_score": 0.0,
+      "quarantined": false
+    },
+    {
+      "client_id": 9,
+      "total_examples": 8,
+      "poisoned_marker_count": 0,
+      "duplicate_query_count": 0,
+      "conflicting_answer_count": 0,
+      "risk_score": 0.0,
+      "quarantined": false
+    }
+  ],
+  "records": [
+    {
+      "Attack": "Client Data Poisoning",
+      "System": "FedRAG Federated Clients",
+      "Dataset": "synthetic-client-rag",
+      "Model": "HashingRetriever",
+      "Baseline BLEU": 1.0,
+      "Post-Attack BLEU": 0.95,
+      "Defended BLEU": 0.95,
+      "Delta BLEU": -0.050000000000000044,
+      "Baseline EM": 1.0,
+      "Post-Attack EM": 0.95,
+      "Defended EM": 0.95,
+      "Delta EM": -0.050000000000000044,
+      "Baseline F1": 1.0,
+      "Post-Attack F1": 0.95,
+      "Defended F1": 0.95,
+      "Delta F1": -0.050000000000000044,
+      "Membership Acc": null,
+      "Defended Membership Acc": null,
+      "KB Recovery %": null,
+      "Defended KB Recovery %": null,
+      "Runtime (s)": 8.67080016178079e-05,
+      "Memory Overhead MB": 218.109375,
+      "Notes": "num_clients=10; malicious_clients=[0, 2]; quarantined=[]"
+    },
+    {
+      "Attack": "Client Membership Inference",
+      "System": "FedRAG Federated Clients",
+      "Dataset": "synthetic-client-rag",
+      "Model": "HashingRetriever",
+      "Baseline BLEU": 1.0,
+      "Post-Attack BLEU": 1.0,
+      "Defended BLEU": 1.0,
+      "Delta BLEU": 0.0,
+      "Baseline EM": 1.0,
+      "Post-Attack EM": 1.0,
+      "Defended EM": 1.0,
+      "Delta EM": 0.0,
+      "Baseline F1": 1.0,
+      "Post-Attack F1": 1.0,
+      "Defended F1": 1.0,
+      "Delta F1": 0.0,
+      "Membership Acc": 0.5,
+      "Defended Membership Acc": 0.5,
+      "KB Recovery %": null,
+      "Defended KB Recovery %": null,
+      "Runtime (s)": 0.0017115829978138208,
+      "Memory Overhead MB": 218.21875,
+      "Notes": "target_client=0; score_masking_public_score=0.5; members=8; non_members=8"
+    },
+    {
+      "Attack": "Client Knowledge Extraction",
+      "System": "FedRAG Federated Clients",
+      "Dataset": "synthetic-client-rag",
+      "Model": "HashingRetriever",
+      "Baseline BLEU": 1.0,
+      "Post-Attack BLEU": 1.0,
+      "Defended BLEU": 1.0,
+      "Delta BLEU": 0.0,
+      "Baseline EM": 1.0,
+      "Post-Attack EM": 1.0,
+      "Defended EM": 1.0,
+      "Delta EM": 0.0,
+      "Baseline F1": 1.0,
+      "Post-Attack F1": 1.0,
+      "Defended F1": 1.0,
+      "Delta F1": 0.0,
+      "Membership Acc": null,
+      "Defended Membership Acc": null,
+      "KB Recovery %": 100.0,
+      "Defended KB Recovery %": 75.0,
+      "Runtime (s)": 0.006508874997962266,
+      "Memory Overhead MB": 218.234375,
+      "Notes": "target_client=0; queries=92; defended_queries=9; defenses={'rate_limiter': {'allowed_count': 18, 'blocked_count': 74, 'block_rate': 0.8043478260869565, 'max_queries_per_client': 18}, 'anomaly_detector': {'allowed_count': 9, 'blocked_count': 83, 'block_rate': 0.9021739130434783, 'flagged_clients': {0: 'broad_topic_coverage'}}}"
+    }
+  ]
+}

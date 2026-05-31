@@ -1,0 +1,56 @@
+# Defense Configuration for FedRAG Security Framework
+# Defences against data-poisoning, membership-inference, and KB-extraction attacks
+
+defense:
+  enabled: true   # Master switch — must be true for any sub-defence to activate
+
+  # ── 1. Client Data-Poisoning Defence (poisoning defence) ────────────────
+  # Inspects per-client data and quarantines clients whose poison ratio exceeds
+  # the threshold.  Target: data-poisoning attacks.
+  client_data_poisoning_defense:
+    enabled: true
+    quarantine_threshold: 0.8
+
+  # ── 2. Score Masking (membership-inference defence) ─────────────────────
+  # Replaces public retrieval confidence scores with a fixed public value so
+  # that an attacker cannot learn membership from score thresholds.
+  score_masking:
+    enabled: true
+    public_score: 0.5
+
+  # ── 3. Cross-Peer Validation (poisoning / byzantine defence) ────────────
+  # Validates client answers by majority vote across multiple peers.
+  # Primary target: data-poisoning and byzantine-node attacks.
+  cross_peer_validation:
+    enabled: false
+    min_agreement_ratio: 0.6
+    voting_method: "majority"
+    min_peers_for_validation: 3
+    use_similarity_matching: true
+    similarity_threshold: 0.85
+
+  # ── 4. Query Rate Limiter (extraction defence) ──────────────────────────
+  # Blocks clients that send more than max_queries_per_client queries.
+  # Directly caps how many data-points the attacker can extract.
+  query_rate_limiter:
+    enabled: true
+    max_queries_per_client: 18
+
+  # ── 5. Extraction Anomaly Detector (extraction defence) ─────────────────
+  # Profiles per-client query behaviour and flags clients showing extraction
+  # patterns: high volume, broad topic coverage, or high topic-diversity ratio.
+  extraction_anomaly_detector:
+    enabled: true
+    max_queries_threshold: 20
+    max_unique_topics_threshold: 6
+    topic_diversity_threshold: 0.6
+    min_queries_for_detection: 10
+
+  # ── 6. Response Perturbation (extraction defence) ───────────────────────
+  # Introduces controlled noise into the ``answer`` field of retrieved
+  # metadata before returning it.  The end-user's LLM-generated answer is NOT
+  # affected — only the raw answer string that an attacker might parse.
+  response_perturbation:
+    enabled: false
+    perturbation_level: 0.15
+    mode: "noise"

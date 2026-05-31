@@ -1,0 +1,740 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.14, pytest-9.0.3, pluggy-1.6.0 -- /Users/tanzim_safin/Desktop/fed-rag/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/tanzim_safin/Desktop/fed-rag
+configfile: pytest.ini
+plugins: typeguard-4.5.1, asyncio-1.3.0, langsmith-0.8.3, anyio-4.13.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 668 items
+
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[BridgeMetadata] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[CompatibleVersions] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[AggregationMode] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[BenchmarkExample] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[BenchmarkResult] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[BenchmarkEvaluatedExample] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[TrainResult] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[TestResult] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[KnowledgeNode] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[NodeType] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[NodeContent] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[RAGConfig] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[RAGResponse] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[SourceNode] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[Query] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[Context] PASSED
+tests/api/test_data_structures_imports.py::test_data_structures_all_importable[Prompt] PASSED
+tests/api/test_deprecated_types_imports.py::test_import_from_types_raises_deprecation_warning[fed_rag.types.bridge-BridgeMetadata] PASSED
+tests/api/test_deprecated_types_imports.py::test_import_from_types_raises_deprecation_warning[fed_rag.types.results-TrainResult] PASSED
+tests/api/test_deprecated_types_imports.py::test_import_from_types_raises_deprecation_warning[fed_rag.types.results-TestResult] PASSED
+tests/api/test_deprecated_types_imports.py::test_import_from_types_raises_deprecation_warning[fed_rag.types.knowledge_node-KnowledgeNode] PASSED
+tests/api/test_deprecated_types_imports.py::test_import_from_types_raises_deprecation_warning[fed_rag.types.knowledge_node-NodeType] PASSED
+tests/api/test_deprecated_types_imports.py::test_import_from_types_raises_deprecation_warning[fed_rag.types.knowledge_node-NodeContent] PASSED
+tests/api/test_deprecated_types_imports.py::test_import_from_types_raises_deprecation_warning[fed_rag.types.rag-RAGConfig] PASSED
+tests/api/test_deprecated_types_imports.py::test_import_from_types_raises_deprecation_warning[fed_rag.types.rag-RAGResponse] PASSED
+tests/api/test_deprecated_types_imports.py::test_import_from_types_raises_deprecation_warning[fed_rag.types.rag-SourceNode] PASSED
+tests/api/test_evals_imports.py::test_evals_all_importable[Benchmarker] PASSED
+tests/api/test_evals_imports.py::test_evals_all_importable[ExactMatchEvaluationMetric] PASSED
+tests/api/test_evals_imports.py::test_evals_benchmarks_all_importable[HuggingFaceBenchmarkMixin] PASSED
+tests/api/test_evals_imports.py::test_evals_benchmarks_all_importable[HuggingFaceMMLU] PASSED
+tests/api/test_evals_imports.py::test_evals_benchmarks_all_importable[HuggingFacePubMedQA] PASSED
+tests/api/test_evals_imports.py::test_evals_benchmarks_all_importable[HuggingFaceHotpotQA] PASSED
+tests/api/test_evals_imports.py::test_evals_benchmarks_all_importable[HuggingFaceSQuADv2] PASSED
+tests/api/test_evals_imports.py::test_evals_benchmarks_all_importable[HuggingFaceNaturalQuestions] PASSED
+tests/api/test_evals_imports.py::test_evals_benchmarks_all_importable[HuggingFaceBoolQ] PASSED
+tests/api/test_evals_imports.py::test_evals_benchmarks_all_importable[HuggingFaceHellaSwag] PASSED
+tests/api/test_namespaced_imports.py::test_public_generators_all_importable[HFMultimodalModelGenerator] PASSED
+tests/api/test_namespaced_imports.py::test_public_generators_all_importable[HFPeftModelGenerator] PASSED
+tests/api/test_namespaced_imports.py::test_public_generators_all_importable[HFPretrainedModelGenerator] PASSED
+tests/api/test_namespaced_imports.py::test_public_generators_all_importable[UnslothFastModelGenerator] PASSED
+tests/api/test_namespaced_imports.py::test_public_generators_all_importable[UnslothFastMultimodalModelGenerator] PASSED
+tests/api/test_namespaced_imports.py::test_public_retrievers_all_importable[HFSentenceTransformerRetriever] PASSED
+tests/api/test_namespaced_imports.py::test_public_knowledge_stores_all_importable[AsyncQdrantKnowledgeStore] PASSED
+tests/api/test_namespaced_imports.py::test_public_knowledge_stores_all_importable[InMemoryKnowledgeStore] PASSED
+tests/api/test_namespaced_imports.py::test_public_knowledge_stores_all_importable[QdrantKnowledgeStore] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[AsyncNoEncodeRAGSystem] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[AsyncQdrantKnowledgeStore] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[AsyncRAGSystem] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[HFPeftModelGenerator] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[HFPretrainedModelGenerator] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[HFSentenceTransformerRetriever] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[HuggingFaceRAGTrainerManager] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[HuggingFaceTrainerForLSR] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[HuggingFaceTrainerForRALT] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[InMemoryKnowledgeStore] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[NoEncodeRAGSystem] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[PyTorchRAGTrainerManager] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[QdrantKnowledgeStore] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[RAGConfig] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[RAGSystem] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[UnslothFastModelGenerator] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[attacks] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[generators] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[retrievers] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[trainer_managers] PASSED
+tests/api/test_root_imports.py::test_root_names_all_importable[trainers] PASSED
+tests/api/test_root_imports.py::test_no_internal_leakage PASSED
+tests/api/test_root_imports.py::test_invalid_name_raises_error PASSED
+tests/api/test_root_imports.py::test_all_in_dir PASSED
+tests/bridges/test_base.py::test_bridge_init PASSED
+tests/bridges/test_base.py::test_bridge_get_metadata PASSED
+tests/bridges/test_base.py::test_rag_system_registry PASSED
+tests/bridges/test_base.py::test_validate_framework_not_installed_error PASSED
+tests/bridges/test_base.py::test_validate_framework_incompatible_error PASSED
+tests/bridges/test_base.py::test_validate_framework_success PASSED
+tests/bridges/test_base.py::test_invalid_mixin_not_registered PASSED
+tests/bridges/test_langchain.py::test_rag_system_bridges PASSED
+tests/bridges/test_langchain.py::test_rag_system_conversion_method PASSED
+tests/bridges/test_langchain.py::test_rag_system_conversion_results PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_embeddings PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_delete_none PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_delete_ids PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_add_text_metadata_length_mismatch_error PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_add_texts_ids_length_mismatch_error PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_add_texts PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_add_documents PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_add_documents_no_ids PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_similarity_search PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_similarity_search_by_vector PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_similarity_search_with_score PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_similarity_search_with_relevance_scores PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_from_texts_not_implemented_error PASSED
+tests/bridges/test_langchain.py::test_rag_vector_store_as_retriever PASSED
+tests/bridges/test_langchain.py::test_rag_llm_generate_stop_set_error PASSED
+tests/bridges/test_langchain.py::test_rag_llm_generate PASSED
+tests/bridges/test_langchain.py::test_rag_llm_generate_multiple_queries PASSED
+tests/bridges/test_langchain.py::test_rag_llm_stream_not_implemented_error PASSED
+tests/bridges/test_llamaindex.py::test_rag_system_bridges PASSED
+tests/bridges/test_llamaindex.py::test_rag_system_conversion_method PASSED
+tests/bridges/test_llamaindex.py::test_convert_llama_node_to_knowledge_node PASSED
+tests/bridges/test_llamaindex.py::test_convert_llama_node_to_knowledge_node_raises_error_missing_embedding PASSED
+tests/bridges/test_llamaindex.py::test_convert_llama_node_to_knowledge_node_raises_error_text_resource_is_none PASSED
+tests/bridges/test_llamaindex.py::test_convert_source_node_to_llama_node_with_score PASSED
+tests/bridges/test_llamaindex.py::test_fedrag_managed_index_init PASSED
+tests/bridges/test_llamaindex.py::test_fedrag_managed_index_init_raises_error_nodes_passed PASSED
+tests/bridges/test_llamaindex.py::test_fedrag_managed_index_as_retriever PASSED
+tests/bridges/test_llamaindex.py::test_fedrag_managed_index_as_retriever_retrieve_method PASSED
+tests/bridges/test_llamaindex.py::test_fedrag_managed_index_as_query_engine_mocked PASSED
+tests/bridges/test_llamaindex.py::test_fedrag_managed_index_as_query_engine PASSED
+tests/bridges/test_llamaindex.py::test_fedrag_managed_index_delete_node 1
+PASSED
+tests/bridges/test_llamaindex.py::test_fedrag_managed_index_insert PASSED
+tests/bridges/test_llamaindex.py::test_fedrag_llm_complete PASSED
+tests/bridges/test_llamaindex.py::test_fedrag_llm_stream_complete_raises_error PASSED
+tests/bridges/test_llamaindex.py::test_fedrag_managed_index_raises_not_implemented_error PASSED
+tests/bridges/test_llamaindex.py::test_async_rag_system_bridges PASSED
+tests/data_collators/huggingface/test_data_collator_for_ralt.py::test_huggingface_extra_missing PASSED
+tests/data_collators/huggingface/test_data_collator_for_ralt.py::test_huggingface_extra_missing_from_parent PASSED
+tests/data_collators/huggingface/test_data_collator_for_ralt.py::test_invalid_rag_system_due_to_generators PASSED
+tests/data_collators/huggingface/test_data_collator_for_ralt.py::test_invalid_rag_system_due_to_retriever PASSED
+tests/data_collators/huggingface/test_data_collator_for_ralt.py::test_invalid_return_tensors PASSED
+tests/data_collators/huggingface/test_data_collator_for_ralt.py::test_init PASSED
+tests/data_collators/huggingface/test_data_collator_for_ralt.py::test_lsr_collator_with_mocks PASSED
+tests/data_collators/huggingface/test_data_collator_for_ralt.py::test_lsr_collator_raises_data_collator_error_when_pad_token_id_less_than_0 PASSED
+tests/data_collators/huggingface/test_data_collator_for_ralt.py::test_lsr_collator_raises_data_collator_error_when_pad_token_id_an PASSED
+tests/data_collators/huggingface/test_data_collator_for_ralt.py::test_lsr_collator_apply_padding PASSED
+tests/data_collators/huggingface/test_data_collator_for_ralt.py::test_lsr_collator_apply_padding_with_eos_token PASSED
+tests/data_collators/huggingface/test_hf_data_collators.py::test_huggingface_extra_missing PASSED
+tests/data_collators/huggingface/test_hf_data_collators.py::test_huggingface_extra_missing_from_parent PASSED
+tests/data_collators/huggingface/test_hf_data_collators.py::test_invalid_rag_system_due_to_generators PASSED
+tests/data_collators/huggingface/test_hf_data_collators.py::test_invalid_rag_system_due_to_retriever PASSED
+tests/data_collators/huggingface/test_hf_data_collators.py::test_invalid_return_tensors PASSED
+tests/data_collators/huggingface/test_hf_data_collators.py::test_init PASSED
+tests/data_collators/huggingface/test_hf_data_collators.py::test_lsr_collator_with_mocks PASSED
+tests/data_collators/test_base.py::test_init PASSED
+tests/data_collators/test_base.py::test_collate PASSED
+tests/data_structures/test_evals.py::test_model_dump_without_embs PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_raises_missing_net_param_error PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_hf_pretrained_model PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_raises_invalid_return_type_error_hf_pretrained PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_fails_to_find_two_data_params_hf_pretrained PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_fails_due_to_missing_data_loader_hf_pretrained PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_from_instance_method_hf_pretrained PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_from_class_method_hf_pretrained PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_hf_pretrained PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_raises_invalid_return_type_hf_pretrained PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_raises_missing_net_param_error_hf_pretrained PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_fails_to_find_a_data_params_hf_pretrained PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_from_instance_method_hf_pretrained PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_from_class_method_hf_pretrained PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_hf_st PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_raises_invalid_return_type_error_hf_st PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_fails_to_find_two_data_params_hf_st PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_fails_due_to_missing_data_loader_hf_st PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_from_instance_method_hf_st PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_from_class_method_hf_st PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_hf_st PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_raises_invalid_return_type_hf_st PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_fails_to_find_a_data_params_hf_st PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_from_instance_method_hf_st PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_from_class_method_hf_st PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_hf_peft PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_raises_invalid_return_type_error_hf_peft PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_fails_to_find_two_data_params_hf_peft PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_fails_due_to_missing_data_loader_hf_peft PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_from_instance_method_hf_peft PASSED
+tests/decorators/test_huggingface.py::test_decorated_trainer_from_class_method_hf_peft PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_hf_peft PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_raises_invalid_return_type_hf_peft PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_fails_to_find_a_data_params_hf_peft PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_from_instance_method_hf_peft PASSED
+tests/decorators/test_huggingface.py::test_decorated_tester_from_class_method_hf_peft PASSED
+tests/decorators/test_pytorch.py::test_decorated_trainer PASSED
+tests/decorators/test_pytorch.py::test_decorated_trainer_raises_invalid_return_type_error PASSED
+tests/decorators/test_pytorch.py::test_decorated_trainer_raises_missing_net_param_error PASSED
+tests/decorators/test_pytorch.py::test_decorated_trainer_fails_to_find_two_data_params PASSED
+tests/decorators/test_pytorch.py::test_decorated_trainer_fails_due_to_missing_data_loader PASSED
+tests/decorators/test_pytorch.py::test_decorated_trainer_from_instance_method PASSED
+tests/decorators/test_pytorch.py::test_decorated_trainer_from_class_method PASSED
+tests/decorators/test_pytorch.py::test_decorated_tester PASSED
+tests/decorators/test_pytorch.py::test_decorated_tester_raises_invalid_return_type PASSED
+tests/decorators/test_pytorch.py::test_decorated_tester_raises_missing_net_param_error PASSED
+tests/decorators/test_pytorch.py::test_decorated_tester_fails_to_a_data_params PASSED
+tests/decorators/test_pytorch.py::test_decorated_tester_from_instance_method PASSED
+tests/decorators/test_pytorch.py::test_decorated_tester_from_class_method PASSED
+tests/evals/benchmarks/huggingface/test_boolq.py::test_boolq_query_response_context_extractors PASSED
+tests/evals/benchmarks/huggingface/test_boolq.py::test_boolq_false_response PASSED
+tests/evals/benchmarks/huggingface/test_hellaswag.py::test_hellaswag_benchmark PASSED
+tests/evals/benchmarks/huggingface/test_hellaswag.py::test_hellaswag_endings_structure PASSED
+tests/evals/benchmarks/huggingface/test_hellaswag.py::test_hellaswag_label_within_range PASSED
+tests/evals/benchmarks/huggingface/test_hotpotqa.py::test_hotpotqa_benchmark PASSED
+tests/evals/benchmarks/huggingface/test_hotpotqa.py::test_hotpotqa_query_response_context_extractors PASSED
+tests/evals/benchmarks/huggingface/test_hotpotqa.py::test_hotpotqa_no_context PASSED
+tests/evals/benchmarks/huggingface/test_hotpotqa.py::test_hotpotqa_empty_context PASSED
+tests/evals/benchmarks/huggingface/test_hotpotqa.py::test_hotpotqa_missing_context_key PASSED
+tests/evals/benchmarks/huggingface/test_hotpotqa.py::test_huggingface_evals_extra_missing PASSED
+tests/evals/benchmarks/huggingface/test_mixin.py::test_hf_mixin PASSED
+tests/evals/benchmarks/huggingface/test_mixin.py::test_hf_streaming PASSED
+tests/evals/benchmarks/huggingface/test_mixin.py::test_hf_convert_to_streaming PASSED
+tests/evals/benchmarks/huggingface/test_mixin.py::test_hf_mixin_raises_error_if_load_dataset_fails PASSED
+tests/evals/benchmarks/huggingface/test_mixin.py::test_hf_mixin_raises_error_if_num_examples_if_no_listed_splits DatasetInfo()
+PASSED
+tests/evals/benchmarks/huggingface/test_mixin.py::test_hf_mixin_raises_error_if_num_examples_if_splits_does_not_contain_test DatasetInfo(splits={'train': SplitInfo(name='train', num_examples=3)})
+PASSED
+tests/evals/benchmarks/huggingface/test_mmlu.py::test_mmlu_benchmark PASSED
+tests/evals/benchmarks/huggingface/test_mmlu.py::test_mmlu_query_response_context_extractors PASSED
+tests/evals/benchmarks/huggingface/test_mmlu.py::test_mmlu_prompt_template_override PASSED
+tests/evals/benchmarks/huggingface/test_mmlu.py::test_huggingface_evals_extra_missing PASSED
+tests/evals/benchmarks/huggingface/test_natural_questions.py::test_natural_questions_benchmark PASSED
+tests/evals/benchmarks/huggingface/test_natural_questions.py::test_natural_questions_short_answer PASSED
+tests/evals/benchmarks/huggingface/test_natural_questions.py::test_natural_questions_multiple_short_answers PASSED
+tests/evals/benchmarks/huggingface/test_natural_questions.py::test_natural_questions_yes_no_answer PASSED
+tests/evals/benchmarks/huggingface/test_natural_questions.py::test_natural_questions_no_answer PASSED
+tests/evals/benchmarks/huggingface/test_natural_questions.py::test_natural_questions_long_answer_only PASSED
+tests/evals/benchmarks/huggingface/test_natural_questions.py::test_natural_questions_no_annotations PASSED
+tests/evals/benchmarks/huggingface/test_natural_questions.py::test_natural_questions_missing_fields PASSED
+tests/evals/benchmarks/huggingface/test_natural_questions.py::test_huggingface_evals_extra_missing PASSED
+tests/evals/benchmarks/huggingface/test_pubmedqa.py::test_pubmedqa_benchmark PASSED
+tests/evals/benchmarks/huggingface/test_pubmedqa.py::test_pubmedqa_query_response_context_extractors PASSED
+tests/evals/benchmarks/huggingface/test_pubmedqa.py::test_pubmedqa_context_fallback PASSED
+tests/evals/benchmarks/huggingface/test_pubmedqa.py::test_pubmedqa_context_is_string PASSED
+tests/evals/benchmarks/huggingface/test_pubmedqa.py::test_pubmedqa_different_response_types PASSED
+tests/evals/benchmarks/huggingface/test_pubmedqa.py::test_pubmedqa_context_unexpected_type PASSED
+tests/evals/benchmarks/huggingface/test_pubmedqa.py::test_huggingface_evals_extra_missing PASSED
+tests/evals/benchmarks/huggingface/test_squad_v2.py::test_squad_v2_benchmark PASSED
+tests/evals/benchmarks/huggingface/test_squad_v2.py::test_squad_v2_answerable_question PASSED
+tests/evals/benchmarks/huggingface/test_squad_v2.py::test_squad_v2_unanswerable_question PASSED
+tests/evals/benchmarks/huggingface/test_squad_v2.py::test_squad_v2_missing_answers_field PASSED
+tests/evals/benchmarks/huggingface/test_squad_v2.py::test_huggingface_evals_extra_missing PASSED
+tests/evals/benchmarks/huggingface/test_utils.py::test_check_raises_error PASSED
+tests/evals/benchmarks/test_base.py::test_sequence_interface PASSED
+tests/evals/benchmarks/test_base.py::test_get_example_raises_exception PASSED
+tests/evals/benchmarks/test_benchmarker.py::test_benchmarker_avg PASSED
+tests/evals/benchmarks/test_benchmarker.py::test_benchmarker_sum PASSED
+tests/evals/benchmarks/test_benchmarker.py::test_benchmarker_min PASSED
+tests/evals/benchmarks/test_benchmarker.py::test_benchmarker_max PASSED
+tests/evals/benchmarks/test_benchmarker.py::test_benchmarker_num_examples PASSED
+tests/evals/benchmarks/test_benchmarker.py::test_benchmarker_min_reversed PASSED
+tests/evals/benchmarks/test_benchmarker.py::test_benchmarker_max_reversed PASSED
+tests/evals/benchmarks/test_benchmarker.py::test_benchmarker_with_streaming_avg PASSED
+tests/evals/benchmarks/test_benchmarker.py::test_benchmarker_save_evaluations PASSED
+tests/evals/benchmarks/test_utils.py::test_load_evaluations PASSED
+tests/evals/benchmarks/test_utils.py::test_load_evaluations_raises_error_file_not_found PASSED
+tests/evals/metrics/test_base.py::test_metric_call PASSED
+tests/evals/metrics/test_exact_match.py::test_exact_match[match] PASSED
+tests/evals/metrics/test_exact_match.py::test_exact_match[match case insensitive] PASSED
+tests/evals/metrics/test_exact_match.py::test_exact_match[not match] PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_init_flower_client PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_flower_client_get_weights PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_flower_client_set_weights PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_flower_client_get_weights_peft PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_flower_client_set_weights_peft PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_flower_client_fit PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_flower_client_evaluate PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_init_from_trainer_tester PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_invoking_server_without_strategy_and_net_param_raises PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_invoking_server PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_huggingface_extra_missing_fltask PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_huggingface_extra_missing_fltask_bundle PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_invoking_server_using_defaults PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_invoking_client_without_net_param_raises PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_creating_fl_task_with_undecorated_trainer_raises_error PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_creating_fl_task_with_undecorated_tested_raises_error PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_creating_fl_task_with_mismatched_net_params_raises_warning PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_init_fl_task_with_mismatched_net_params_raises_warning PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_init_fl_task_with_mismatched_net_param_type_raises_error_i PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_init_fl_task_with_mismatched_net_param_type_raises_error_ii PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_fl_task_methods_not_implemented PASSED
+tests/fl_tasks/huggingface/test_huggingface_fltask.py::test_private_get_weights_raises_error_with_invalid_net_type PASSED
+tests/fl_tasks/pytorch/test_pytorch_fltask.py::test_init_flower_client PASSED
+tests/fl_tasks/pytorch/test_pytorch_fltask.py::test_flower_client_get_weights PASSED
+tests/fl_tasks/pytorch/test_pytorch_fltask.py::test_flower_client_set_weights PASSED
+tests/fl_tasks/pytorch/test_pytorch_fltask.py::test_flower_client_fit PASSED
+tests/fl_tasks/pytorch/test_pytorch_fltask.py::test_flower_client_evaluate PASSED
+tests/fl_tasks/pytorch/test_pytorch_fltask.py::test_init_from_trainer_tester PASSED
+tests/fl_tasks/pytorch/test_pytorch_fltask.py::test_invoking_server_without_strategy_and_net_param_raises PASSED
+tests/fl_tasks/pytorch/test_pytorch_fltask.py::test_invoking_server PASSED
+tests/fl_tasks/pytorch/test_pytorch_fltask.py::test_invoking_server_using_defaults PASSED
+tests/fl_tasks/pytorch/test_pytorch_fltask.py::test_invoking_client_without_net_param_raises PASSED
+tests/fl_tasks/pytorch/test_pytorch_fltask.py::test_creating_fl_task_with_mismatched_net_params_raises_warning PASSED
+tests/fl_tasks/pytorch/test_pytorch_fltask.py::test_init_fl_task_with_mismatched_net_params_raises_warning PASSED
+tests/generators/mixins/test_audio_mixin.py::test_audio_mixin PASSED
+tests/generators/mixins/test_audio_mixin.py::test_audio_mixin_fails_validation PASSED
+tests/generators/mixins/test_image_mixin.py::test_mixin PASSED
+tests/generators/mixins/test_image_mixin.py::test_mixin_fails_validation PASSED
+tests/generators/mixins/test_video_mixin.py::test_video_mixin PASSED
+tests/generators/mixins/test_video_mixin.py::test_video_mixin_fails_validation PASSED
+tests/generators/test_base.py::test_generate PASSED
+tests/generators/test_base.py::test_complete PASSED
+tests/generators/test_base.py::test_compute_target_sequence_proba PASSED
+tests/generators/test_hf_multimodal_model.py::test_hf_multimodal_generator_init PASSED
+tests/generators/test_hf_multimodal_model.py::test_pack_messages_batch_mismatch_raises PASSED
+tests/generators/test_hf_multimodal_model.py::test_pack_messages_single_and_batch PASSED
+tests/generators/test_hf_multimodal_model.py::test_generate_returns_batch PASSED
+tests/generators/test_hf_multimodal_model.py::test_to_query_and_to_context_types PASSED
+tests/generators/test_hf_multimodal_model.py::test_compute_target_sequence_proba_with_modalities PASSED
+tests/generators/test_hf_multimodal_model.py::test_pack_messages_with_ndarray_inputs PASSED
+tests/generators/test_hf_multimodal_model.py::test_generate_and_complete PASSED
+tests/generators/test_hf_multimodal_model.py::test_prompt_template_setter PASSED
+tests/generators/test_hf_multimodal_model.py::test_compute_target_sequence_proba PASSED
+tests/generators/test_hf_multimodal_model.py::test_model_property_and_tokenizer PASSED
+tests/generators/test_hf_multimodal_model.py::test_tokenizer_returns_processor_tokenizer PASSED
+tests/generators/test_hf_multimodal_model.py::test_tokenizer_returns_processor_if_encode PASSED
+tests/generators/test_hf_multimodal_model.py::test_tokenizer_raises_if_neither_tokenizer_nor_encode PASSED
+tests/generators/test_hf_multimodal_model.py::test_processor_property PASSED
+tests/generators/test_hf_multimodal_model.py::test_prompt_template_property PASSED
+tests/generators/test_hf_multimodal_model.py::test_compute_target_sequence_proba_ndarray_image PASSED
+tests/generators/test_hf_multimodal_model.py::test_complete_raises_generatorerror_on_bad_batch_decode PASSED
+tests/generators/test_hf_multimodal_model.py::test_compute_target_sequence_proba_raises_on_missing_logits[model_output0] PASSED
+tests/generators/test_hf_multimodal_model.py::test_compute_target_sequence_proba_raises_on_missing_logits[model_output1] PASSED
+tests/generators/test_hf_multimodal_model.py::test_lazy_loading_model PASSED
+tests/generators/test_hf_multimodal_model.py::test_detect_model_class_all_branches PASSED
+tests/generators/test_hf_peft.py::test_hf_peft_generator_class PASSED
+tests/generators/test_hf_peft.py::test_hf_peft_generator_class_init_delayed_load PASSED
+tests/generators/test_hf_peft.py::test_hf_peft_generator_class_init PASSED
+tests/generators/test_hf_peft.py::test_hf_pretrained_generator_class_init_no_load PASSED
+tests/generators/test_hf_peft.py::test_hf_peft_load_model_from_hf PASSED
+tests/generators/test_hf_peft.py::test_generate PASSED
+tests/generators/test_hf_peft.py::test_compute_target_sequence_proba PASSED
+tests/generators/test_hf_peft.py::test_huggingface_extra_missing PASSED
+tests/generators/test_hf_peft.py::test_prompt_setter PASSED
+tests/generators/test_hf_pretrained.py::test_hf_pretrained_generator_class PASSED
+tests/generators/test_hf_pretrained.py::test_hf_pretrained_generator_class_init_delayed_load PASSED
+tests/generators/test_hf_pretrained.py::test_hf_pretrained_generator_class_init PASSED
+tests/generators/test_hf_pretrained.py::test_hf_pretrained_generator_class_init_no_load PASSED
+tests/generators/test_hf_pretrained.py::test_hf_pretrained_load_model_from_hf PASSED
+tests/generators/test_hf_pretrained.py::test_generate PASSED
+tests/generators/test_hf_pretrained.py::test_generate_raises_error_with_query_context_length_mismatch PASSED
+tests/generators/test_hf_pretrained.py::test_compute_target_sequence_proba PASSED
+tests/generators/test_hf_pretrained.py::test_huggingface_extra_missing PASSED
+tests/generators/test_hf_pretrained.py::test_prompt_setter PASSED
+tests/generators/test_hf_utils.py::test_check_raises_error PASSED
+tests/generators/test_unsloth_fast_model.py::test_unsloth_pretrained_generator_class PASSED
+tests/generators/test_unsloth_fast_model.py::test_unsloth_pretrained_generator_class_init_delayed_load PASSED
+tests/generators/test_unsloth_fast_model.py::test_unsloth_pretrained_generator_class_init PASSED
+tests/generators/test_unsloth_fast_model.py::test_unsloth_load_model_and_tokenizer PASSED
+tests/generators/test_unsloth_fast_model.py::test_prompt_setter PASSED
+tests/generators/test_unsloth_fast_model.py::test_unsloth_model_and_tokenizer_setter PASSED
+tests/generators/test_unsloth_fast_model.py::test_to_peft PASSED
+tests/generators/test_unsloth_fast_model.py::test_to_peft_raises_error_if_already_peft PASSED
+tests/generators/test_unsloth_fast_model.py::test_private_get_peft_model PASSED
+tests/generators/test_unsloth_fast_model.py::test_private_get_peft_model_adjusts_dtypes_if_necessary PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_unsloth_multimodal_generator_init PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_pack_messages_batch_mismatch_raises PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_pack_messages_single_and_batch PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_generate_returns_batch PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_to_query_and_to_context_types PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_pack_messages_with_ndarray_inputs PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_generate_and_complete PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_complete_with_list_of_prompts PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_prompt_template_setter PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_compute_target_sequence_proba PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_model_property_and_tokenizer PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_tokenizer_returns_processor_tokenizer PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_tokenizer_returns_processor_if_encode PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_tokenizer_raises_if_neither_tokenizer_nor_encode PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_processor_property PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_prompt_template_property PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_compute_target_sequence_proba_ndarray_image PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_generate_raises_generatorerror_on_bad_batch_decode PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_compute_target_sequence_proba_raises_on_missing_logits[model_output0] PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_compute_target_sequence_proba_raises_on_missing_logits[model_output1] PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_lazy_loading_model PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_load_model_from_unsloth_actual_implementation PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_type_checking_import_path PASSED
+tests/generators/test_unsloth_fast_multimodal_model.py::test_pack_messages_converts_ndarray_to_pil PASSED
+tests/generators/test_unsloth_utils.py::test_check_raises_error PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_source_stdio.py::test_source_init PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_source_stdio.py::test_source_init_with_fluent_style PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_source_stdio.py::test_source_custom_convert PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_source_stdio.py::test_source_default_convert PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_source_stdio.py::test_source_default_convert_raises_error PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_source_stdio.py::test_mutate_server_params PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_source_streamable_http.py::test_source_init PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_source_streamable_http.py::test_source_init_with_fluent_style PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_source_streamable_http.py::test_source_custom_convert PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_source_streamable_http.py::test_source_default_convert PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_source_streamable_http.py::test_source_default_convert_raises_error PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_mcp_knowledge_store_class PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_mcp_knowledge_store_init PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_mcp_knowledge_store_retrieve_streamable_http PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_mcp_knowledge_store_retrieve_stdio PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_mcp_knowledge_store_retrieve_with_reranker PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_add_unsupported_source_type_raises_error PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_add_source_raises_error_with_existing_name PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_load_node_raises_not_implemented_error PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_load_nodes_raises_not_implemented_error PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_delete_node_raises_not_implemented_error PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_clear_raises_not_implemented_error PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_count_raises_not_implemented_error PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_persist_raises_not_implemented_error PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_load_raises_not_implemented_error PASSED
+tests/knowledge_stores/no_encode/mcp/test_mcp_store.py::test_batch_retrieve_raises_not_implemented_error PASSED
+tests/knowledge_stores/no_encode/test_base.py::test_base_abstract_attr PASSED
+tests/knowledge_stores/no_encode/test_base.py::test_base_async_abstract_attr PASSED
+tests/knowledge_stores/no_encode/test_base.py::test_base_async_load_nodes PASSED
+tests/knowledge_stores/no_encode/test_base.py::test_to_sync_methods PASSED
+tests/knowledge_stores/test_base.py::test_base_abstract_attr PASSED
+tests/knowledge_stores/test_base.py::test_base_async_abstract_attr PASSED
+tests/knowledge_stores/test_base.py::test_base_async_load_nodes PASSED
+tests/knowledge_stores/test_base.py::test_to_sync_methods PASSED
+tests/knowledge_stores/test_in_memory.py::test_in_memory_knowledge_store_class PASSED
+tests/knowledge_stores/test_in_memory.py::test_in_memory_knowledge_store_init PASSED
+tests/knowledge_stores/test_in_memory.py::test_from_nodes PASSED
+tests/knowledge_stores/test_in_memory.py::test_delete_node 3
+PASSED
+tests/knowledge_stores/test_in_memory.py::test_delete_node_returns_false PASSED
+tests/knowledge_stores/test_in_memory.py::test_load_node PASSED
+tests/knowledge_stores/test_in_memory.py::test_load_nodes PASSED
+tests/knowledge_stores/test_in_memory.py::test_load_and_offload_nodes[[1.0, 1.0, 1.0]] 3
+PASSED
+tests/knowledge_stores/test_in_memory.py::test_load_and_offload_nodes[[0.5, 0.0, 0.0]] 3
+PASSED
+tests/knowledge_stores/test_in_memory.py::test_clear PASSED
+tests/knowledge_stores/test_in_memory.py::test_retrieve[[1.0, 1.0, 1.0]] PASSED
+tests/knowledge_stores/test_in_memory.py::test_retrieve[[0.5, 0.0, 0.0]] PASSED
+tests/knowledge_stores/test_in_memory.py::test_persist PASSED
+tests/knowledge_stores/test_in_memory.py::test_load PASSED
+tests/knowledge_stores/test_in_memory.py::test_load_with_missing_file_raises_error PASSED
+tests/knowledge_stores/test_in_memory.py::test_persist_overwrite PASSED
+tests/knowledge_stores/test_in_memory.py::test_batch_retrieve_raises_error PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_in_memory_knowledge_store_class PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_in_memory_knowledge_store_init PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_from_nodes PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_delete_node 3
+PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_delete_node_returns_false PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_load_node PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_load_nodes PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_clear PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_retrieve[[1.0, 1.0, 1.0]] PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_retrieve[[0.5, 0.0, 0.0]] PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_persist PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_load PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_load_with_missing_file_raises_error PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_persist_overwrite PASSED
+tests/knowledge_stores/test_in_memory_managed.py::test_batch_retrieve_raises_error PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_text_knowledge_node_init PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_text_knowledge_node_init_raises_validation_error PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_image_knowledge_node_init PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_image_knowledge_node_init_raises_validation_error PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_multimodal_knowledge_node_init PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_multimodal_knowledge_node_init_raises_validation_error_missing_text PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_multimodal_knowledge_node_init_raises_validation_error_missing_image PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_get_content[node0-expected_content0] PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_get_content[node1-expected_content1] PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_get_content[node2-expected_content2] PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_serialize_metadata PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_deserialize_metadata PASSED
+tests/knowledge_stores/test_knowledge_node.py::test_deserialize_metadata_when_empty PASSED
+tests/knowledge_stores/test_qdrant.py::test_init PASSED
+tests/knowledge_stores/test_qdrant.py::test_init_in_memory PASSED
+tests/knowledge_stores/test_qdrant.py::test_init_raises_error_if_qdrant_extra_is_missing_parent_import PASSED
+tests/knowledge_stores/test_qdrant.py::test_init_raises_error_if_qdrant_extra_is_missing PASSED
+tests/knowledge_stores/test_qdrant.py::test_get_qdrant_client PASSED
+tests/knowledge_stores/test_qdrant.py::test_get_qdrant_client_ssl PASSED
+tests/knowledge_stores/test_qdrant.py::test_get_qdrant_client_error_at_teardown_throws_warning PASSED
+tests/knowledge_stores/test_qdrant.py::test_load_node PASSED
+tests/knowledge_stores/test_qdrant.py::test_load_node_raises_error PASSED
+tests/knowledge_stores/test_qdrant.py::test_load_nodes PASSED
+tests/knowledge_stores/test_qdrant.py::test_load_nodes_raises_error PASSED
+tests/knowledge_stores/test_qdrant.py::test_private_ensure_collection_exists PASSED
+tests/knowledge_stores/test_qdrant.py::test_private_ensure_collection_exists_raises_not_found PASSED
+tests/knowledge_stores/test_qdrant.py::test_private_create_collection PASSED
+tests/knowledge_stores/test_qdrant.py::test_private_create_collection_raises_invalid_distance_error PASSED
+tests/knowledge_stores/test_qdrant.py::test_private_create_collection_raises_qdrant_error PASSED
+tests/knowledge_stores/test_qdrant.py::test_retrieve PASSED
+tests/knowledge_stores/test_qdrant.py::test_retrieve_raises_error PASSED
+tests/knowledge_stores/test_qdrant.py::test_batch_retrieve PASSED
+tests/knowledge_stores/test_qdrant.py::test_batch_retrieve_raises_error PASSED
+tests/knowledge_stores/test_qdrant.py::test_persist_raises_error PASSED
+tests/knowledge_stores/test_qdrant.py::test_load_raises_error PASSED
+tests/knowledge_stores/test_qdrant.py::test_delete_node PASSED
+tests/knowledge_stores/test_qdrant.py::test_delete_node_raises_error PASSED
+tests/knowledge_stores/test_qdrant.py::test_clear PASSED
+tests/knowledge_stores/test_qdrant.py::test_clear_raises_error PASSED
+tests/knowledge_stores/test_qdrant.py::test_count PASSED
+tests/knowledge_stores/test_qdrant.py::test_count_raises_error PASSED
+tests/knowledge_stores/test_qdrant.py::test_private_check_if_collection_exists_otherwise_create_one PASSED
+tests/knowledge_stores/test_qdrant.py::test_private_check_if_collection_exists_otherwise_create_one_raises_error PASSED
+tests/knowledge_stores/test_qdrant.py::test_get_qdrant_client_raises_warning_if_node_has_none_embedding PASSED
+tests/knowledge_stores/test_qdrant.py::testconvert_knowledge_node_to_qdrant_point_raises_error_none_embedding PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_init PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_init_in_memory PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_init_raises_error_if_qdrant_extra_is_missing_parent_import PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_init_raises_error_if_qdrant_extra_is_missing PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_get_qdrant_client PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_get_qdrant_client_ssl PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_get_qdrant_client_error_at_teardown_throws_warning PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_load_node PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_load_node_raises_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_load_nodes PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_load_nodes_raises_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_private_ensure_collection_exists PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_private_ensure_collection_exists_raises_not_found PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_private_create_collection PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_private_create_collection_raises_invalid_distance_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_private_create_collection_raises_qdrant_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_retrieve PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_retrieve_raises_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_batch_retrieve PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_batch_retrieve_raises_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_persist_raises_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_load_raises_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_count_raises_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_delete_node PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_delete_node_raises_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_clear PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_clear_raises_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_get_count PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_get_count_raises_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_private_check_if_collection_exists_otherwise_create_one PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_private_check_if_collection_exists_otherwise_create_one_raises_error PASSED
+tests/knowledge_stores/test_qdrant_async.py::test_get_qdrant_client_raises_warning_if_node_has_none_embedding PASSED
+tests/loss/pytorch/test_lsr.py::test_lsr_loss_init PASSED
+tests/loss/pytorch/test_lsr.py::test_invalid_reduction_raises_error PASSED
+tests/loss/pytorch/test_lsr.py::test_lsr_forward_with_mocks[mean-10.5] PASSED
+tests/loss/pytorch/test_lsr.py::test_lsr_forward_with_mocks[sum-21] PASSED
+tests/loss/pytorch/test_lsr.py::test_lsr_expected_output_with_sample_data PASSED
+tests/rag_system/test_async_no_encode_rag_system.py::test_rag_system_init PASSED
+tests/rag_system/test_async_no_encode_rag_system.py::test_rag_system_query PASSED
+tests/rag_system/test_async_no_encode_rag_system.py::test_rag_system_batch_query PASSED
+tests/rag_system/test_async_no_encode_rag_system.py::test_rag_system_generate PASSED
+tests/rag_system/test_async_no_encode_rag_system.py::test_rag_system_batch_generate PASSED
+tests/rag_system/test_async_no_encode_rag_system.py::test_rag_system_batch_generate_list_length_mismatch_error PASSED
+tests/rag_system/test_async_no_encode_rag_system.py::test_rag_system_format_context PASSED
+tests/rag_system/test_async_no_encode_rag_system.py::test_rag_system_batch_retrieve[dummy_store] PASSED
+tests/rag_system/test_async_no_encode_rag_system.py::test_rag_system_batch_retrieve[dummy_store_no_batch_retrieval] PASSED
+tests/rag_system/test_async_no_encode_rag_system.py::test_bridging_no_encode_rag_system PASSED
+tests/rag_system/test_async_no_encode_rag_system.py::test_rag_system_to_sync PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_init PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_with_dual_encoder_init PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_query PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_batch_query PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_retrieve[encode_result0] PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_retrieve[encode_result1] PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_batch_retrieve[encode_result0-dummy_store] PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_batch_retrieve[encode_result0-dummy_store_no_batch_retrieval] PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_batch_retrieve[encode_result1-dummy_store] PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_batch_retrieve[encode_result1-dummy_store_no_batch_retrieval] PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_retrieve_raises_error_invalid_encode_result PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_batch_retrieve_raises_error_invalid_encode_result[dummy_store] PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_batch_retrieve_raises_error_invalid_encode_result[dummy_store_no_batch_retrieval] PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_generate PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_batch_generate PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_batch_generate_list_length_mismatch_error PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_format_context PASSED
+tests/rag_system/test_async_rag_system.py::test_rag_system_to_sync PASSED
+tests/rag_system/test_no_encode_rag_system.py::test_rag_system_init PASSED
+tests/rag_system/test_no_encode_rag_system.py::test_rag_system_query PASSED
+tests/rag_system/test_no_encode_rag_system.py::test_rag_system_batch_query PASSED
+tests/rag_system/test_no_encode_rag_system.py::test_rag_system_generate PASSED
+tests/rag_system/test_no_encode_rag_system.py::test_rag_system_batch_generate PASSED
+tests/rag_system/test_no_encode_rag_system.py::test_rag_system_batch_generate_list_length_mismatch_error PASSED
+tests/rag_system/test_no_encode_rag_system.py::test_rag_system_format_context PASSED
+tests/rag_system/test_no_encode_rag_system.py::test_rag_system_batch_retrieve[dummy_store] PASSED
+tests/rag_system/test_no_encode_rag_system.py::test_rag_system_batch_retrieve[dummy_store_no_batch_retrieval] PASSED
+tests/rag_system/test_no_encode_rag_system.py::test_bridging_no_encode_rag_system PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_init PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_with_dual_encoder_init PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_query PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_batch_query PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_retrieve[encode_result0] PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_retrieve[encode_result1] PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_batch_retrieve[encode_result0] PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_batch_retrieve[encode_result1] PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_retrieve_raises_error_with_invalid_encode_result PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_batch_retrieve_raises_error_with_invalid_encode_result PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_generate PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_batch_generate PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_batch_generate_list_length_mismatch_error PASSED
+tests/rag_system/test_rag_system.py::test_rag_system_format_context PASSED
+tests/rag_system/test_source_node.py::test_getattr_sourcenode_wraps_knowledge_node PASSED
+tests/retrievers/mixins/test_audio_retriever_mixin.py::test_audio_retriever_mixin PASSED
+tests/retrievers/mixins/test_audio_retriever_mixin.py::test_audio_retriever_mixin_fails_validation PASSED
+tests/retrievers/mixins/test_image_retriever_mixin.py::test_image_retriever_mixin PASSED
+tests/retrievers/mixins/test_image_retriever_mixin.py::test_image_retriever_mixin_fails_validation PASSED
+tests/retrievers/mixins/test_video_retriever_mixin.py::test_video_retriever_mixin PASSED
+tests/retrievers/mixins/test_video_retriever_mixin.py::test_video_retriever_mixin_fails_validation PASSED
+tests/retrievers/test_base.py::test_base_abstract_attr PASSED
+tests/retrievers/test_base.py::test_base_encode PASSED
+tests/retrievers/test_hf_sentence_transformer.py::test_hf_sentence_transformer_retriever_class PASSED
+tests/retrievers/test_hf_sentence_transformer.py::test_hf_sentence_transformer_retriever_class_init_delayed_load PASSED
+tests/retrievers/test_hf_sentence_transformer.py::test_hf_sentence_transformer_retriever_class_init_delayed_dual_encoder_load PASSED
+tests/retrievers/test_hf_sentence_transformer.py::test_hf_sentence_transformer_retriever_class_init_dual_encoder PASSED
+tests/retrievers/test_hf_sentence_transformer.py::test_hf_sentence_transformer_retriever_class_init_encoder PASSED
+tests/retrievers/test_hf_sentence_transformer.py::test_load_model_from_hf_constructs_sentence_transformer_obj PASSED
+tests/retrievers/test_hf_sentence_transformer.py::test_load_model_from_hf_constructs_sentence_transformer_obj_dual PASSED
+tests/retrievers/test_hf_sentence_transformer.py::test_load_model_from_hf_raises_invalid_type_error PASSED
+tests/retrievers/test_hf_sentence_transformer.py::test_encode_query PASSED
+tests/retrievers/test_hf_sentence_transformer.py::test_huggingface_extra_missing PASSED
+tests/tokenizers/test_base.py::test_base PASSED
+tests/tokenizers/test_hf_pretrained.py::test_hf_pretrained_generator_class PASSED
+tests/tokenizers/test_hf_pretrained.py::test_hf_pretrained_tokenizer_class_init_delayed_load PASSED
+tests/tokenizers/test_hf_pretrained.py::test_hf_pretrained_generator_class_init PASSED
+tests/tokenizers/test_hf_pretrained.py::test_hf_pretrained_generator_class_init_no_load PASSED
+tests/tokenizers/test_hf_pretrained.py::test_hf_pretrained_load_model_from_hf PASSED
+tests/tokenizers/test_hf_pretrained.py::test_encode PASSED
+tests/tokenizers/test_hf_pretrained.py::test_decode PASSED
+tests/tokenizers/test_hf_pretrained.py::test_huggingface_extra_missing PASSED
+tests/tokenizers/test_hf_pretrained.py::test_flatten_lists_if_necessary_within_encode PASSED
+tests/tokenizers/test_hf_pretrained.py::test_encode_raises_error_if_input_ids_is_empty PASSED
+tests/tokenizers/test_hf_pretrained.py::test_encode_raises_error_if_input_ids_has_unexpected_shape PASSED
+tests/tokenizers/test_unsloth_pretrained.py::test_hf_pretrained_generator_class PASSED
+tests/tokenizers/test_unsloth_pretrained.py::test_unsloth_extra_missing PASSED
+tests/trainer_configs/test_pytorch_trainer_config.py::test_init PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_pt_rag_trainer_class PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_init PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_init_raises_unspecified_generator_trainer_error PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_init_raises_unspecified_retriever_trainer_error PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_huggingface_extra_missing PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_train_retriever PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_train_generator PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_get_federated_task_retriever PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_get_federated_task_generator PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_invalid_mode_raises_error PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_get_federated_task_raises_unspecified_generator_error PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_private_get_federated_task_raises_unspecified_retriever_error PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_prepare_generator_for_training PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_prepare_retriever_for_training PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_private_train_retriever_raises_unspecified_retriever_error PASSED
+tests/trainer_managers/huggingface/test_hf_trainer_manager.py::test_private_train_generator_raises_unspecified_generator_error PASSED
+tests/trainer_managers/test_base.py::test_init PASSED
+tests/trainer_managers/test_base.py::test_invalid_mode_raises_error PASSED
+tests/trainer_managers/test_base.py::test_inconsistent_rag_systems_raises_error PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_pt_rag_trainer_class PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_init PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_train_retriever PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_init_raises_unspecified_retriever_trainer_error PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_train_generator PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_init_raises_unspecified_generator_trainer_error PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_get_federated_task_retriever PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_get_federated_task_generator PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_get_federated_task_raises_unspecified_generator_error PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_private_get_federated_task_raises_unspecified_retriever_error PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_invalid_mode_raises_error PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_prepare_generator_for_training PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_prepare_retriever_for_training PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_private_train_retriever_raises_unspecified_retriever_error PASSED
+tests/trainer_managers/test_pytorch_trainer_manager.py::test_private_train_generator_raises_unspecified_generator_error PASSED
+tests/trainers/huggingface/test_hf_lsr.py::test_init PASSED
+tests/trainers/huggingface/test_hf_lsr.py::test_invalid_retriever_raises_error PASSED
+tests/trainers/huggingface/test_hf_lsr.py::test_huggingface_extra_missing PASSED
+tests/trainers/huggingface/test_hf_lsr.py::test_train PASSED
+tests/trainers/huggingface/test_hf_lsr.py::test_evaluate PASSED
+tests/trainers/huggingface/test_hf_lsr.py::test_lsr_sentence_transformer_training_missing_extra_error PASSED
+tests/trainers/huggingface/test_hf_lsr.py::test_lsr_sentence_transformer_raises_invalid_loss_error PASSED
+tests/trainers/huggingface/test_hf_lsr.py::test_lsr_sentence_transformer_raises_invalid_collator_error PASSED
+tests/trainers/huggingface/test_hf_lsr.py::test_lsr_sentence_transformer_compute_loss PASSED
+tests/trainers/huggingface/test_hf_lsr.py::test_lsr_sentence_transformer_collect_scores PASSED
+tests/trainers/huggingface/test_hf_lsr.py::test_lsr_sentence_transformer_collect_scores_raises_missing_input_tensor_error PASSED
+tests/trainers/huggingface/test_hf_mixin.py::test_hf_trainer_init PASSED
+tests/trainers/huggingface/test_hf_mixin.py::test_huggingface_extra_missing PASSED
+tests/trainers/huggingface/test_hf_ralt.py::test_init PASSED
+tests/trainers/huggingface/test_hf_ralt.py::test_init_raises_invalid_rag_system_error PASSED
+tests/trainers/huggingface/test_hf_ralt.py::test_huggingface_extra_missing PASSED
+tests/trainers/huggingface/test_hf_ralt.py::test_train PASSED
+tests/trainers/huggingface/test_hf_ralt.py::test_evaluate PASSED
+tests/trainers/pytorch/test_pt_mixin.py::test_pt_trainer_init PASSED
+tests/trainers/pytorch/test_pt_mixin.py::test_pt_retriever_trainer PASSED
+tests/trainers/pytorch/test_pt_mixin.py::test_pt_trainer_init_raises_inconsistent_dataset_error PASSED
+tests/trainers/test_base.py::test_init PASSED
+tests/trainers/test_base.py::test_retriever_trainer_with_dual_encoder_retriever PASSED
+tests/utils/data/finetuning_datasets/test_hf_dataset.py::test_hf_rag_ft_dataset_init PASSED
+tests/utils/data/finetuning_datasets/test_hf_dataset.py::test_hf_rag_ft_dataset_missing_extra_raises_error PASSED
+tests/utils/data/finetuning_datasets/test_pt_dataset.py::test_pt_rag_ft_dataset_init PASSED
+tests/utils/data/test_functions.py::test_build_finetune_dataset_txt_return PASSED
+tests/utils/data/test_functions.py::test_build_finetune_dataset_pt_return PASSED
+tests/utils/data/test_functions.py::test_build_finetune_dataset_hf_return PASSED
+tests/utils/data/test_functions.py::test_build_finetune_dataset_invalid_return_raises_error PASSED
+tests/utils/test_asyncio.py::test_simple_coroutine_execution PASSED
+tests/utils/test_asyncio.py::test_coroutine_with_default_args PASSED
+tests/utils/test_asyncio.py::test_existing_but_not_running_loop PASSED
+tests/utils/test_asyncio.py::test_nested_asyncio_run_calls PASSED
+tests/utils/test_asyncio.py::test_coroutine_exception_propagation PASSED
+
+=============================== warnings summary ===============================
+src/fed_rag/data_collators/huggingface/lsr.py:16
+  /Users/tanzim_safin/Desktop/fed-rag/src/fed_rag/data_collators/huggingface/lsr.py:16: DeprecationWarning: Importing from 'sentence_transformers.data_collator' is deprecated and will be removed in a future version. Please use 'sentence_transformers.sentence_transformer.data_collator' instead.
+    from sentence_transformers.data_collator import (
+
+tests/fl_tasks/huggingface/test_huggingface_fltask.py: 38 warnings
+  /Users/tanzim_safin/Desktop/fed-rag/src/fed_rag/fl_tasks/huggingface.py:116: PydanticDeprecatedSince211: Accessing the 'model_fields' attribute on the instance is deprecated. Instead, you should access this attribute from the model class. Deprecated in Pydantic V2.11 to be removed in V3.0.
+    if name in self.task_bundle.model_fields:
+
+tests/fl_tasks/huggingface/test_huggingface_fltask.py: 14 warnings
+  /Users/tanzim_safin/Desktop/fed-rag/.venv/lib/python3.11/site-packages/torch/jit/_script.py:365: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+tests/fl_tasks/pytorch/test_pytorch_fltask.py: 29 warnings
+  /Users/tanzim_safin/Desktop/fed-rag/src/fed_rag/fl_tasks/pytorch.py:61: PydanticDeprecatedSince211: Accessing the 'model_fields' attribute on the instance is deprecated. Instead, you should access this attribute from the model class. Deprecated in Pydantic V2.11 to be removed in V3.0.
+    if name in self.task_bundle.model_fields:
+
+tests/knowledge_stores/test_qdrant_async.py::test_get_qdrant_client
+tests/knowledge_stores/test_qdrant_async.py::test_get_qdrant_client_ssl
+  /Users/tanzim_safin/Desktop/fed-rag/src/fed_rag/knowledge_stores/qdrant/asynchronous.py:128: KnowledgeStoreWarning: Unable to close client: object MagicMock can't be used in 'await' expression
+    warnings.warn(
+
+tests/knowledge_stores/test_qdrant_async.py::test_load_nodes
+  /Users/tanzim_safin/Desktop/fed-rag/src/fed_rag/knowledge_stores/qdrant/asynchronous.py:224: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    client.upload_points(
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/rag_system/test_async_rag_system.py::test_rag_system_query
+  /Users/tanzim_safin/Desktop/fed-rag/tests/rag_system/test_async_rag_system.py:108: RuntimeWarning: coroutine 'BaseAsyncKnowledgeStore.load_nodes' was never awaited
+    knowledge_store.load_nodes(nodes=knowledge_nodes)
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+tests/retrievers/test_base.py::test_base_encode
+  /Users/tanzim_safin/Desktop/fed-rag/tests/retrievers/test_base.py:21: UserWarning: The use of `x.T` on tensors of dimension other than 2 to reverse their shape is deprecated and it will throw an error in a future release. Consider `x.mT` to transpose batches of matrices or `x.permute(*torch.arange(x.ndim - 1, -1, -1))` to reverse the dimensions of a tensor. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/aten/src/ATen/native/TensorShape.cpp:4483.)
+    cosine_sim = encoded_ctx @ encoded_query.T
+
+tests/trainer_configs/test_pytorch_trainer_config.py::test_init
+tests/trainer_configs/test_pytorch_trainer_config.py::test_init
+tests/trainer_configs/test_pytorch_trainer_config.py::test_init
+tests/trainer_configs/test_pytorch_trainer_config.py::test_init
+tests/trainer_configs/test_pytorch_trainer_config.py::test_init
+tests/trainer_configs/test_pytorch_trainer_config.py::test_init
+  /Users/tanzim_safin/Desktop/fed-rag/src/fed_rag/base/trainer_config.py:38: PydanticDeprecatedSince211: Accessing the 'model_fields' attribute on the instance is deprecated. Instead, you should access this attribute from the model class. Deprecated in Pydantic V2.11 to be removed in V3.0.
+    if k in self.model_fields:
+
+tests/trainer_configs/test_pytorch_trainer_config.py::test_init
+tests/trainer_configs/test_pytorch_trainer_config.py::test_init
+tests/trainer_configs/test_pytorch_trainer_config.py::test_init
+  /Users/tanzim_safin/Desktop/fed-rag/src/fed_rag/base/trainer_config.py:63: PydanticDeprecatedSince211: Accessing the 'model_fields' attribute on the instance is deprecated. Instead, you should access this attribute from the model class. Deprecated in Pydantic V2.11 to be removed in V3.0.
+    or __name in self.model_fields
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+====================== 668 passed, 96 warnings in 12.37s =======================

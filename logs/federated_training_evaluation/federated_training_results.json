@@ -1,0 +1,67 @@
+{
+  "args": {
+    "num_clients": 2,
+    "num_rounds": 2,
+    "local_epochs": 1,
+    "batch_size": 4,
+    "seed": 0,
+    "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+    "attack": "gradient_flip",
+    "malicious_clients": 1,
+    "poisoning_ratio": 0.35,
+    "noise_std": 0.5,
+    "scale": 2.0,
+    "dataset": "synthetic",
+    "num_examples": 20,
+    "output_dir": "logs/federated_training_evaluation"
+  },
+  "malicious_ids": [
+    1
+  ],
+  "round_records": [
+    {
+      "round": 1,
+      "metrics": {
+        "exact_match": 0.95,
+        "precision": 0.95,
+        "recall": 0.95,
+        "f1": 0.95,
+        "bleu": 0.95,
+        "rouge1": 0.9875,
+        "rouge2": 0.9833333333333334,
+        "rougeL": 0.9875,
+        "semantic_similarity": 0.9961623579263688,
+        "jaccard": 0.95,
+        "edit_distance": 0.05,
+        "normalized_edit_distance": 0.998076923076923,
+        "bigram_overlap": 0.0,
+        "trigram_overlap": 0.0,
+        "query_failure_rate": 0.0,
+        "successful_queries": 20,
+        "failed_queries": 0
+      }
+    },
+    {
+      "round": 2,
+      "metrics": {
+        "exact_match": 0.05,
+        "precision": 0.05,
+        "recall": 0.05,
+        "f1": 0.05,
+        "bleu": 0.05,
+        "rouge1": 0.5375,
+        "rouge2": 0.08333333333333333,
+        "rougeL": 0.5375,
+        "semantic_similarity": 0.5201670452952385,
+        "jaccard": 0.05,
+        "edit_distance": 10.5,
+        "normalized_edit_distance": 0.6500537634408602,
+        "bigram_overlap": 0.0,
+        "trigram_overlap": 0.0,
+        "query_failure_rate": 0.0,
+        "successful_queries": 20,
+        "failed_queries": 0
+      }
+    }
+  ]
+}

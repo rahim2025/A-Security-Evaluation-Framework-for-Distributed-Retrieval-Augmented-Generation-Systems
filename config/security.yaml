@@ -1,0 +1,27 @@
+security:
+  # Adversarial Poisoning Attack
+  enable_attack: false
+  poisoning_ratio: 0.3
+  attack_strategy: 'random'
+  poison_type: 'answer_swap'
+  target_peer_ids: []
+  amplification_factor: 3
+  question_variants: 2
+
+  # Membership Inference Attack
+  enable_membership_inference: true
+  membership_threshold: 0.8
+  membership_top_k: 1
+
+  # Knowledge Base Extraction Attack
+  enable_extraction: false
+  extraction_attacker_peer: null
+  extraction_queries_per_topic: 5
+  extraction_attack_type: 'external'
+  extraction_use_topic_inference: false
+  extraction_use_dataset_questions: false
+
+  # Node Availability Attack (ported from DRAG)
+  enable_node_availability: false
+  node_attack_type: 'node_removal'
+  node_attack_ratio: 0.3

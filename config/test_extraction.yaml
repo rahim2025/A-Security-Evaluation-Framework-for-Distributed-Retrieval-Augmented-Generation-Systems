@@ -1,0 +1,53 @@
+log_level: DEBUG
+
+rag:
+  random_seed: 0
+  log_every_n_steps: 10
+  test_mode: false  # Keep test mode ON for fast testing
+  network_type: DRAG
+  num_peers: 10  # Small network for testing
+  num_peer_attachments: 2
+  search_algorithm: TARW
+  query_confidence_threshold: 0.0  # Accept all responses for extraction
+  num_query_neighbor: 2
+  query_ttl: 4  # Reduced for faster testing
+  filter_out_topic_ratio: 0.0
+  filter_out_qa_ratio: 0.0
+  replication_factor: 1  # Number of peers per topic
+
+# Use Llama 3.2 3B (your actual model)
+llm:
+  base_url: http://localhost:11434
+  name: llama3.2:3b
+  num_ctx: 4096
+
+# Use MMLU dataset
+data:
+  load:
+    path: cais/mmlu
+    name: all
+    split: test
+  task_type: mcqa
+  topic_path: subject
+  question_path: question
+  choices_path: choices
+  answer_path: answer
+  num_samples: 50  # Very limited for testing
+
+# Security settings
+security:
+  enable_attack: false  # Disable poisoning
+  poisoning_ratio: 0.0
+  attack_strategy: random
+  poison_type: answer_swap
+  target_peer_ids: []
+  amplification_factor: 1
+  question_variants: 1
+  
+  # Knowledge Base Extraction Attack
+  enable_extraction: true
+  extraction_attacker_peer: null  # Random target
+  extraction_queries_per_topic: 8  # Limited queries for speed
+  extraction_attack_type: external # external = probing adversary, insider = direct access
+  extraction_use_topic_inference: false
+  extraction_use_dataset_questions: true  # NEW - Use dataset questions (RECOMMENDED)

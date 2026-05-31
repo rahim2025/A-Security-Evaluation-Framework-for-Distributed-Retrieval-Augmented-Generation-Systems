@@ -1,0 +1,30 @@
+{
+  "mmlu": {
+    "score": 0.22600000000000006,
+    "num_examples_used": 500,
+    "num_total_examples": 14042,
+    "metric": "ExactMatchEvaluationMetric",
+    "evaluations_file": "logs/benchmark_results/HuggingFaceMMLU-20260509_092704.jsonl"
+  },
+  "attack_demo": {
+    "summary": {
+      "poisoning_ratio": 0.1,
+      "num_original": 200,
+      "num_poisoned": 20,
+      "mode": "replace",
+      "poison_type": "wrong_answer"
+    },
+    "metrics_clean": {
+      "em": 1.0,
+      "f1": 1.0,
+      "bleu": 1.0,
+      "jaccard": 1.0
+    },
+    "metrics_poisoned": {
+      "em": 0.9,
+      "f1": 0.9,
+      "bleu": 0.9,
+      "jaccard": 0.9
+    }
+  }
+}

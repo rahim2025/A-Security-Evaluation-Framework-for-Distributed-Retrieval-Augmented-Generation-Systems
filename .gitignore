@@ -1,0 +1,52 @@
+# Local development
+venv/
+.venv/
+.ipynb_checkpoints
+.__pycache__
+__pycache__
+dev_notebooks/
+.vscode
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.env
+fed-rag.code-workspace
+.fed_rag/
+
+# docs
+site/
+docs/stylesheets/extra.css.map
+
+# datasets for running examples
+data/
+!src/fed_rag/utils/data
+!tests/utils/data
+
+# HF training artifacts
+tmp_trainer/
+
+# example benchmark results
+.benchmark_results
+
+# example checkpoints
+.checkpoints
+
+# qdrant
+qdrant_storage
+
+# notebooks
+dev_notebooks
+**/rag_federated_learning.py
+
+# trainer outputs
+trainer_output
+unsloth_compiled_cache
+
+# import profile
+# python -X importtime -c "import fed_rag" 2> import_profile.txt
+import_profile.txt
+
+# coverage
+.coverage
+coverage.xml
+htmlcov/
