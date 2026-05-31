@@ -1,0 +1,198 @@
+{
+  "model": "llama3.2:3b",
+  "dataset": "news (heegyu/news-category-dataset)",
+  "num_clients": 20,
+  "attacks": [
+    "poisoning",
+    "node_availability",
+    "extraction",
+    "membership_inference"
+  ],
+  "num_queries": 20,
+  "avg_em": 0.0,
+  "avg_f1": 0.20236059402234644,
+  "avg_bleu": 0.0,
+  "avg_semantic_similarity": 0.4545614396221936,
+  "per_query": [
+    {
+      "query": "RNC Chair: Trump Was Just Making Small Talk When He Asked FBI Head How He Voted",
+      "ground_truth": "\"This is a president who is just getting to know people, and that\u2019s part of those conversations,\u201d said Ronna Romney McDaniel.",
+      "llm_answer": "Ronna Romney McDaniel, chair of the Republican National Committee, defended Donald Trump's conversation with FBI Director Christopher Wray, saying it was just small talk and not a serious inquiry into Wray's voting history.",
+      "em": 0.0,
+      "f1": 0.22641509433962265,
+      "bleu": 0.0,
+      "semantic_similarity": 0.6085200309753418
+    },
+    {
+      "query": "Make Me Laugh",
+      "ground_truth": "If you had to make a list of all the things that made you want to be with the people you have chosen in your life, what would be on it? Is it that they are good-looking, know all the best places to go, are they super smart or really generous, is it physical chemistry?",
+      "llm_answer": "The article explores the various qualities that make someone attractive and desirable as a partner in life, beyond physical appearance or material possessions.",
+      "em": 0.0,
+      "f1": 0.25,
+      "bleu": 0.0,
+      "semantic_similarity": 0.46480095386505127
+    },
+    {
+      "query": "Sure, The Mediterranean Diet Is Good For You. But Have You Tried The Nordic Diet?",
+      "ground_truth": "Over the course of the 26-week trial, 32 people dropped out. Of the drop-outs, nine cited lack of time to participate, six",
+      "llm_answer": "A new study found that participants in a 26-week trial of the Nordic diet experienced significant health benefits, despite some individuals dropping out due to time constraints and other reasons.",
+      "em": 0.0,
+      "f1": 0.21276595744680854,
+      "bleu": 0.0,
+      "semantic_similarity": 0.42572659254074097
+    },
+    {
+      "query": "Fundamentalist Conspiracy Theory: Search for Extraterrestrial Life Demonstrates \"Rebellion Against God\"",
+      "ground_truth": "Do you want conspiracy theorists to create the nation's scientific research agenda? Does it make sense to take their bizarre views seriously?",
+      "llm_answer": "A fundamentalist conspiracy theory claims that the search for extraterrestrial life is a deliberate attempt by scientists to rebel against God and undermine traditional values.",
+      "em": 0.0,
+      "f1": 0.13333333333333333,
+      "bleu": 0.0,
+      "semantic_similarity": 0.565185546875
+    },
+    {
+      "query": "Leading German Far-Right Figure Ditches Party, Converts To Islam",
+      "ground_truth": "The nationalist Alternative for Germany party warns against \"Islamization.\"",
+      "llm_answer": "A prominent figure in the far-right Alternative for Germany party has left the group and converted to Islam, sparking concerns over the potential impact on the party's ideology.",
+      "em": 0.0,
+      "f1": 0.29411764705882354,
+      "bleu": 0.0,
+      "semantic_similarity": 0.6082420945167542
+    },
+    {
+      "query": "Men's Underwear Goes Green",
+      "ground_truth": "If the first thing you put on in the morning was made in an earth-conscious way, wouldn't that make you a bit more earth-conscious, too?",
+      "llm_answer": "A new line of men's underwear has been launched with eco-friendly materials and production methods, aiming to promote sustainability in everyday fashion choices.",
+      "em": 0.0,
+      "f1": 0.08888888888888888,
+      "bleu": 0.0,
+      "semantic_similarity": 0.1250627487897873
+    },
+    {
+      "query": "6 Color Ideas We're Tired Of Seeing In Home Design (PHOTOS)",
+      "ground_truth": "5. Red, White and Black: Some may say it's a classic, but this combo can be a bit jarring in a space. Spaces by Los Angeles",
+      "llm_answer": "The article highlights six color combinations that have become tired and overused in home design, including red, white, and black, which can be jarring in a space.",
+      "em": 0.0,
+      "f1": 0.32653061224489793,
+      "bleu": 0.0,
+      "semantic_similarity": 0.5792844295501709
+    },
+    {
+      "query": "How To Bounce Back From A Sports Injury",
+      "ground_truth": "",
+      "llm_answer": "The article provides guidance and advice on how to recover from a sports injury, including strategies for rehabilitation, pain management, and returning to physical activity safely and effectively.",
+      "em": 0.0,
+      "f1": 0.0,
+      "bleu": 0.0,
+      "semantic_similarity": 0.005364393815398216
+    },
+    {
+      "query": "Dylann Roof Gets Famed Anti-Death Penalty Attorney For Federal Trial",
+      "ground_truth": "David Bruck previously defended Dzhokhar Tsarnaev.",
+      "llm_answer": "Dylann Roof has been assigned a high-profile anti-death penalty attorney, David Bruck, to defend him in his federal trial.",
+      "em": 0.0,
+      "f1": 0.08,
+      "bleu": 0.0,
+      "semantic_similarity": 0.3537982404232025
+    },
+    {
+      "query": "Rescued Baby Fox Can\u2019t Get Enough Belly And Chin Rubs",
+      "ground_truth": "A tiny baby fox is now getting a second chance at life after being abandoned by its mother.",
+      "llm_answer": "A rescued baby fox that was abandoned by its mother is receiving affection and care, particularly enjoying belly and chin rubs, as it gets a second chance at life.",
+      "em": 0.0,
+      "f1": 0.45454545454545453,
+      "bleu": 0.0,
+      "semantic_similarity": 0.7257288098335266
+    },
+    {
+      "query": "U.S. Fears Russia Ramping Up Support For Assad",
+      "ground_truth": "Russia has sent a military advance team to Syria and is taking other steps the United States fears may signal that President",
+      "llm_answer": "The US government believes Russia is increasing its support for Syrian President Bashar al-Assad by sending a military advance team to Syria and taking other actions that may signal a significant escalation of involvement in the conflict.",
+      "em": 0.0,
+      "f1": 0.5614035087719298,
+      "bleu": 0.0,
+      "semantic_similarity": 0.7619157433509827
+    },
+    {
+      "query": "World Will Miss Goal For Universal Education By 50 Years: UN",
+      "ground_truth": "Aid for education needs to increase six-fold to bring quality universal education to all by 2030.",
+      "llm_answer": "The United Nations warns that the world will miss its goal of achieving universal education by 2030 due to a significant shortage of aid required to improve quality and increase access to education globally.",
+      "em": 0.0,
+      "f1": 0.3333333333333333,
+      "bleu": 0.0,
+      "semantic_similarity": 0.5799288153648376
+    },
+    {
+      "query": "This Is How Kimye Celebrated North West's First Birthday",
+      "ground_truth": "",
+      "llm_answer": "Kim Kardashian and Kanye West celebrated their daughter North West's first birthday in style, but details of the celebration remain private.",
+      "em": 0.0,
+      "f1": 0.0,
+      "bleu": 0.0,
+      "semantic_similarity": 0.035244930535554886
+    },
+    {
+      "query": "Steve Bannon: Catholic Church Opposes DACA's End Because It Needs 'Illegal Aliens To Fill The Churches'",
+      "ground_truth": "Bannon, former chief strategist to President Donald Trump, gave his first major interview since being ousted from the White House.",
+      "llm_answer": "Steve Bannon has made a provocative statement in an interview, claiming that the Catholic Church opposes the end of DACA due to its need for \"illegal aliens\" to fill its churches.",
+      "em": 0.0,
+      "f1": 0.08333333333333333,
+      "bleu": 0.0,
+      "semantic_similarity": 0.42100632190704346
+    },
+    {
+      "query": "The 20 Funniest Tweets From Women This Week (Sept. 19-25)",
+      "ground_truth": "\"But does the embarrassing thing that happened twenty years ago think about *me* at 3 a.m.\"",
+      "llm_answer": "The article highlights 20 humorous tweets from women that showcase their witty observations and relatable experiences, often focusing on embarrassing moments or everyday life.",
+      "em": 0.0,
+      "f1": 0.15,
+      "bleu": 0.0,
+      "semantic_similarity": 0.3582278788089752
+    },
+    {
+      "query": "Kids' Diets Need More Whole Grains, Veggies, Seafood (REPORT)",
+      "ground_truth": "The report also gave estimates about changing demographics. By 2050, about half of U.S. children will be Hispanic, Asian",
+      "llm_answer": "A new report emphasizes the importance of incorporating more whole grains, vegetables, and seafood into kids' diets to address growing demographic changes in the US population by 2050.",
+      "em": 0.0,
+      "f1": 0.17777777777777776,
+      "bleu": 0.0,
+      "semantic_similarity": 0.5098097920417786
+    },
+    {
+      "query": "The Cast Of Broadway's 'Miss Saigon' Took A Knee In Solidarity With NFL Players",
+      "ground_truth": "The mostly Asian cast said they \"believe in equality and the right to peaceful protest.\"",
+      "llm_answer": "The predominantly Asian cast of Broadway's 'Miss Saigon' took a knee in solidarity with NFL players protesting racial injustice and police brutality.",
+      "em": 0.0,
+      "f1": 0.2777777777777778,
+      "bleu": 0.0,
+      "semantic_similarity": 0.5323432683944702
+    },
+    {
+      "query": "Will Your Child Grow Up To Be Slim Or Heavy?",
+      "ground_truth": "Families prepared meals with fresh ingredients. Families did outdoor physical activities together. Parents talked to children",
+      "llm_answer": "A new study suggests that a family's lifestyle choices, including healthy eating habits and regular physical activity, can significantly influence their child's weight and body shape in adulthood.",
+      "em": 0.0,
+      "f1": 0.04878048780487805,
+      "bleu": 0.0,
+      "semantic_similarity": 0.44511353969573975
+    },
+    {
+      "query": "Gwyneth Paltrow's Sheer Dress For 'Iron Man 3' Premiere Is A Little Risky (PHOTOS)",
+      "ground_truth": "Of course, Gwyn has practiced the sheer look before, so this get-up seems like the, um, natural progression. On our end, we",
+      "llm_answer": "Gwyneth Paltrow's choice of a sheer dress for the premiere of 'Iron Man 3' has raised eyebrows due to its risqu\u00e9 nature.",
+      "em": 0.0,
+      "f1": 0.18604651162790697,
+      "bleu": 0.0,
+      "semantic_similarity": 0.4730011820793152
+    },
+    {
+      "query": "Our Daily Guide To The #30Up Eat Well, Feel Great Challenge",
+      "ground_truth": "The most fun way to boost your health!",
+      "llm_answer": "The #30Up Eat Well, Feel Great Challenge provides a fun and engaging approach to boosting one's health through a daily guide that offers tips and advice on eating well and feeling great.",
+      "em": 0.0,
+      "f1": 0.16216216216216217,
+      "bleu": 0.0,
+      "semantic_similarity": 0.5129234790802002
+    }
+  ]
+}
