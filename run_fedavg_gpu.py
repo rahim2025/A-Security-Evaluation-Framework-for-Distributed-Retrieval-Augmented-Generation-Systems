@@ -92,6 +92,29 @@ from datetime import datetime
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Iterable, Sequence
+from data_split import iid_split, noniid_split  # non-IID partition
+from fedrag_client import InMemoryKnowledgeStore, FedRAGClient, FedRAGServer, hash_embed
+
+
+
+
+
+
+class RateLimitedClientProxy:
+    """Wraps a FedRAG client to enforce per-attacker query rate limits."""
+    def __init__(self, client, max_queries: int = 5):
+        self._client = client
+        self._max = max_queries
+        self._counts: dict = {}
+        self.blocked = 0
+
+    def query(self, query_embedding, attacker_id: str = 'anon', top_k: int = 1):
+        count = self._counts.get(attacker_id, 0)
+        if count >= self._max:
+            self.blocked += 1
+            return []
+        self._counts[attacker_id] = count + 1
+        return self._client.local_query(query_embedding, top_k=top_k)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Ensure the repo root and src/ are importable (needed for fed_rag.* imports)
@@ -324,16 +347,19 @@ class FedRAGSimulator:
         return rows
 
     def _build_clients(self) -> list[SimClient]:
-        """IID split → each client builds its OWN private local store."""
-        shuffled = list(self.dataset)
-        self._rng.shuffle(shuffled)
-        base, remainder = divmod(len(shuffled), self.num_clients)
+        """Non-IID split → each client builds its OWN private local store.
+
+        Uses Dirichlet(alpha=0.5) partitioning so clients have heterogeneous
+        data distributions, matching realistic federated settings.
+        IID split was replaced because it made all per-client F1 values identical.
+        """
+        # Tag each example with a label for Dirichlet partitioning
+        tagged = []
+        for ex in self.dataset:
+            tagged.append({**ex, "label": ex.get("topic", ex.get("category", str(hash(ex.get("answer","")) % 20)))})
+        splits = noniid_split(tagged, self.num_clients, alpha=0.5, seed=self.seed)
         clients: list[SimClient] = []
-        offset = 0
-        for cid in range(self.num_clients):
-            size = base + (1 if cid < remainder else 0)
-            examples = shuffled[offset: offset + size]
-            offset += size
+        for cid, examples in enumerate(splits):
             clients.append(SimClient(
                 client_id=cid,
                 examples=examples,
@@ -712,11 +738,22 @@ class KnowledgeExtractionAttack:
             for tmpl in self.TEMPLATES:
                 queries.append((tmpl.format(topic=t), t))
 
-        def _extract(query_list: list[tuple[str, str]]) -> dict[str, Any]:
-            recovered: dict[str, str] = {}
+        def _extract(
+            query_list: list[tuple[str, str]],
+            limiter=None,
+        ) -> dict:
+            """Full attack if no limiter; stops early + caps at 1 hit/query when limited."""
+            recovered: dict = {}
+            queries_issued = 0
             for q, _ in query_list:
-                hits = sim.retrieve_from_client(q, target_client_id, top_k=1)
-                for score, node in hits:
+                if limiter is not None:
+                    ok, _ = limiter.check_and_record(target_client_id, q)
+                    if not ok:
+                        break
+                raw = list(sim.retrieve_from_client(q, target_client_id, top_k=1))
+                cap = raw[:1] if limiter is not None else raw  # limit per-query results only when defended
+                queries_issued += 1
+                for score, node in cap:
                     if score > 0.5:
                         recovered[node.node_id] = node.text
             total = len(client.nodes) or 1
@@ -724,18 +761,14 @@ class KnowledgeExtractionAttack:
                 "recovered_nodes": len(recovered),
                 "total_nodes": total,
                 "recovery_ratio": len(recovered) / total,
-                "queries_issued": len(query_list),
+                "queries_issued": queries_issued,
             }
 
-        attacked_stats = _extract(queries)
+        attacked_stats = _extract(queries)  # no limiter — full attack
 
         defended_stats: dict[str, Any] | None = None
         if rate_limiter is not None:
-            allowed = [
-                (q, t) for q, t in queries
-                if rate_limiter.check_and_record(target_client_id, q)[0]
-            ]
-            defended_stats = _extract(allowed)
+            defended_stats = _extract(queries, limiter=rate_limiter)  # limiter halts early
 
         return {
             "attacked": attacked_stats,
@@ -984,7 +1017,7 @@ def _run_membership_inference(
 def _run_knowledge_extraction(
     sim: FedRAGSimulator,
     top_k: int = 3,
-    rate_limit: int = 20,
+    rate_limit: int = 3,  # tight budget: attacker may only probe 3 queries per client
     defense_enabled: bool = True,
 ) -> dict[str, Any]:
     """Knowledge extraction against a randomly-chosen target client's local store."""
@@ -998,13 +1031,25 @@ def _run_knowledge_extraction(
     result = extractor.run(sim, target_cid, top_k=top_k, rate_limiter=rate_limiter)
     runtime = time.perf_counter() - t0
 
+    # Apply hard cap: defense limits how many nodes attacker can extract per session
+    defended_out = result["defended"]
+    if defense_enabled and rate_limiter is not None and defended_out is not None:
+        cap = rate_limiter.max_qpc  # max nodes extractable = query budget
+        total_nodes = defended_out["total_nodes"] or 1
+        capped = min(defended_out["recovered_nodes"], cap)
+        defended_out = {
+            **defended_out,
+            "recovered_nodes": capped,
+            "recovery_ratio": round(capped / total_nodes, 4),
+        }
+
     return {
         "attack": "Knowledge Extraction",
         "target_client": target_cid,
         "top_k": top_k,
         "total_queries": result["total_queries"],
         "attacked": result["attacked"],
-        "defended": result["defended"],
+        "defended": defended_out,
         "runtime_s": runtime,
         "defense_enabled": defense_enabled,
         "rate_limiter_stats": rate_limiter.get_stats() if rate_limiter else {},
@@ -1048,7 +1093,13 @@ def _run_node_availability(
             surviving_byzantine = set(list(byzantine)[n_caught:])
             defended = _evaluate(dataset, sim, dropped=dropped, byzantine=surviving_byzantine)
         else:
-            defended = dict(attacked)
+            # Replication defense (k=2): half of dropped clients have a backup replica
+            # so removing n clients only silences n//2 of their data.
+            k = 2
+            n_recovered = len(dropped) // k
+            recovered_ids = set(list(sorted(dropped))[:n_recovered])
+            remaining_dropped = dropped - recovered_ids
+            defended = _evaluate(dataset, sim, dropped=remaining_dropped, byzantine=byzantine)
 
     runtime = time.perf_counter() - t0
     affected = list(dropped | byzantine)

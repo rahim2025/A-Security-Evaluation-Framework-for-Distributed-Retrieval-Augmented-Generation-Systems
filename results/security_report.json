@@ -111,78 +111,51 @@
     ],
     "poisoning_ratio": 0.4,
     "poison_type": "wrong_answer",
-    "total_poisoned_records": 196,
+    "total_poisoned_records": 210,
     "baseline": {
       "em": 1.0,
       "f1": 1.0,
       "bleu": 1.0
     },
     "attacked": {
-      "em": 0.8693333333333333,
-      "f1": 0.8693333333333333,
-      "bleu": 0.8693333333333333
+      "em": 0.86,
+      "f1": 0.86,
+      "bleu": 0.86
     },
     "defended": {
-      "em": 0.6733333333333333,
-      "f1": 0.6733333333333333,
-      "bleu": 0.6733333333333333
+      "em": 0.6993333333333334,
+      "f1": 0.6993333333333334,
+      "bleu": 0.6993333333333334
     },
-    "delta_em": -0.1306666666666667,
-    "delta_f1": -0.1306666666666667,
-    "delta_bleu": -0.1306666666666667,
-    "runtime_s": 15.897036202999516,
+    "delta_em": -0.14,
+    "delta_f1": -0.14,
+    "delta_bleu": -0.14,
+    "runtime_s": 15.77600655599963,
     "defense_enabled": true,
     "defense_stats": {
       "quarantined_clients": [
-        1,
         7,
         10,
-        11,
         12,
         18,
         24,
-        25,
         26,
         33,
         35,
-        37,
         40,
         45,
-        51,
-        55,
-        56,
-        61,
-        64,
-        66,
         70,
         71,
-        72,
         77,
-        78,
         79,
-        80,
-        81,
         84,
-        85,
-        90,
         91,
-        92,
-        98,
-        100,
         103,
         107,
-        110,
-        116,
-        117,
-        120,
-        122,
         124,
         129,
         130,
-        137,
-        139,
-        143,
-        146
+        137
       ],
       "inspections": [
         {
@@ -193,9 +166,9 @@
         },
         {
           "client_id": 1,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.25,
+          "quarantined": false,
+          "poisoned_markers": 1
         },
         {
           "client_id": 2,
@@ -229,9 +202,9 @@
         },
         {
           "client_id": 7,
-          "risk_score": 0.4,
+          "risk_score": 0.3934,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 24
         },
         {
           "client_id": 8,
@@ -247,21 +220,21 @@
         },
         {
           "client_id": 10,
-          "risk_score": 0.4,
+          "risk_score": 0.375,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 3
         },
         {
           "client_id": 11,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 12,
           "risk_score": 0.4,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 2
         },
         {
           "client_id": 13,
@@ -295,9 +268,9 @@
         },
         {
           "client_id": 18,
-          "risk_score": 0.4,
+          "risk_score": 0.3906,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 25
         },
         {
           "client_id": 19,
@@ -331,15 +304,15 @@
         },
         {
           "client_id": 24,
-          "risk_score": 0.4,
+          "risk_score": 0.386,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 22
         },
         {
           "client_id": 25,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.2857,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 26,
@@ -385,9 +358,9 @@
         },
         {
           "client_id": 33,
-          "risk_score": 0.4,
+          "risk_score": 0.5,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 1
         },
         {
           "client_id": 34,
@@ -397,9 +370,9 @@
         },
         {
           "client_id": 35,
-          "risk_score": 0.4,
+          "risk_score": 1.0,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 1
         },
         {
           "client_id": 36,
@@ -409,9 +382,9 @@
         },
         {
           "client_id": 37,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 1
         },
         {
           "client_id": 38,
@@ -427,7 +400,7 @@
         },
         {
           "client_id": 40,
-          "risk_score": 0.4,
+          "risk_score": 0.3636,
           "quarantined": true,
           "poisoned_markers": 4
         },
@@ -459,7 +432,7 @@
           "client_id": 45,
           "risk_score": 0.4,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 2
         },
         {
           "client_id": 46,
@@ -493,9 +466,9 @@
         },
         {
           "client_id": 51,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.2857,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 52,
@@ -517,15 +490,15 @@
         },
         {
           "client_id": 55,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 56,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 57,
@@ -553,9 +526,9 @@
         },
         {
           "client_id": 61,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 3
         },
         {
           "client_id": 62,
@@ -571,9 +544,9 @@
         },
         {
           "client_id": 64,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 1
         },
         {
           "client_id": 65,
@@ -583,9 +556,9 @@
         },
         {
           "client_id": 66,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.25,
+          "quarantined": false,
+          "poisoned_markers": 1
         },
         {
           "client_id": 67,
@@ -607,20 +580,20 @@
         },
         {
           "client_id": 70,
-          "risk_score": 0.4,
+          "risk_score": 0.3934,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 24
         },
         {
           "client_id": 71,
           "risk_score": 0.4,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 2
         },
         {
           "client_id": 72,
-          "risk_score": 0.4,
-          "quarantined": true,
+          "risk_score": 0.3333,
+          "quarantined": false,
           "poisoned_markers": 4
         },
         {
@@ -649,33 +622,33 @@
         },
         {
           "client_id": 77,
-          "risk_score": 0.4,
+          "risk_score": 0.5,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 1
         },
         {
           "client_id": 78,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.2857,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 79,
-          "risk_score": 0.4,
+          "risk_score": 0.375,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 3
         },
         {
           "client_id": 80,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.25,
+          "quarantined": false,
+          "poisoned_markers": 1
         },
         {
           "client_id": 81,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.2857,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 82,
@@ -691,14 +664,14 @@
         },
         {
           "client_id": 84,
-          "risk_score": 0.4,
+          "risk_score": 0.375,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 3
         },
         {
           "client_id": 85,
-          "risk_score": 0.4,
-          "quarantined": true,
+          "risk_score": 0.3333,
+          "quarantined": false,
           "poisoned_markers": 4
         },
         {
@@ -727,21 +700,21 @@
         },
         {
           "client_id": 90,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 91,
-          "risk_score": 0.4,
+          "risk_score": 1.0,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 1
         },
         {
           "client_id": 92,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.25,
+          "quarantined": false,
+          "poisoned_markers": 1
         },
         {
           "client_id": 93,
@@ -775,9 +748,9 @@
         },
         {
           "client_id": 98,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 99,
@@ -787,9 +760,9 @@
         },
         {
           "client_id": 100,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 101,
@@ -831,7 +804,7 @@
           "client_id": 107,
           "risk_score": 0.4,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 2
         },
         {
           "client_id": 108,
@@ -847,9 +820,9 @@
         },
         {
           "client_id": 110,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 111,
@@ -883,15 +856,15 @@
         },
         {
           "client_id": 116,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 3
         },
         {
           "client_id": 117,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.25,
+          "quarantined": false,
+          "poisoned_markers": 1
         },
         {
           "client_id": 118,
@@ -907,8 +880,8 @@
         },
         {
           "client_id": 120,
-          "risk_score": 0.4,
-          "quarantined": true,
+          "risk_score": 0.3333,
+          "quarantined": false,
           "poisoned_markers": 4
         },
         {
@@ -919,9 +892,9 @@
         },
         {
           "client_id": 122,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 1
         },
         {
           "client_id": 123,
@@ -933,7 +906,7 @@
           "client_id": 124,
           "risk_score": 0.4,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 2
         },
         {
           "client_id": 125,
@@ -961,13 +934,13 @@
         },
         {
           "client_id": 129,
-          "risk_score": 0.4,
+          "risk_score": 0.386,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 22
         },
         {
           "client_id": 130,
-          "risk_score": 0.4,
+          "risk_score": 0.3636,
           "quarantined": true,
           "poisoned_markers": 4
         },
@@ -1009,9 +982,9 @@
         },
         {
           "client_id": 137,
-          "risk_score": 0.4,
+          "risk_score": 1.0,
           "quarantined": true,
-          "poisoned_markers": 4
+          "poisoned_markers": 1
         },
         {
           "client_id": 138,
@@ -1021,9 +994,9 @@
         },
         {
           "client_id": 139,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 140,
@@ -1045,9 +1018,9 @@
         },
         {
           "client_id": 143,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.25,
+          "quarantined": false,
+          "poisoned_markers": 1
         },
         {
           "client_id": 144,
@@ -1063,9 +1036,9 @@
         },
         {
           "client_id": 146,
-          "risk_score": 0.4,
-          "quarantined": true,
-          "poisoned_markers": 4
+          "risk_score": 0.3333,
+          "quarantined": false,
+          "poisoned_markers": 2
         },
         {
           "client_id": 147,
@@ -1090,49 +1063,49 @@
     "per_client_breakdown": {
       "0": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.004,
+        "defended_f1": 0.004,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "1": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": 0.0
       },
       "2": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0007,
+        "attacked_f1": 0.0007,
+        "defended_f1": 0.0007,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "3": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "4": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0393,
+        "attacked_f1": 0.0393,
+        "defended_f1": 0.0393,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "5": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0053,
+        "attacked_f1": 0.0053,
+        "defended_f1": 0.0053,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
@@ -1146,129 +1119,129 @@
       },
       "7": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0407,
+        "attacked_f1": 0.0247,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.016,
+        "defense_recovery_f1": -0.0247
       },
       "8": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "9": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.006,
+        "attacked_f1": 0.006,
+        "defended_f1": 0.006,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "10": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0053,
+        "attacked_f1": 0.0033,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.002,
+        "defense_recovery_f1": -0.0033
       },
       "11": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "12": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.002,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": -0.002
       },
       "13": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0047,
+        "defended_f1": 0.0047,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "14": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "15": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "16": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.004,
+        "defended_f1": 0.004,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "17": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "18": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0427,
+        "attacked_f1": 0.026,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0167,
+        "defense_recovery_f1": -0.026
       },
       "19": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0053,
+        "attacked_f1": 0.0053,
+        "defended_f1": 0.0053,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "20": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0053,
+        "attacked_f1": 0.0053,
+        "defended_f1": 0.0053,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "21": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "22": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.002,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
@@ -1282,19 +1255,19 @@
       },
       "24": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.038,
+        "attacked_f1": 0.0233,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0147,
+        "defense_recovery_f1": -0.0233
       },
       "25": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "26": {
         "malicious": true,
@@ -1306,475 +1279,475 @@
       },
       "27": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.004,
+        "defended_f1": 0.004,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "28": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0053,
+        "attacked_f1": 0.0053,
+        "defended_f1": 0.0053,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "29": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "30": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "31": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.004,
+        "defended_f1": 0.004,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "32": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0053,
+        "attacked_f1": 0.0053,
+        "defended_f1": 0.0053,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "33": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0007,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": -0.0007
       },
       "34": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0047,
+        "defended_f1": 0.0047,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "35": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0007,
+        "attacked_f1": 0.0,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": 0.0
       },
       "36": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0,
+        "attacked_f1": 0.0,
+        "defended_f1": 0.0,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "37": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.002,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": 0.0
       },
       "38": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0007,
+        "attacked_f1": 0.0007,
+        "defended_f1": 0.0007,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "39": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0047,
+        "defended_f1": 0.0047,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "40": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0073,
+        "attacked_f1": 0.0047,
         "defended_f1": 0.0,
         "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "defense_recovery_f1": -0.0047
       },
       "41": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0047,
+        "defended_f1": 0.0047,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "42": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0387,
+        "attacked_f1": 0.0387,
+        "defended_f1": 0.0387,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "43": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.002,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "44": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.002,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "45": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.002,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": -0.002
       },
       "46": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.008,
+        "attacked_f1": 0.008,
+        "defended_f1": 0.008,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "47": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "48": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "49": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.002,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "50": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "51": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "52": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0007,
+        "attacked_f1": 0.0007,
+        "defended_f1": 0.0007,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "53": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "54": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.004,
+        "defended_f1": 0.004,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "55": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "56": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "57": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "58": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "59": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0073,
+        "attacked_f1": 0.0073,
+        "defended_f1": 0.0073,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "60": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.008,
+        "attacked_f1": 0.008,
+        "defended_f1": 0.008,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "61": {
         "malicious": true,
-        "baseline_f1": 0.0067,
+        "baseline_f1": 0.006,
         "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "defended_f1": 0.004,
+        "delta_f1": -0.002,
+        "defense_recovery_f1": 0.0
       },
       "62": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "63": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.038,
+        "attacked_f1": 0.038,
+        "defended_f1": 0.038,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "64": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.002,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": 0.0
       },
       "65": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "66": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": 0.0
       },
       "67": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.002,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "68": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "69": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.004,
+        "defended_f1": 0.004,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "70": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0407,
+        "attacked_f1": 0.0247,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.016,
+        "defense_recovery_f1": -0.0247
       },
       "71": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.002,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": -0.002
       },
       "72": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
+        "baseline_f1": 0.008,
+        "attacked_f1": 0.0053,
+        "defended_f1": 0.0053,
         "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "defense_recovery_f1": 0.0
       },
       "73": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "74": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0373,
+        "attacked_f1": 0.0373,
+        "defended_f1": 0.0373,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "75": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "76": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.002,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "77": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0007,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": -0.0007
       },
       "78": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "79": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0053,
+        "attacked_f1": 0.0033,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.002,
+        "defense_recovery_f1": -0.0033
       },
       "80": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": 0.0
       },
       "81": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "82": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "83": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "84": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0053,
+        "attacked_f1": 0.0033,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.002,
+        "defense_recovery_f1": -0.0033
       },
       "85": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
+        "baseline_f1": 0.008,
+        "attacked_f1": 0.0053,
+        "defended_f1": 0.0053,
         "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "defense_recovery_f1": 0.0
       },
       "86": {
         "malicious": false,
@@ -1786,121 +1759,121 @@
       },
       "87": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "88": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "89": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0053,
+        "attacked_f1": 0.0053,
+        "defended_f1": 0.0053,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "90": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "91": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0007,
+        "attacked_f1": 0.0,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": 0.0
       },
       "92": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": 0.0
       },
       "93": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0047,
+        "defended_f1": 0.0047,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "94": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0047,
+        "defended_f1": 0.0047,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "95": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "96": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "97": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0007,
+        "attacked_f1": 0.0007,
+        "defended_f1": 0.0007,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "98": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "99": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "100": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "101": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
@@ -1922,41 +1895,41 @@
       },
       "104": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0433,
+        "attacked_f1": 0.0433,
+        "defended_f1": 0.0433,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "105": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "106": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.004,
+        "defended_f1": 0.004,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "107": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.002,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": -0.002
       },
       "108": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0047,
+        "defended_f1": 0.0047,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
@@ -1970,321 +1943,321 @@
       },
       "110": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "111": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0073,
+        "attacked_f1": 0.0073,
+        "defended_f1": 0.0073,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "112": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0047,
+        "defended_f1": 0.0047,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "113": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.046,
+        "attacked_f1": 0.046,
+        "defended_f1": 0.046,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "114": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "115": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.008,
+        "attacked_f1": 0.008,
+        "defended_f1": 0.008,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "116": {
         "malicious": true,
-        "baseline_f1": 0.0067,
+        "baseline_f1": 0.006,
         "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "defended_f1": 0.004,
+        "delta_f1": -0.002,
+        "defense_recovery_f1": 0.0
       },
       "117": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": 0.0
       },
       "118": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0047,
+        "defended_f1": 0.0047,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "119": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0,
+        "attacked_f1": 0.0,
+        "defended_f1": 0.0,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "120": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
+        "baseline_f1": 0.008,
+        "attacked_f1": 0.0053,
+        "defended_f1": 0.0053,
         "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "defense_recovery_f1": 0.0
       },
       "121": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.002,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "122": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.002,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": 0.0
       },
       "123": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0367,
+        "attacked_f1": 0.0367,
+        "defended_f1": 0.0367,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "124": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.002,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": -0.002
       },
       "125": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "126": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.002,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "127": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.004,
+        "defended_f1": 0.004,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "128": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0113,
+        "attacked_f1": 0.0113,
+        "defended_f1": 0.0113,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "129": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.038,
+        "attacked_f1": 0.0233,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0147,
+        "defense_recovery_f1": -0.0233
       },
       "130": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0073,
+        "attacked_f1": 0.0047,
         "defended_f1": 0.0,
         "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "defense_recovery_f1": -0.0047
       },
       "131": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0007,
+        "attacked_f1": 0.0007,
+        "defended_f1": 0.0007,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "132": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.002,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "133": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0047,
+        "attacked_f1": 0.0047,
+        "defended_f1": 0.0047,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "134": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0013,
+        "attacked_f1": 0.0013,
+        "defended_f1": 0.0013,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "135": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "136": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "137": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
+        "baseline_f1": 0.0007,
+        "attacked_f1": 0.0,
         "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": 0.0
       },
       "138": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.004,
+        "defended_f1": 0.004,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "139": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "140": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "141": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.004,
+        "defended_f1": 0.004,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "142": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0087,
+        "attacked_f1": 0.0087,
+        "defended_f1": 0.0087,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "143": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.0027,
+        "attacked_f1": 0.002,
+        "defended_f1": 0.002,
+        "delta_f1": -0.0007,
+        "defense_recovery_f1": 0.0
       },
       "144": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0093,
+        "attacked_f1": 0.0093,
+        "defended_f1": 0.0093,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "145": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "146": {
         "malicious": true,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.004,
-        "defended_f1": 0.0,
-        "delta_f1": -0.0027,
-        "defense_recovery_f1": -0.004
+        "baseline_f1": 0.004,
+        "attacked_f1": 0.0027,
+        "defended_f1": 0.0027,
+        "delta_f1": -0.0013,
+        "defense_recovery_f1": 0.0
       },
       "147": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "148": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.0033,
+        "attacked_f1": 0.0033,
+        "defended_f1": 0.0033,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       },
       "149": {
         "malicious": false,
-        "baseline_f1": 0.0067,
-        "attacked_f1": 0.0067,
-        "defended_f1": 0.0067,
+        "baseline_f1": 0.006,
+        "attacked_f1": 0.006,
+        "defended_f1": 0.006,
         "delta_f1": 0.0,
         "defense_recovery_f1": 0.0
       }
@@ -2294,7 +2267,7 @@
     "attack": "Membership Inference",
     "target_client": 98,
     "threshold": 0.8,
-    "num_members_tested": 10,
+    "num_members_tested": 6,
     "attacked": {
       "accuracy": 1.0,
       "tpr": 1.0,
@@ -2307,32 +2280,32 @@
       "fpr": 0.0,
       "precision": 0.0
     },
-    "runtime_s": 0.0009257849997084122,
+    "runtime_s": 0.00031383799978357274,
     "defense_enabled": true
   },
   "knowledge_extraction": {
     "attack": "Knowledge Extraction",
     "target_client": 98,
     "top_k": 3,
-    "total_queries": 40,
+    "total_queries": 31,
     "attacked": {
-      "recovered_nodes": 10,
-      "total_nodes": 10,
+      "recovered_nodes": 6,
+      "total_nodes": 6,
       "recovery_ratio": 1.0,
-      "queries_issued": 40
+      "queries_issued": 31
     },
     "defended": {
-      "recovered_nodes": 10,
-      "total_nodes": 10,
+      "recovered_nodes": 6,
+      "total_nodes": 6,
       "recovery_ratio": 1.0,
       "queries_issued": 20
     },
-    "runtime_s": 0.002031607999924745,
+    "runtime_s": 0.0011047259995393688,
     "defense_enabled": true,
     "rate_limiter_stats": {
       "allowed_count": 20,
-      "blocked_count": 20,
-      "block_rate": 0.5
+      "blocked_count": 1,
+      "block_rate": 0.047619047619047616
     }
   },
   "node_availability": {
@@ -2395,18 +2368,18 @@
       "bleu": 1.0
     },
     "attacked": {
-      "em": 0.7,
-      "f1": 0.7,
-      "bleu": 0.7
+      "em": 0.6406666666666667,
+      "f1": 0.6406666666666667,
+      "bleu": 0.6406666666666667
     },
     "defended": {
-      "em": 0.7,
-      "f1": 0.7,
-      "bleu": 0.7
+      "em": 0.8706666666666667,
+      "f1": 0.8706666666666667,
+      "bleu": 0.8706666666666667
     },
-    "delta_em": -0.30000000000000004,
-    "delta_f1": -0.30000000000000004,
-    "runtime_s": 5.212247550000029,
+    "delta_em": -0.3593333333333333,
+    "delta_f1": -0.3593333333333333,
+    "runtime_s": 11.367777863999436,
     "defense_enabled": true
   }
 }
