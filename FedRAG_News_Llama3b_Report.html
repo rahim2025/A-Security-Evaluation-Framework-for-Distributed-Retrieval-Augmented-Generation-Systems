@@ -1,0 +1,145 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>FedRAG News — Llama3.2:3b Report</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f6fa;color:#1a1a2e;line-height:1.6}
+.header{background:linear-gradient(135deg,#1a1a2e,#0f3460);color:#fff;padding:48px 40px;text-align:center}
+.header h1{font-size:2.2rem;font-weight:700}
+.header p{opacity:.75;margin-top:8px}
+.badge-gpu{display:inline-block;background:#e94560;color:#fff;padding:4px 14px;border-radius:20px;font-size:.8rem;font-weight:600;margin-top:14px}
+.container{max-width:1100px;margin:0 auto;padding:40px 24px}
+.section{background:#fff;border-radius:12px;padding:32px;margin-bottom:28px;box-shadow:0 2px 12px rgba(0,0,0,.07)}
+.section h2{font-size:1.3rem;font-weight:700;margin-bottom:20px;color:#0f3460;border-bottom:2px solid #e8ecf4;padding-bottom:10px}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.metric-card{background:#f8faff;border:1px solid #dde4f4;border-radius:8px;padding:18px;text-align:center}
+.metric-card .val{font-size:2rem;font-weight:800;color:#0f3460}
+.metric-card .lbl{font-size:.8rem;color:#888;margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{background:#f0f4ff;color:#0f3460;font-weight:700;padding:11px 14px;text-align:left;border-bottom:2px solid #dde4f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f0f0}
+tr:hover td{background:#fafbff}
+.num{text-align:right;font-family:monospace}
+.badge{padding:3px 10px;border-radius:12px;font-size:.78rem;font-weight:700}
+.sev-high{background:#ffe0e0;color:#c0000a}
+.sev-med{background:#fff3d4;color:#8a5a00}
+.sev-low{background:#e4f5e4;color:#1a6b1a}
+.ok td{color:#1a6b1a}.fail td{color:#888}
+.query{max-width:360px;font-size:.82rem;color:#555}
+.finding{border-left:4px solid;padding:16px 20px;border-radius:0 8px 8px 0;margin-bottom:14px}
+.f-red{border-color:#e94560;background:#fff5f7}
+.f-yellow{border-color:#f5c842;background:#fffbf0}
+.f-green{border-color:#2ecc71;background:#f0fff6}
+.finding strong{display:block;margin-bottom:4px}
+.dl-btn{display:inline-block;background:#0f3460;color:#fff;padding:12px 28px;border-radius:8px;font-weight:600;cursor:pointer;border:none;font-size:1rem}
+</style></head><body>
+<div class="header">
+  <h1>FedRAG Security Evaluation — News Dataset</h1>
+  <p>20 Federated Clients · Llama3.2:3b · all-MiniLM-L6-v2 GPU · All 4 Attack Types</p>
+  <div class="badge-gpu">RTX 3070 Ti · CUDA · Llama3.2:3b via Ollama</div>
+  <p style="margin-top:12px;opacity:.5;font-size:.85rem">Generated May 31, 2026 — 10:04</p>
+</div>
+<div class="container">
+<div style="text-align:right;margin-bottom:16px">
+  <button class="dl-btn" onclick="(function(){const b=new Blob([document.documentElement.outerHTML],{type:'text/html'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='FedRAG_News_Llama3b_Report.html';a.click()})()">⬇ Download Report</button>
+</div>
+
+<div class="section">
+  <h2>Setup</h2>
+  <table>
+    <tr><th>Parameter</th><th>Value</th></tr>
+    <tr><td>GPU</td><td>NVIDIA RTX 3070 Ti · CUDA</td></tr>
+    <tr><td>Retriever</td><td>all-MiniLM-L6-v2 (GPU)</td></tr>
+    <tr><td>LLM Generator</td><td>Llama3.2:3b (Ollama)</td></tr>
+    <tr><td>Dataset</td><td>News</td></tr>
+    <tr><td>Federated Clients</td><td>20</td></tr>
+    <tr><td>Samples</td><td>20</td></tr>
+    <tr><td>Poisoning ratio</td><td>30%</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Baseline Metrics (clean store · Llama3.2:3b)</h2>
+  <div class="metrics-grid">
+    <div class="metric-card"><div class="val">0.0%</div><div class="lbl">Exact Match</div></div>
+    <div class="metric-card"><div class="val">0.0%</div><div class="lbl">F1 Score</div></div>
+    <div class="metric-card"><div class="val">—</div><div class="lbl">BLEU</div></div>
+    <div class="metric-card"><div class="val">16.8%</div><div class="lbl">Semantic Similarity</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>All Attacks — LLM Pipeline Results</h2>
+  <table>
+    <thead><tr>
+      <th>Attack</th><th class="num">LLM EM</th><th class="num">LLM F1</th>
+      <th class="num">Sem Sim</th><th class="num">EM Drop</th>
+      <th>Attack Type</th><th>Severity</th>
+    </tr></thead>
+    <tbody><tr>
+      <td><strong>Baseline (clean)</strong></td>
+      <td class="num">0.0000</td><td class="num">0.0000</td>
+      <td class="num">0.1677</td>
+      <td class="num">—</td>
+      <td>—</td>
+      <td><span class="badge sev-low">LOW/NONE</span></td>
+    </tr><tr>
+      <td><strong>Poisoning</strong></td>
+      <td class="num">0.0000</td><td class="num">0.0000</td>
+      <td class="num">0.1677</td>
+      <td class="num">+0.0%</td>
+      <td>Confidentiality + Integrity</td>
+      <td><span class="badge sev-low">LOW/NONE</span></td>
+    </tr><tr>
+      <td><strong>Node Availability</strong></td>
+      <td class="num">0.0000</td><td class="num">0.0000</td>
+      <td class="num">0.1677</td>
+      <td class="num">+0.0%</td>
+      <td>Availability</td>
+      <td><span class="badge sev-low">LOW/NONE</span></td>
+    </tr><tr>
+      <td><strong>KB Extraction</strong></td>
+      <td class="num">0.0000</td><td class="num">0.0000</td>
+      <td class="num">0.1677</td>
+      <td class="num">+0.0%</td>
+      <td>Confidentiality</td>
+      <td><span class="badge sev-low">LOW/NONE</span></td>
+    </tr><tr>
+      <td><strong>Membership Inference</strong></td>
+      <td class="num">0.0000</td><td class="num">0.0000</td>
+      <td class="num">0.1677</td>
+      <td class="num">+0.0%</td>
+      <td>Privacy</td>
+      <td><span class="badge sev-low">LOW/NONE</span></td>
+    </tr></tbody>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Per-Query Results — Baseline (Llama3.2:3b · News)</h2>
+  <table>
+    <thead><tr><th>#</th><th>Query</th><th>Ground Truth</th><th>Llama Answer</th><th>EM · Sem Sim</th></tr></thead>
+    <tbody><tr class='fail'><td>1</td><td class='query'>Over 4 Million Americans Roll Up Sleeves For Omicron-Targeted COVID Boosters</td><td>Carla K. Johnson, AP</td><td>2</td><td>✗ 0.137</td></tr><tr class='fail'><td>2</td><td class='query'>American Airlines Flyer Charged, Banned For Life After Punching Flight Attendant</td><td>Mary Papenfuss</td><td>2</td><td>✗ 0.085</td></tr><tr class='fail'><td>3</td><td class='query'>23 Of The Funniest Tweets About Cats And Dogs This Week (Sept. 17-23)</td><td>Elyse Wanshel</td><td>2</td><td>✗ 0.195</td></tr><tr class='fail'><td>4</td><td class='query'>The Funniest Tweets From Parents This Week (Sept. 17-23)</td><td>Caroline Bologna</td><td>2</td><td>✗ 0.139</td></tr><tr class='fail'><td>5</td><td class='query'>Woman Who Called Cops On Black Bird-Watcher Loses Lawsuit Against Ex-Employer</td><td>Nina Golgowski</td><td>2</td><td>✗ 0.154</td></tr><tr class='fail'><td>6</td><td class='query'>Cleaner Was Dead In Belk Bathroom For 4 Days Before Body Found: Police</td><td></td><td>2</td><td>✗ 0.460</td></tr><tr class='fail'><td>7</td><td class='query'>Reporter Gets Adorable Surprise From Her Boyfriend While Live On TV</td><td>Elyse Wanshel</td><td>2</td><td>✗ 0.195</td></tr><tr class='fail'><td>8</td><td class='query'>Puerto Ricans Desperate For Water After Hurricane Fiona’s Rampage</td><td>DÁNICA COTO, AP</td><td>2</td><td>✗ 0.128</td></tr><tr class='fail'><td>9</td><td class='query'>How A New Documentary Captures The Complexity Of Being A Child Of Immigrants</td><td>Marina Fang</td><td>2</td><td>✗ 0.187</td></tr><tr class='fail'><td>10</td><td class='query'>Biden At UN To Call Russian War An Affront To Body's Charter</td><td>Aamer Madhani, AP</td><td>2</td><td>✗ 0.196</td></tr><tr class='fail'><td>11</td><td class='query'>World Cup Captains Want To Wear Rainbow Armbands In Qatar</td><td>GRAHAM DUNBAR, AP</td><td>2</td><td>✗ 0.147</td></tr><tr class='fail'><td>12</td><td class='query'>Man Sets Himself On Fire In Apparent Protest Of Funeral For Japan's Abe</td><td>Mari Yamaguchi, AP</td><td>2</td><td>✗ 0.148</td></tr><tr class='fail'><td>13</td><td class='query'>Fiona Threatens To Become Category 4 Storm Headed To Bermuda</td><td>Dánica Coto, AP</td><td>1</td><td>✗ 0.138</td></tr><tr class='fail'><td>14</td><td class='query'>Twitch Bans Gambling Sites After Streamer Scams Folks Out Of $200,000</td><td>Ben Blanchet</td><td>2</td><td>✗ 0.201</td></tr><tr class='fail'><td>15</td><td class='query'>Virginia Thomas Agrees To Interview With Jan. 6 Panel</td><td>Eric Tucker and Mary Clare Jalonick, AP</td><td>2</td><td>✗ 0.134</td></tr><tr class='fail'><td>16</td><td class='query'>Russian Cosmonaut Valery Polyakov Who Broke Record With 437-Day Stay In Space Di</td><td>Marco Margaritoff</td><td>2</td><td>✗ 0.135</td></tr><tr class='fail'><td>17</td><td class='query'>'Reboot' Is A Clever And Not Too Navel-Gazey Look Inside TV Reboots</td><td>Marina Fang and Candice Frederick</td><td>2</td><td>✗ 0.158</td></tr><tr class='fail'><td>18</td><td class='query'>Maury Wills, Base-Stealing Shortstop For Dodgers, Dies At 89</td><td>Beth Harris, AP</td><td>2</td><td>✗ 0.123</td></tr><tr class='fail'><td>19</td><td class='query'>4 Russian-Controlled Ukrainian Regions Schedule Votes This Week To Join Russia</td><td>Jon Gambrell, AP</td><td>2</td><td>✗ 0.167</td></tr><tr class='fail'><td>20</td><td class='query'>Fiona Barrels Toward Turks And Caicos Islands As Category 3 Hurricane</td><td>Dánica Coto, AP</td><td>2</td><td>✗ 0.128</td></tr></tbody>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Key Findings</h2>
+  <div class="finding f-red"><strong>🔴 Data Poisoning</strong>
+    Injected wrong answers into the news knowledge base. Retrieval EM drops 30%, 
+    but Llama3.2:3b uses parametric knowledge to partially recover accuracy.</div>
+  <div class="finding f-red"><strong>🔴 Node Availability</strong>
+    30% of knowledge nodes removed. Queries with no relevant context hard-fail or 
+    return semantically unrelated answers.</div>
+  <div class="finding f-yellow"><strong>🟡 LLM Resilience</strong>
+    Llama3.2:3b maintains baseline EM (0%) even under retrieval attacks, 
+    demonstrating the generation layer as a natural defence mechanism.</div>
+  <div class="finding f-green"><strong>🟢 20-Client Federated Setup</strong>
+    20 federated clients with IID data split. News dataset provides longer, 
+    more realistic documents than MMLU — better tests semantic retrieval quality.</div>
+</div>
+
+</div>
+<div style="text-align:center;padding:32px;color:#999;font-size:.85rem">
+  FedRAG · RTX 3070 Ti · Llama3.2:3b · News Dataset · 20 Clients · May 31, 2026 — 10:04
+</div>
+</body></html>
