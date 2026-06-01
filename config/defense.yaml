@@ -1,0 +1,34 @@
+# Defense Configuration for DRAG Security Framework
+
+defense:
+  enabled: true  # Set to true to enable defense mechanisms
+  
+  # Cross-Peer Answer Validation Settings
+  cross_peer_validation:
+    enabled: false  # Enable cross-peer answer validation
+    min_agreement_ratio: 0.6  # Minimum ratio of peers that must agree (60%)
+    voting_method: "majority"  # Options: majority, weighted
+    min_peers_for_validation: 3  # Minimum number of peers needed for validation
+    use_similarity_matching: true  # Use fuzzy matching for answer comparison
+    similarity_threshold: 0.85  # Threshold for considering answers as "same"
+    max_additional_hops: 2  # Maximum additional hops to collect peers for validation (only when defense enabled)
+    
+  # Privacy-Preserving Retrieval (defense against Membership Inference Attack)
+  # Adds calibrated Laplace noise to retrieval similarity scores at query time.
+  # noise_scale controls the privacy-utility tradeoff:
+  #   0.0  = disabled (no noise)
+  #   0.05 = light noise (minimal utility loss)
+  #   0.1  = moderate noise (recommended starting point)
+  #   0.2  = heavy noise (significant privacy gain, noticeable utility cost)
+  #   0.5  = very heavy noise (near-random retrieval)
+  privacy_preserving_retrieval:
+    enabled: true
+    noise_mechanism: laplace  # only 'laplace' is supported
+    noise_scale: 0.2
+
+  # Logging and Monitoring
+  #logging:
+    #log_filtered_answers: true
+    #log_voting_details: true
+    #save_defense_metrics: true
+    #defense_log_dir: "logs"

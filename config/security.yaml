@@ -1,0 +1,37 @@
+security:
+  enable_attack: false
+  poisoning_ratio: 0.3  # % of malicious peers
+  attack_strategy: 'high_degree'  # 'random', 'data_rich', 'high_degree', 'replica_aware'
+  poison_type: 'answer_swap'
+  target_peer_ids: []  # Specifically target peer
+  amplification_factor: 5  # copies of each poison
+  question_variants: 4  # question variants
+
+  # Knowledge Base Extraction Attack
+  enable_extraction: false
+  extraction_attacker_peer: null  # null = random selection
+  extraction_queries_per_topic: 5  # Keep low for efficiency
+  extraction_attack_type: 'external'  # 'external' or 'insider'
+  extraction_use_topic_inference: false
+  extraction_use_dataset_questions: true  # NEW - Use dataset questions (RECOMMENDED)
+
+
+  # Membership Inference Attack
+  enable_membership_inference: true
+  mia_inference_method: 'confidence_based'
+  mia_test_size: 0.3
+  mia_threshold_percentile: 50
+  mia_random_seed: 42
+
+  # Routing Manipulation Attack (Source Selection Manipulation)
+  enable_routing_manipulation: false
+  routing_attacker_peer: null          # null = select via ratio; integer = specific peer ID
+  routing_attacker_ratio: 0.3          # fraction of peers used as attackers (if no specific ID)
+  routing_attack_strategy: 'high_degree'    # 'random' or 'high_degree'
+  routing_response_type: 'fabricated'  # 'empty' (wipe KB) or 'fabricated' (inject garbage)
+  routing_topic_claim_ratio: 0.6       # fraction of all topics each attacker falsely claims
+
+  # Selective Forwarding Attack
+  enable_selective_forwarding: false
+  sfa_ratio: 0.3
+  sfa_strategy: 'high_connectivity'
