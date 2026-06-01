@@ -1,0 +1,241 @@
+{
+  "attack": "node_availability",
+  "num_clients": 20,
+  "nodes_total": 20,
+  "nodes_offline": 6,
+  "attack_rate": 0.3,
+  "baseline_em": 1.0,
+  "attack_em": 0.65,
+  "em_drop": 0.35,
+  "fail_rate": 0.05,
+  "offline_clients": [
+    1,
+    6,
+    8,
+    12,
+    13,
+    15
+  ],
+  "per_query": [
+    {
+      "query": "RNC Chair: Trump Was Just Making Small Talk When He Asked FBI Head How He Voted",
+      "ground_truth": "\"This is a president who is just getting to know people, and that\u2019s part of those conversations,\u201d said Ronna Romney McDaniel.",
+      "topic": "POLITICS",
+      "client": 0,
+      "node_offline": false,
+      "retrieved_answer": "\"This is a president who is just getting to know people, and that\u2019s part of those conversations,\u201d said Ronna Romney McDaniel.",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    },
+    {
+      "query": "Make Me Laugh",
+      "ground_truth": "If you had to make a list of all the things that made you want to be with the people you have chosen in your life, what would be on it? Is it that they are good-looking, know all the best places to go, are they super smart or really generous, is it physical chemistry?",
+      "topic": "WELLNESS",
+      "client": 1,
+      "node_offline": true,
+      "retrieved_answer": "\"But does the embarrassing thing that happened twenty years ago think about *me* at 3 a.m.\"",
+      "retrieval_score": 0.2885,
+      "em": 0.0,
+      "status": "degraded"
+    },
+    {
+      "query": "Sure, The Mediterranean Diet Is Good For You. But Have You Tried The Nordic Diet?",
+      "ground_truth": "Over the course of the 26-week trial, 32 people dropped out. Of the drop-outs, nine cited lack of time to participate, six",
+      "topic": "WELLNESS",
+      "client": 2,
+      "node_offline": false,
+      "retrieved_answer": "Over the course of the 26-week trial, 32 people dropped out. Of the drop-outs, nine cited lack of time to participate, six",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    },
+    {
+      "query": "Fundamentalist Conspiracy Theory: Search for Extraterrestrial Life Demonstrates \"Rebellion Against God\"",
+      "ground_truth": "Do you want conspiracy theorists to create the nation's scientific research agenda? Does it make sense to take their bizarre views seriously?",
+      "topic": "RELIGION",
+      "client": 3,
+      "node_offline": false,
+      "retrieved_answer": "Do you want conspiracy theorists to create the nation's scientific research agenda? Does it make sense to take their bizarre views seriously?",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    },
+    {
+      "query": "Leading German Far-Right Figure Ditches Party, Converts To Islam",
+      "ground_truth": "The nationalist Alternative for Germany party warns against \"Islamization.\"",
+      "topic": "WORLD NEWS",
+      "client": 4,
+      "node_offline": false,
+      "retrieved_answer": "The nationalist Alternative for Germany party warns against \"Islamization.\"",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    },
+    {
+      "query": "Men's Underwear Goes Green",
+      "ground_truth": "If the first thing you put on in the morning was made in an earth-conscious way, wouldn't that make you a bit more earth-conscious, too?",
+      "topic": "STYLE & BEAUTY",
+      "client": 5,
+      "node_offline": false,
+      "retrieved_answer": "If the first thing you put on in the morning was made in an earth-conscious way, wouldn't that make you a bit more earth-conscious, too?",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    },
+    {
+      "query": "6 Color Ideas We're Tired Of Seeing In Home Design (PHOTOS)",
+      "ground_truth": "5. Red, White and Black: Some may say it's a classic, but this combo can be a bit jarring in a space. Spaces by Los Angeles",
+      "topic": "HOME & LIVING",
+      "client": 6,
+      "node_offline": true,
+      "retrieved_answer": "Of course, Gwyn has practiced the sheer look before, so this get-up seems like the, um, natural progression. On our end, we",
+      "retrieval_score": 0.2586,
+      "em": 0.0,
+      "status": "degraded"
+    },
+    {
+      "query": "How To Bounce Back From A Sports Injury",
+      "ground_truth": "",
+      "topic": "HEALTHY LIVING",
+      "client": 7,
+      "node_offline": false,
+      "retrieved_answer": "",
+      "retrieval_score": 1.0,
+      "em": 0.0,
+      "status": "failed"
+    },
+    {
+      "query": "Dylann Roof Gets Famed Anti-Death Penalty Attorney For Federal Trial",
+      "ground_truth": "David Bruck previously defended Dzhokhar Tsarnaev.",
+      "topic": "CRIME",
+      "client": 8,
+      "node_offline": true,
+      "retrieved_answer": "The mostly Asian cast said they \"believe in equality and the right to peaceful protest.\"",
+      "retrieval_score": 0.0921,
+      "em": 0.0,
+      "status": "degraded"
+    },
+    {
+      "query": "Rescued Baby Fox Can\u2019t Get Enough Belly And Chin Rubs",
+      "ground_truth": "A tiny baby fox is now getting a second chance at life after being abandoned by its mother.",
+      "topic": "GOOD NEWS",
+      "client": 9,
+      "node_offline": false,
+      "retrieved_answer": "A tiny baby fox is now getting a second chance at life after being abandoned by its mother.",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    },
+    {
+      "query": "U.S. Fears Russia Ramping Up Support For Assad",
+      "ground_truth": "Russia has sent a military advance team to Syria and is taking other steps the United States fears may signal that President",
+      "topic": "THE WORLDPOST",
+      "client": 10,
+      "node_offline": false,
+      "retrieved_answer": "Russia has sent a military advance team to Syria and is taking other steps the United States fears may signal that President",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    },
+    {
+      "query": "World Will Miss Goal For Universal Education By 50 Years: UN",
+      "ground_truth": "Aid for education needs to increase six-fold to bring quality universal education to all by 2030.",
+      "topic": "IMPACT",
+      "client": 11,
+      "node_offline": false,
+      "retrieved_answer": "Aid for education needs to increase six-fold to bring quality universal education to all by 2030.",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    },
+    {
+      "query": "This Is How Kimye Celebrated North West's First Birthday",
+      "ground_truth": "",
+      "topic": "ENTERTAINMENT",
+      "client": 12,
+      "node_offline": true,
+      "retrieved_answer": "Of course, Gwyn has practiced the sheer look before, so this get-up seems like the, um, natural progression. On our end, we",
+      "retrieval_score": 0.1678,
+      "em": 0.0,
+      "status": "degraded"
+    },
+    {
+      "query": "Steve Bannon: Catholic Church Opposes DACA's End Because It Needs 'Illegal Aliens To Fill The Churches'",
+      "ground_truth": "Bannon, former chief strategist to President Donald Trump, gave his first major interview since being ousted from the White House.",
+      "topic": "POLITICS",
+      "client": 13,
+      "node_offline": true,
+      "retrieved_answer": "Do you want conspiracy theorists to create the nation's scientific research agenda? Does it make sense to take their bizarre views seriously?",
+      "retrieval_score": 0.3618,
+      "em": 0.0,
+      "status": "degraded"
+    },
+    {
+      "query": "The 20 Funniest Tweets From Women This Week (Sept. 19-25)",
+      "ground_truth": "\"But does the embarrassing thing that happened twenty years ago think about *me* at 3 a.m.\"",
+      "topic": "WOMEN",
+      "client": 14,
+      "node_offline": false,
+      "retrieved_answer": "\"But does the embarrassing thing that happened twenty years ago think about *me* at 3 a.m.\"",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    },
+    {
+      "query": "Kids' Diets Need More Whole Grains, Veggies, Seafood (REPORT)",
+      "ground_truth": "The report also gave estimates about changing demographics. By 2050, about half of U.S. children will be Hispanic, Asian",
+      "topic": "PARENTING",
+      "client": 15,
+      "node_offline": true,
+      "retrieved_answer": "The most fun way to boost your health!",
+      "retrieval_score": 0.4273,
+      "em": 0.0,
+      "status": "degraded"
+    },
+    {
+      "query": "The Cast Of Broadway's 'Miss Saigon' Took A Knee In Solidarity With NFL Players",
+      "ground_truth": "The mostly Asian cast said they \"believe in equality and the right to peaceful protest.\"",
+      "topic": "BLACK VOICES",
+      "client": 16,
+      "node_offline": false,
+      "retrieved_answer": "The mostly Asian cast said they \"believe in equality and the right to peaceful protest.\"",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    },
+    {
+      "query": "Will Your Child Grow Up To Be Slim Or Heavy?",
+      "ground_truth": "Families prepared meals with fresh ingredients. Families did outdoor physical activities together. Parents talked to children",
+      "topic": "WELLNESS",
+      "client": 17,
+      "node_offline": false,
+      "retrieved_answer": "Families prepared meals with fresh ingredients. Families did outdoor physical activities together. Parents talked to children",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    },
+    {
+      "query": "Gwyneth Paltrow's Sheer Dress For 'Iron Man 3' Premiere Is A Little Risky (PHOTOS)",
+      "ground_truth": "Of course, Gwyn has practiced the sheer look before, so this get-up seems like the, um, natural progression. On our end, we",
+      "topic": "STYLE & BEAUTY",
+      "client": 18,
+      "node_offline": false,
+      "retrieved_answer": "Of course, Gwyn has practiced the sheer look before, so this get-up seems like the, um, natural progression. On our end, we",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    },
+    {
+      "query": "Our Daily Guide To The #30Up Eat Well, Feel Great Challenge",
+      "ground_truth": "The most fun way to boost your health!",
+      "topic": "TASTE",
+      "client": 19,
+      "node_offline": false,
+      "retrieved_answer": "The most fun way to boost your health!",
+      "retrieval_score": 1.0,
+      "em": 1.0,
+      "status": "ok"
+    }
+  ]
+}

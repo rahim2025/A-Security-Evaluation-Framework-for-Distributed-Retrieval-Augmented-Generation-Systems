@@ -21,14 +21,14 @@
   "attacks": {
     "poisoning": {
       "attack": "poisoning",
-      "runtime": 8.478700328851119e-05,
+      "runtime": 9.34880001750571e-05,
       "num_poisoned": 6,
       "dropped_clients": [],
       "byzantine_clients": []
     },
     "node_availability": {
       "attack": "node_availability",
-      "runtime": 3.384899900993332e-05,
+      "runtime": 2.7840000029755174e-05,
       "node_attack_type": "node_removal",
       "node_attack_ratio": 0.3,
       "affected_nodes": [
@@ -53,7 +53,7 @@
     },
     "extraction": {
       "attack": "extraction",
-      "runtime": 0.5054854140034877,
+      "runtime": 0.3496446479998667,
       "recovery_ratio": 1.0,
       "total_queries": 84,
       "kb_recovery_pct": 100.0,
@@ -62,7 +62,7 @@
     },
     "membership_inference": {
       "attack": "membership_inference",
-      "runtime": 0.12803663100203266,
+      "runtime": 0.08821419099990635,
       "attack_accuracy": 1.0,
       "num_members_tested": 10,
       "num_non_members_tested": 10,
@@ -120,8 +120,8 @@
       "Defended Availability %": 100.0,
       "Membership Acc": null,
       "KB Recovery %": null,
-      "Runtime (s)": 8.478700328851119e-05,
-      "Memory Overhead MB": 1439.0390625,
+      "Runtime (s)": 9.34880001750571e-05,
+      "Memory Overhead MB": 1439.1171875,
       "Notes": "attack=poisoning; node_type=N/A; affected=[]; defense_enabled=True"
     },
     {
@@ -173,8 +173,8 @@
       "Defended Availability %": 70.0,
       "Membership Acc": null,
       "KB Recovery %": null,
-      "Runtime (s)": 3.384899900993332e-05,
-      "Memory Overhead MB": 1439.0390625,
+      "Runtime (s)": 2.7840000029755174e-05,
+      "Memory Overhead MB": 1439.1171875,
       "Notes": "attack=node_availability; node_type=node_removal; affected=[1, 6, 8, 12, 13, 15]; defense_enabled=True"
     },
     {
@@ -226,8 +226,8 @@
       "Defended Availability %": 100.0,
       "Membership Acc": null,
       "KB Recovery %": 100.0,
-      "Runtime (s)": 0.5054854140034877,
-      "Memory Overhead MB": 1439.0390625,
+      "Runtime (s)": 0.3496446479998667,
+      "Memory Overhead MB": 1439.1171875,
       "Notes": "attack=extraction; node_type=N/A; affected=[]; defense_enabled=True"
     },
     {
@@ -279,8 +279,8 @@
       "Defended Availability %": 100.0,
       "Membership Acc": 1.0,
       "KB Recovery %": null,
-      "Runtime (s)": 0.12803663100203266,
-      "Memory Overhead MB": 1439.0390625,
+      "Runtime (s)": 0.08821419099990635,
+      "Memory Overhead MB": 1439.1171875,
       "Notes": "attack=membership_inference; node_type=N/A; affected=[]; defense_enabled=True"
     }
   ],

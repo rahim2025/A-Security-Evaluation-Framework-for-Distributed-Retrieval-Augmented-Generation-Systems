@@ -1,198 +1,213 @@
-<!-- markdownlint-disable-file MD033 MD041 -->
+# FedRAG Security Evaluation Pipeline
 
-<img src="https://d3ddy8balm3goa.cloudfront.net/vector-fed-rag/logo-dark.svg" width="175" align="right" alt="logo"/>
+Federated Retrieval-Augmented Generation (FedRAG) security evaluation with 4 adversarial attacks,
+20 federated clients, and end-to-end LLM generation using llama3.2:3b via Ollama.
 
-# FedRAG
+---
 
----------------------------------------------------------------------------------------
+## What This Does
 
-[![Linting](https://github.com/VectorInstitute/fed-rag/actions/workflows/lint.yml/badge.svg)](https://github.com/VectorInstitute/fed-rag/actions/workflows/lint.yml)
-[![Unit Testing and Upload Coverage](https://github.com/VectorInstitute/fed-rag/actions/workflows/unit_test.yml/badge.svg)](https://github.com/VectorInstitute/fed-rag/actions/workflows/unit_test.yml)
-[![codecov](https://codecov.io/github/VectorInstitute/fed-rag/graph/badge.svg?token=JjJBPckP8v)](https://codecov.io/github/VectorInstitute/fed-rag)
-[![GitHub License](https://img.shields.io/github/license/VectorInstitute/fed-rag)](https://github.com/VectorInstitute/fed-rag/blob/main/LICENSE)
-![GitHub Release](https://img.shields.io/github/v/release/VectorInstitute/fed-rag)
-[![DOI](https://zenodo.org/badge/918377874.svg)](https://doi.org/10.5281/zenodo.15092361)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/VectorInstitute/fed-rag)
+Evaluates how adversarial attacks degrade a federated RAG system across two layers:
 
-FedRAG is an open-source framework for fine-tuning Retrieval-Augmented
-Generation (RAG) systems across both centralized and federated architectures.
+  Retrieval layer  — How much each attack corrupts knowledge store retrieval quality (EM, F1, SemSim)
+  LLM layer        — How poisoned context changes llama3.2:3b news summaries (F1, Semantic Similarity)
 
-## Simplified RAG fine-tuning across centralized or federated architectures
+Dataset : heegyu/news-category-dataset — 20 news headlines, one per federated client
+Attacks : Data Poisoning | Node Availability | Knowledge Extraction | Membership Inference (MIA)
 
-### Advanced RAG fine-tuning
+---
 
-Comprehensive support for state-of-the-art RAG fine-tuning methods that can be
-federated with ease.
+## Prerequisites
 
-### Work with your tools
+  Python      3.10+   (inside WSL Ubuntu 22.04)
+  Ollama      latest  (running on Windows host, reachable at localhost:11434)
+  llama3.2:3b         (pulled via Ollama)
+  GPU         optional (all-MiniLM-L6-v2 retriever; falls back to CPU)
 
-Seamlessly integrates with popular frameworks including HuggingFace,
-LlamaIndex, and LangChain — use the tools you already know.
+---
 
-### Lightweight abstractions
+## One-Time Setup
 
-Clean, intuitive abstractions that simplify RAG fine-tuning while
-maintaining full flexibility and control.
+### 1. Enter project directory
+  cd /mnt/d/safin/distributed-rag-poison-defense-fed-rag-safin/distributed-rag-poison-defense-fed-rag-safin
 
-## Installation
+### 2. Create and activate virtual environment
+  python3 -m venv venv
+  source venv/bin/activate
 
-### From package managers
+### 3. Install Python dependencies
+  pip install -e .
+  pip install datasets requests sentence-transformers nltk
 
-```sh
-# pypi
-pip install fed-rag
+### 4. Pull the LLM (run in Windows PowerShell, NOT WSL)
+  ollama pull llama3.2:3b
+  ollama serve
 
-# conda-forge
-conda install -c conda-forge fed-rag
-```
+### 5. Verify Ollama is reachable from WSL
+  curl http://localhost:11434/api/tags
+  # Should return JSON listing llama3.2:3b
 
-> [!NOTE]
-> Extras for `fed-rag` are also available, such as the HuggingFace extra, which
-> can be installed via `pip install fed-rag[huggingface]`
+---
 
-### From source
+## Run the Full Pipeline
 
-```sh
-git clone https://github.com/VectorInstitute/fed-rag.git
-cd fed-rag
+  source venv/bin/activate
 
-# install using pip
-pip install -e .
+  python run_system_with_llm_news_20clients.py \
+    --llm-model llama3.2:3b \
+    --num-samples 20 \
+    --num-clients 20 \
+    --attacks poisoning node_availability extraction membership_inference \
+    --output-dir logs/news_llama_20clients_all_attacks
 
-# or, install using uv, our package manager tool of choice
-uv sync --all-extras --group dev --group docs
-```
+Runtime: ~10-20 minutes depending on GPU/CPU speed.
 
-## Documentation
+---
 
-For more detailed documentation, visit our [official documentation site](https://vectorinstitute.github.io/fed-rag/).
+## Generate HTML Report
 
-- [Getting Started](https://vectorinstitute.github.io/fed-rag/getting_started/essentials/)
-- [Quick Starts](https://vectorinstitute.github.io/fed-rag/getting_started/quick_starts/)
-- [Examples](https://vectorinstitute.github.io/fed-rag/examples/)
-- [API Reference](https://vectorinstitute.github.io/fed-rag/api_reference/)
-- [Glossary](https://vectorinstitute.github.io/fed-rag/glossary/)
+  python generate_news_report.py
+  explorer.exe FedRAG_News_Report.html
 
-> [!TIP]
-> This README provides a high-level overview, but our official documentation is
-> updated more frequently with the latest features, tutorials, and API changes.
-> For the most current information, please refer to the documentation site.
+---
 
-## Examples
+## Optional Flags
 
-Check out our [examples directory](examples/) for more detailed usage examples:
+  --llm-model       llama3.2:3b   Any Ollama model tag (mistral, gemma2:2b, etc.)
+  --num-samples     20            Number of news articles to evaluate
+  --num-clients     20            Number of simulated federated clients
+  --seed            0             Random seed for reproducibility
+  --output-dir      logs/...      Where JSON results are saved
+  --attacks         (all 4)       Space-separated list of attacks to run
 
-- Basic RAG fine-tuning with federated learning
-- Implementing RA-DIT with FedRAG
-- Custom federated aggregation strategies
-- Integration with popular LLM frameworks
+---
 
-## Security Evaluation (Knowledge-Store Level)
+## Expected Results
 
-FedRAG includes experimental attack utilities for evaluating **knowledge-store
-security** against data corruption and availability attacks.  These evaluators
-measure how much retrieval quality degrades when the knowledge base is
-compromised — **they do not model federated training** (no local client
- training, no FedAvg aggregation, no Flower rounds).
+Phase 1 - Retrieval Layer (no LLM):
 
-- `DataPoisoningAttack` corrupts stored question–answer pairs.
-- `MembershipInferenceAttack` infers whether query-like text is present in the
-  knowledge store using retrieval confidence.
-- `KnowledgeExtractionAttack` probes the retrieval interface to recover stored
-  nodes.
-- `NodeAvailabilityAttack` models node-removal, Byzantine, partition, DDoS,
-  and Sybil attacks.
+  Attack                  Baseline EM   Post-Attack EM   Impact
+  Data Poisoning          1.00          0.70             -30%  <-- vulnerable
+  Node Availability       1.00          1.00              0%   <-- resilient by design
+  Knowledge Extraction    1.00          1.00              0%   <-- measures leakage not quality
+  Membership Inference    1.00          1.00              0%   <-- measures privacy not quality
 
-> **Scope note:** The evaluators all query a **single pooled knowledge store**
-> built from the (possibly corrupted) dataset.  The "federated" label only
-> means data is IID-split across clients for attack attribution (e.g. "poison
-> client 3's data", "drop client 5"); no actual federated learning occurs.
+Phase 2 - LLM Generation Layer (llama3.2:3b):
 
-### Evaluation modes
+  Scenario                F1      Semantic Similarity
+  Baseline (clean)        ~0.23   ~0.48
+  After poisoning         ~0.20   ~0.44   <-- LLM reads corrupted context
+  Node/Extraction/MIA     ~0.23   ~0.48   <-- no change (expected)
 
-Three modes are supported.  All produce the **same evaluation matrix**
-(columns: EM, precision, recall, F1, BLEU, ROUGE, semantic similarity,
-edit distance, n-gram overlap, query-failure rate, availability) so that
-DRAG and FedRAG results are directly comparable on architecture-agnostic
-metrics.
+NOTE: Exact Match (EM) = 0 for all LLM results is CORRECT and EXPECTED.
+Free-text summarisation never exactly matches ground truth.
+F1 and Semantic Similarity are the real metrics for news generation.
 
-#### 1. Centralized (single knowledge store)
+---
 
-```sh
-python run_security_evaluation.py --mode centralized \
-  --dataset mmlu --llm llama32_3b --seed 0
-```
+## Output Files
 
-Uses DRAG's MMLU dataset config and `sentence-transformers/all-MiniLM-L6-v2`
-retriever. Writes `logs/security_evaluation/EVALUATION_MATRIX.md`.
+  logs/news_llama_20clients_all_attacks/
+  |-- system_evaluation.json        Phase 1 retrieval-layer results (all 4 attacks)
+  |-- llm_generation_results.json   Phase 2 LLM-layer results (baseline + poisoning)
 
-#### 2. Federated (multi-client simulation)
+  FedRAG_News_Report.html           Full interactive HTML report
 
-```sh
-python run_security_evaluation.py --mode federated \
-  --num-clients 10 --num-examples 240 --seed 7
-```
+---
 
-Simulates IID data splits across clients, runs poisoning,
-membership-inference, extraction and node-availability attacks, and applies
-client-side defences (poisoning quarantine, score masking, rate limiting,
-anomaly detection).  **The underlying query target is still a single pooled
-knowledge store.**
+## What Was Fixed and Implemented
 
-#### 3. System-level (baseline → attack → post-attack)
+  Fix 1 - LLM output "2" bug
+    Problem : llama3.2:3b treated news headlines as MMLU multiple-choice, answered "2"
+    Solution: Rewrote prompt to demand ONE sentence; uses only top-1 retrieved doc
 
-Mirrors DRAG's `simulator.py` flow exactly:
+  Fix 2 - Response validator
+    Problem : Model still occasionally output bare numbers on first attempt
+    Solution: _clean_response() detects MCQ-pattern answers, retries up to 3x
 
-```sh
-python run_security_evaluation.py --mode system \
-  --num-clients 10 --attacks poisoning node_availability extraction \
-  --dataset mmlu --seed 0
-```
+  Fix 3 - Poisoning LLM evaluation showed n/a
+    Problem : fed_rag.attacks.get_attack does not exist in this version
+    Solution: Manual store poisoning - directly corrupts metadata["answer"] of 30% of nodes
 
-This mode evaluates the **whole system** by:
+  Fix 4 - Attacks appeared harmless at LLM layer
+    Problem : LLM only ran on clean store so no attack damage was visible
+    Solution: _run_llm_on_store() runs LLM on both clean and poisoned stores
 
-1. Building a baseline knowledge store from clean data.
-2. Running all queries and recording answer-quality metrics.
-3. Applying the selected attack(s) (corrupts the store or drops clients).
-4. Re-running the same queries against the attacked store.
-5. Computing degradation: `baseline − post-attack`.
-6. Writing a unified matrix with architecture-agnostic fields:
-   `exact_match`, `precision`, `recall`, `f1`, `bleu`, `rouge1/2/L`,
-   `semantic_similarity`, `edit_distance`, `bigram/trigram_overlap`,
-   `query_failure_rate`, `availability_percentage`.
+  IMPORTANT: No changes made to the core fed_rag/ library.
+  All fixes are in run_system_with_llm_news_20clients.py and generate_news_report.py only.
 
-All three modes write Markdown matrix, CSV matrix, and raw JSON results.
+---
 
-## Contributing
+## Pipeline Architecture
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for more details.
+  Query (news headline)
+       |
+       v
+  Retriever (all-MiniLM-L6-v2 · GPU)
+       |
+       v
+  Knowledge Store <--- attacks injected here (Phase 1)
+  (20 news nodes, one per federated client)
+       |
+       v
+  Top-1 Retrieved Doc
+       |
+       v
+  LLM Generator (llama3.2:3b via Ollama) <--- Phase 2 reads poisoned context
+       |
+       v
+  Generated Answer (1-sentence news summary)
+       |
+       v
+  Metrics vs Ground Truth (EM | F1 | BLEU | Semantic Similarity)
 
-## Citation
+---
 
-If you use FedRAG in your research, please cite our library:
+## Federated Client Distribution (20 Clients, IID Split)
 
-```bibtex
-@software{Fajardo_fed-rag_2025,
-author = {Fajardo, Andrei and Emerson, David},
-doi = {10.5281/zenodo.15092361},
-license = {Apache-2.0},
-month = mar,
-title = {{fed-rag}},
-url = {https://github.com/VectorInstitute/fed-rag},
-version = {0.0.27},
-year = {2025}
-}
-```
+  Client 00: THE WORLDPOST      Client 10: STYLE & BEAUTY
+  Client 01: STYLE & BEAUTY     Client 11: HEALTHY LIVING
+  Client 02: BLACK VOICES       Client 12: WORLD NEWS
+  Client 03: WOMEN              Client 13: TASTE
+  Client 04: POLITICS           Client 14: HOME & LIVING
+  Client 05: WELLNESS           Client 15: PARENTING
+  Client 06: IMPACT             Client 16: CRIME
+  Client 07: WELLNESS           Client 17: WELLNESS
+  Client 08: RELIGION           Client 18: POLITICS
+  Client 09: GOOD NEWS          Client 19: ENTERTAINMENT
 
-> [!NOTE]
-> The above citation may not reflect the most recent version of the library. We
-> recommend using the Github citation widget (i.e. "Cite this respository") to
-> obtain a citation entry reflecting the latest released version.
+All client knowledge is pooled into one in-memory store of 20 nodes before evaluation.
 
-## License
+---
 
-FedRAG is released under the [Apache License 2.0](LICENSE).
+## Troubleshooting
 
-## Acknowledgements
+  Connection refused on Ollama
+    Run "ollama serve" in Windows (not WSL). Check port 11434 is not blocked by firewall.
 
-FedRAG is developed and maintained by the [Vector Institute](https://vectorinstitute.ai/).
+  ModuleNotFoundError: fed_rag
+    Run: pip install -e .   (inside activated venv)
+
+  ModuleNotFoundError: datasets
+    Run: pip install datasets
+
+  LLM outputs "2" again
+    Confirm run_system_with_llm_news_20clients.py contains the _clean_response function.
+
+  Old HTML report still shows "2"
+    Re-run: python generate_news_report.py   to overwrite the stale file.
+
+  HF Hub unauthenticated warning
+    Set: export HF_TOKEN=your_token   OR ignore it — dataset still downloads fine.
+Step 3 — Run the pipeline
+
+python run_system_with_llm_news_20clients.py \
+  --llm-model llama3.2:3b \
+  --num-samples 20 \
+  --num-clients 20 \
+  --attacks poisoning node_availability extraction membership_inference \
+  --output-dir logs/news_llama_20clients_all_attacks
+
+Step 4 — Generate and open the report
+
+python generate_news_report.py && explorer.exe FedRAG_News_Report.html
