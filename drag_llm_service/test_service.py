@@ -262,6 +262,7 @@ def test_query_analyze_sse(base_url="http://localhost:9000", query="Who won the 
                         current_data.append(data_line)
                 # Ignore other line types (id:, retry:, etc.)
             
+            response.close()  # Always close the SSE connection to prevent keep-alive reuse
             print("-" * 60)
             if final_result:
                 success_msg = "SSE test completed successfully!"

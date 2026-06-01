@@ -174,7 +174,8 @@ class DataPoisoningAttack:
         results = {}
         for src in self.data_sources:
             try:
-                r = requests.post(f"{src['url']}/reset", timeout=30)
+                logger.info(f"[RESET] Resetting {src['name']} (re-embedding ~3000 docs, may take 2 min)...")
+                r = requests.post(f"{src['url']}/reset", timeout=300)
                 results[src["name"]] = r.json()
                 logger.info(f"[RESET] {src['name']}: {r.json()}")
             except Exception as e:
@@ -401,7 +402,7 @@ class DataPoisoningAttack:
         """POST docs to a data source's /poison endpoint. Returns injected count."""
         try:
             payload = {"documents": docs}
-            r = requests.post(f"{url}/poison", json=payload, timeout=60)
+            r = requests.post(f"{url}/poison", json=payload, timeout=300)
             if r.status_code == 200:
                 return r.json().get("injected_count", len(docs))
             else:
