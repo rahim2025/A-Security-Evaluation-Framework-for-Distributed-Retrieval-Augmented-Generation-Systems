@@ -1,0 +1,14 @@
+services:
+  llm-service:
+    build:
+      context: ..
+      dockerfile: drag_llm_service/Dockerfile
+    container_name: drag-llm-service
+    ports:
+      - "9000:9000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_DEBUG=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # to resolve localhost to host-gateway in macos
+    restart: unless-stopped

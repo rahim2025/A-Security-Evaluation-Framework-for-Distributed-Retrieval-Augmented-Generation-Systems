@@ -1,0 +1,12 @@
+services:
+  hardhat-node:
+    build:
+      context: ..
+      dockerfile: drag_contract/Dockerfile
+    container_name: drag-hardhat-node
+    ports:
+      - "8545:8545"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+
