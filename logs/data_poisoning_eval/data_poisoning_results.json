@@ -1,0 +1,48 @@
+{
+  "baseline_sem": 1.0,
+  "baseline_f1": 0.9,
+  "experiments": [
+    {
+      "label": "30% Strategic",
+      "rate": 0.3,
+      "strategy": "strategic",
+      "color": "#d97706",
+      "bg": "#fef3c7",
+      "desc": "Targets highest-traffic categories (POLITICS/WELLNESS first) to maximise query hit rate.",
+      "n_poison": 6,
+      "f1": 0.7350300000000001,
+      "sem": 0.7885199999999999,
+      "f1_drop": 16.496999999999996,
+      "sem_drop": 21.14800000000001,
+      "affected": 6
+    },
+    {
+      "label": "50% Random",
+      "rate": 0.5,
+      "strategy": "random",
+      "color": "#ea580c",
+      "bg": "#fff7ed",
+      "desc": "50% of nodes poisoned uniformly at random with article-specific contradictions.",
+      "n_poison": 10,
+      "f1": 0.6351150000000001,
+      "sem": 0.740195,
+      "f1_drop": 26.48849999999999,
+      "sem_drop": 25.980499999999996,
+      "affected": 10
+    },
+    {
+      "label": "70% Random",
+      "rate": 0.7,
+      "strategy": "random",
+      "color": "#dc2626",
+      "bg": "#fee2e2",
+      "desc": "70% of nodes poisoned -- severe attack, most queries hit a poisoned node.",
+      "n_poison": 14,
+      "f1": 0.49577,
+      "sem": 0.60669,
+      "f1_drop": 40.423,
+      "sem_drop": 39.331,
+      "affected": 14
+    }
+  ]
+}

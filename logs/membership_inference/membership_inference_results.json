@@ -1,0 +1,26 @@
+{
+  "L1_exact": {
+    "auc_mean": 1.0,
+    "auc_std": 0.0,
+    "acc_mean": 1.0,
+    "acc_std": 0.0,
+    "adv_mean": 0.5,
+    "gap_mean": 0.7514
+  },
+  "L2_paraphrase": {
+    "auc_mean": 1.0,
+    "auc_std": 0.0,
+    "acc_mean": 1.0,
+    "acc_std": 0.0,
+    "adv_mean": 0.5,
+    "gap_mean": 0.6427
+  },
+  "L3_topic": {
+    "auc_mean": 0.988,
+    "auc_std": 0.0135,
+    "acc_mean": 0.98,
+    "acc_std": 0.01,
+    "adv_mean": 0.48,
+    "gap_mean": 0.3755
+  }
+}
