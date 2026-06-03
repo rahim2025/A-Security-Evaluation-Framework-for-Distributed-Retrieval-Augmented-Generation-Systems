@@ -25,13 +25,13 @@ model:
 # Data sources configuration
 data_sources:
   - name: "sources_0"
-    url: "http://host.docker.internal:8001" # macos specific to resolve localhost to host-gateway
-  
+    url: "http://localhost:8001"
+
   - name: "sources_20"
-    url: "http://host.docker.internal:8002" # macos specific to resolve localhost to host-gateway
-  
+    url: "http://localhost:8002"
+
   - name: "sources_100"
-    url: "http://host.docker.internal:8003" # macos specific to resolve localhost to host-gateway
+    url: "http://localhost:8003"
 
 # Blockchain configuration
 blockchain:
@@ -42,7 +42,7 @@ blockchain:
   private_key: "0x701b615bbdfb9de65240bc28bd21bbc0d996645a3dd57e7b12bc2bdf6f192c82"
   
   # Ethereum provider URL (RPC endpoint)
-  provider_url: "http://host.docker.internal:8545"
+  provider_url: "http://localhost:8545"
   
   # Contract address (optional, will try to find from Hardhat Ignition if not provided)
   contract_address: null

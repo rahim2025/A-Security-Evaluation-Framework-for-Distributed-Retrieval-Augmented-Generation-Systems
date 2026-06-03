@@ -252,16 +252,18 @@ class LocalModel(ModelBase):
     def generate(self, prompt: str) -> str:
         """
         Generate text from prompt
-        
+
         Args:
             prompt: Text prompt
-            
+
         Returns:
             Generated text response
         """
-        response = self.model(prompt)
-        self.model.restart()
-        return response
+        try:
+            response = self.model(prompt)
+            return response
+        finally:
+            self.model.restart()
 
 class BaseSHAP(ABC):
     """Base class for SHAP implementations"""
