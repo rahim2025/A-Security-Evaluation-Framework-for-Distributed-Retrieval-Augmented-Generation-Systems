@@ -6,4 +6,5 @@ __all__ = [
     'BaseDefense',
     'CrossPeerValidation',
     'PrivacyPreservingRetrieval',
+    'SelectiveForwardingDefense',
 ]
