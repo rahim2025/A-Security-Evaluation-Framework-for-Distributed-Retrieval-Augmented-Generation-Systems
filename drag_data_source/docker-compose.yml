@@ -1,0 +1,49 @@
+services:
+  data-source-0:
+    build:
+      context: ..
+      dockerfile: drag_data_source/Dockerfile
+    container_name: drag-data-source-0
+    ports:
+      - "8001:8001"
+    volumes:
+      # Mount your data directory here
+      - ../data/polluted_token:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CONFIG_PATH=/app/configs/config_sources_0.yaml
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # to resolve localhost to host-gateway in macos
+
+  data-source-20:
+    build:
+      context: ..
+      dockerfile: drag_data_source/Dockerfile
+    container_name: drag-data-source-20
+    ports:
+      - "8002:8001"
+    volumes:
+      - ../data/polluted_token:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CONFIG_PATH=/app/configs/config_sources_20.yaml
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # to resolve localhost to host-gateway in macos
+  
+  data-source-100:
+    build:
+      context: ..
+      dockerfile: drag_data_source/Dockerfile
+    container_name: drag-data-source-100
+    ports:
+      - "8003:8001"
+    volumes:
+      - ../data/polluted_token:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CONFIG_PATH=/app/configs/config_sources_100.yaml
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # to resolve localhost to host-gateway in macos

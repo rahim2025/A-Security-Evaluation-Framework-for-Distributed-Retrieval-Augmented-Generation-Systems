@@ -1,0 +1,173 @@
+services:
+  # Contract Service (Hardhat Node)
+  hardhat-node:
+    build:
+      context: .
+      dockerfile: drag_contract/Dockerfile
+    container_name: drag-hardhat-node
+    ports:
+      - "8545:8545"
+    volumes:
+      - ./drag_contract/ignition/deployments:/app/drag_contract/ignition/deployments
+    restart: unless-stopped
+    networks:
+      - drag_network
+    healthcheck:
+      test: ["CMD", "/healthcheck.sh"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 240s
+
+  # Data Source Services
+  data-source-0:
+    build:
+      context: .
+      dockerfile: drag_data_source/Dockerfile
+    container_name: drag-data-source-0
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data/polluted_token:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_TOKEN=${HF_TOKEN}
+      - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
+      - CONFIG_PATH=/app/configs/config_sources_0.yaml
+    restart: unless-stopped
+    networks:
+      - drag_network
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 300s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  data-source-20:
+    build:
+      context: .
+      dockerfile: drag_data_source/Dockerfile
+    container_name: drag-data-source-20
+    ports:
+      - "8002:8001"
+    volumes:
+      - ./data/polluted_token:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CONFIG_PATH=/app/configs/config_sources_20.yaml
+    restart: unless-stopped
+    networks:
+      - drag_network
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 300s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  data-source-100:
+    build:
+      context: .
+      dockerfile: drag_data_source/Dockerfile
+    container_name: drag-data-source-100
+    ports:
+      - "8003:8001"
+    volumes:
+      - ./data/polluted_token:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CONFIG_PATH=/app/configs/config_sources_100.yaml
+    restart: unless-stopped
+    networks:
+      - drag_network
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 300s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # KB Attack runner — one-shot, run with:
+  #   docker compose run --rm kb-attack [args]
+  kb-attack:
+    build:
+      context: .
+      dockerfile: attack/Dockerfile
+    container_name: drag-kb-attack
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATA_SOURCE_0_URL=http://drag-data-source-0:8001
+      - DATA_SOURCE_20_URL=http://drag-data-source-20:8001
+      - DATA_SOURCE_100_URL=http://drag-data-source-100:8001
+      - LLM_SERVICE_URL=http://drag-llm-service:9000
+      - DATA_DIR=/app/data/polluted_token
+    networks:
+      - drag_network
+    depends_on:
+      data-source-0:
+        condition: service_healthy
+      data-source-20:
+        condition: service_healthy
+      data-source-100:
+        condition: service_healthy
+    restart: "no"
+
+  # LLM Orchestrator Service
+  llm-service:
+    build:
+      context: .
+      dockerfile: drag_llm_service/Dockerfile
+      args:
+        INSTALL_VLLM: ${INSTALL_VLLM:-true}
+    container_name: drag-llm-service
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./drag_contract/ignition/deployments:/app/drag_contract/ignition/deployments
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_TOKEN=${HF_TOKEN}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+      - VLLM_USE_FLASHINFER_SAMPLER=0
+      - VLLM_ATTENTION_BACKEND=FLASH_ATTN
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+      data-source-0:
+        condition: service_healthy
+      data-source-20:
+        condition: service_healthy
+      data-source-100:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    networks:
+      - drag_network
+
+networks:
+  drag_network:
+    driver: bridge

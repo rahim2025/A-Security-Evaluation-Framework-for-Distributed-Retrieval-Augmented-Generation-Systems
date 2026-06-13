@@ -1,0 +1,43 @@
+# Data source configuration
+data:
+  # Path to the JSONL document file
+  jsonl_path: "/data/sources_0.jsonl"
+  
+  # Dataset name/prefix for this data source
+  dataset_name: "sources_0"
+
+blockchain:
+  # Ethereum wallet address (Hardhat default account #1)
+  address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+  
+  # Ethereum wallet private key (Hardhat default account #1)
+  private_key: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+  
+  # Ethereum provider URL (RPC endpoint)
+  provider_url: "http://host.docker.internal:8545"
+  
+  # Contract address (optional, will try to find from Hardhat Ignition if not provided)
+  contract_address: null
+
+retriever:
+  # Embedding model to use
+  model_name: "sentence-transformers/all-MiniLM-L6-v2"
+  
+  # Whether to normalize embeddings
+  normalize: true
+  
+  # Whether to use FAISS for faster search
+  use_faiss: true
+  
+  # Device to run the retriever on (e.g., "cuda:0", "cpu")
+  device: "cpu"
+  
+  # Batch size for embedding
+  batch_size: 256
+
+server:
+  # Port for the API server
+  port: 8001
+  
+  # Host to bind to
+  host: "0.0.0.0"
