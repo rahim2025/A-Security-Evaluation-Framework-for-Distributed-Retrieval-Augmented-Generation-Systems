@@ -140,8 +140,8 @@ class SSMScoreAttack:
                     message=fake_message,
                     signatures=[sig_bytes],
                     update_source_ids=[source_id],
-                    update_reliability_scores=[0],
-                    update_usefulness_scores=[0],
+                    update_reliability_scores=[10000],
+                    update_usefulness_scores=[10000],
                     info="SSM_ATTACK_reset",
                 )
                 results[source_id] = f"reset OK (tx={tx})"

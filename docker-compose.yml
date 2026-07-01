@@ -135,7 +135,7 @@ services:
       - VLLM_ATTENTION_BACKEND=FLASH_ATTN
       - REPLACE_LOCALHOST_WITH=host.docker.internal
       - FLASK_DEBUG=false
-      - DS_API_KEY=reliable-derag-secret-2026
+      - API_KEY=reliable-derag-secret-2026
     depends_on:
       hardhat-node:
         condition: service_healthy

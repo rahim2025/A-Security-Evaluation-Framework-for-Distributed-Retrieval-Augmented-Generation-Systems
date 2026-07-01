@@ -11,7 +11,7 @@ blockchain:
   address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
   
   # Ethereum wallet private key (Hardhat default account #3)
-  private_key: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
+  private_key: "LOADED_FROM_ENV"
   
   # Ethereum provider URL (RPC endpoint)
   provider_url: "http://host.docker.internal:8545"
