@@ -111,6 +111,9 @@ services:
     container_name: drag-llm-service
     ports:
       - "9000:9000"
+    volumes:
+      - ./drag_contract/artifacts:/app/drag_contract/artifacts
+      - ./drag_contract/ignition/deployments:/app/drag_contract/ignition/deployments
     deploy:
       resources:
         reservations:
@@ -124,6 +127,8 @@ services:
       - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
       - VLLM_USE_FLASHINFER_SAMPLER=0
       - VLLM_ATTENTION_BACKEND=FLASH_ATTN
+      - REPLACE_LOCALHOST_WITH=host.docker.internal
+      - FLASK_DEBUG=false
     depends_on:
       hardhat-node:
         condition: service_healthy
