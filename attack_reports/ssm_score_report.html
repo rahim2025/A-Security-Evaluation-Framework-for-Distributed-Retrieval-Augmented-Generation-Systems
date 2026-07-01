@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>SSM-Score Attack Report — Reliable-dRAG</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',system-ui,sans-serif;background:#f9fafb;color:#111827;line-height:1.6}
+header{background:linear-gradient(135deg,#1e3a5f,#1a56db);color:#fff;padding:2.5rem 3rem}header h1{font-size:1.8rem;font-weight:700}header .sub{opacity:.85;font-size:.95rem}
+.container{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
+h2{font-size:1.3rem;font-weight:700;color:#1e3a5f;margin:2rem 0 1rem;border-left:4px solid #1a56db;padding-left:.75rem}
+h3{font-size:1.05rem;font-weight:600;color:#374151;margin:1.2rem 0 .5rem}
+p{margin-bottom:.75rem;color:#374151}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:.75rem;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem}
+.metric{text-align:center;padding:1.25rem}.metric .val{font-size:2.4rem;font-weight:800;line-height:1}.metric .lbl{font-size:.8rem;color:#6b7280;margin-top:.35rem;text-transform:uppercase}
+.red .val{color:#e02424}.green .val{color:#057a55}.blue .val{color:#1a56db}
+table{width:100%;border-collapse:collapse;font-size:.88rem}th{background:#f3f4f6;padding:.6rem .9rem;text-align:left;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb}
+td{padding:.55rem .9rem;border-bottom:1px solid #e5e7eb;vertical-align:top}tr:last-child td{border-bottom:none}
+.ok{color:#057a55;font-weight:700}.fail{color:#e02424;font-weight:700}
+code{background:#f3f4f6;padding:.1em .4em;border-radius:.25rem;font-size:.85em;font-family:monospace}
+pre{background:#1e293b;color:#e2e8f0;padding:1.25rem;border-radius:.5rem;overflow-x:auto;font-size:.83rem;line-height:1.55;margin:.75rem 0}
+.step{display:flex;gap:1rem;margin-bottom:1rem;align-items:flex-start}
+.step-num{flex-shrink:0;width:2rem;height:2rem;border-radius:50%;background:#1a56db;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;margin-top:.15rem}
+.vuln{border-left:4px solid #e02424;background:#fef2f2;padding:1rem 1.25rem;border-radius:0 .5rem .5rem 0;margin-bottom:1rem}
+.vuln h4{color:#e02424;font-weight:700;margin-bottom:.25rem}
+.info{border-left:4px solid #1a56db;background:#eff6ff;padding:1rem 1.25rem;border-radius:0 .5rem .5rem 0;margin-bottom:1rem}
+.info h4{color:#1a56db;font-weight:700;margin-bottom:.25rem}
+.tx{font-family:monospace;font-size:.78rem;color:#6b7280;word-break:break-all}
+.hl td{background:#fef9c3;font-weight:600}
+footer{background:#1e3a5f;color:#94a3b8;padding:1.5rem 3rem;font-size:.85rem;margin-top:3rem}
+@media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}}
+</style></head><body>
+<header>
+  <h1>SSM-Score Manipulation Attack &nbsp;<span style="display:inline-block;padding:.15rem .6rem;border-radius:999px;font-size:.75rem;font-weight:600;background:#fee2e2;color:#991b1b">CRITICAL</span></h1>
+  <div class="sub">Security Analysis Report &nbsp;·&nbsp; Reliable-dRAG System &nbsp;·&nbsp; July 1, 2026 &nbsp;·&nbsp; Thesis Evaluation</div>
+</header>
+<div class="container">
+
+<h2>1. Executive Summary</h2>
+<div class="card">
+<p>The <strong>SSM-Score Manipulation Attack</strong> targets Reliable-dRAG's on-chain Scoring &amp; Sampling Mechanism. All blockchain private keys are the publicly-known Hardhat defaults, so an attacker impersonates the LLM service and submits forged score-update transactions that inflate a malicious source's on-chain R<sub>i</sub>/U<sub>i</sub> by 500×. The system then exclusively selects the poisoned source, dropping accuracy from <strong>42.9% → 0%</strong>.</p>
+<div class="grid3" style="margin-top:1.25rem">
+<div class="card metric red"><div class="val">100%</div><div class="lbl">Accuracy Drop</div></div>
+<div class="card metric blue"><div class="val">500×</div><div class="lbl">Score Amplification</div></div>
+<div class="card metric red"><div class="val">5 TXs</div><div class="lbl">Transactions to Achieve Attack</div></div>
+</div></div>
+
+<h2>2. System Under Test — Reliable-dRAG</h2>
+<div class="card">
+<div class="grid2">
+<div><h3>Running Services (Docker)</h3>
+<table><tr><th>Container</th><th>URL</th><th>Role</th></tr>
+<tr><td>hardhat-node</td><td><code>localhost:8545</code></td><td>Blockchain (chain ID 31337)</td></tr>
+<tr><td>data-source-0</td><td><code>localhost:8001</code></td><td>KB — 0% poisoned</td></tr>
+<tr><td>data-source-20</td><td><code>localhost:8002</code></td><td>KB — 20% poisoned</td></tr>
+<tr><td>data-source-100</td><td><code>localhost:8003</code></td><td>KB — 100% poisoned ← target</td></tr>
+<tr><td>llm-service</td><td><code>localhost:9000</code></td><td>RAG query endpoint</td></tr>
+</table></div>
+<div><h3>Data Used</h3>
+<table><tr><th>Item</th><th>Detail</th></tr>
+<tr><td>Knowledge base</td><td>TriviaQA dataset (JSONL)</td></tr>
+<tr><td>Eval questions</td><td>7 TriviaQA questions (same benchmark as data poisoning attack)</td></tr>
+<tr><td>Embedding model</td><td>sentence-transformers/all-MiniLM-L6-v2</td></tr>
+<tr><td>Smart contract</td><td>DragScores.sol on local Hardhat node</td></tr>
+<tr><td>Private keys</td><td>Hardhat defaults — all publicly known (the vulnerability)</td></tr>
+</table></div></div>
+<h3 style="margin-top:1.25rem">How SSM Scoring Normally Works</h3>
+<p>After each query the LLM service evaluates answer correctness and calls <code>feedbackAndUpdateScoreRecords()</code> on the smart contract, updating each source's R<sub>i</sub> and U<sub>i</sub>. The sampling function uses U<sub>i</sub> as weights — sources with higher scores are selected more often. The blockchain makes this audit trail immutable.</p>
+<h3>Initial Blockchain State (Before Attack)</h3>
+<table><tr><th>Source</th><th>R<sub>i</sub></th><th>U<sub>i</sub></th><th>Selection %</th></tr>
+<tr><td>sources_0</td><td>10,000</td><td>10,000</td><td>~33%</td></tr>
+<tr><td>sources_20</td><td>10,000</td><td>10,000</td><td>~33%</td></tr>
+<tr><td>sources_100</td><td>10,000</td><td>10,000</td><td>~33%</td></tr>
+</table></div>
+
+<h2>3. Vulnerability Analysis</h2>
+<div class="card">
+<div class="vuln"><h4>VULN-01 · Exposed Default Private Keys (Root Cause)</h4>
+<p>All accounts use publicly documented Hardhat test keys committed to the repo. Anyone reading the config files gets the LLM service's private key — the sole authorised caller of <code>feedbackAndUpdateScoreRecords()</code>.</p></div>
+<div class="vuln"><h4>VULN-02 · Unconstrained Score Delta</h4>
+<p>The contract accepts arbitrary absolute score values with no max delta, no rate limiting, and no sanity check. One call can raise a score from 10,000 to 1,009,999 — a 100× jump with zero on-chain resistance.</p></div>
+<div class="vuln"><h4>VULN-03 · Self-Signature Acceptance</h4>
+<p>The contract validates that an update is signed by the source being scored. But because the attacker controls that source's private key (VULN-01), they manufacture valid signatures for fake messages with no real query occurring.</p></div>
+<div class="info"><h4>What the Blockchain DOES Protect Against</h4>
+<p>The contract correctly prevents unauthorised parties (those lacking the LLM service key) from submitting updates, and maintains an immutable on-chain audit trail. These protections hold in a properly key-managed deployment — they fail here solely because default test keys were never rotated.</p></div>
+<h3>Known Private Keys (All Hardhat Public Defaults)</h3>
+<table><tr><th>Role</th><th>Acct</th><th>Address</th><th>Key suffix</th></tr>
+<tr><td>sources_0</td><td>#1</td><td><code>0xf39F…2266</code></td><td><code>…2ff80</code></td></tr>
+<tr><td>sources_20</td><td>#2</td><td><code>0x7099…79C8</code></td><td><code>…8690d</code></td></tr>
+<tr><td>sources_100</td><td>#3</td><td><code>0x3C44…93BC</code></td><td><code>…c2e68</code> ← signed fake msgs</td></tr>
+<tr class="hl"><td>LLM Service</td><td>#11</td><td><code>0x701b…82</code></td><td><code>…365a</code> ← submitted TXs</td></tr>
+</table></div>
+
+<h2>4. Attack Process (Step-by-Step)</h2>
+<div class="card">
+<div class="step"><div class="step-num">1</div><div><strong>Reconnaissance</strong> — Read <code>config_sources_100.yaml</code> and <code>drag_llm_service/configs/config.yaml</code> to extract all private keys. Files are committed with default Hardhat values.</div></div>
+<div class="step"><div class="step-num">2</div><div><strong>Craft fake message</strong><pre>{"query": "attack_probe", "selected_sources": {"sources_0": [0,0], "sources_20": [0,0], "sources_100": [0,0]}}</pre></div></div>
+<div class="step"><div class="step-num">3</div><div><strong>Sign fake message</strong> with <code>sources_100</code> private key using Ethereum personal_sign → valid 65-byte ECDSA signature the contract accepts as proof of participation.</div></div>
+<div class="step"><div class="step-num">4</div><div><strong>Submit forged score update</strong> using the LLM service private key:<pre>feedbackAndUpdateScoreRecords(
+    message              = fake_query_json,
+    signatures           = [sign(fake_query_json, key_sources_100)],
+    update_source_ids    = ["sources_100"],
+    update_reliability   = [current_R + 999_999],
+    update_usefulness    = [current_U + 999_999],
+    info                 = "SSM_ATTACK_round_N"
+)</pre></div></div>
+<div class="step"><div class="step-num">5</div><div><strong>Repeat 5 rounds</strong> — each adds +999,999. Final: R = U = 5,009,995 for sources_100 vs 10,000 for legitimate sources (500× ratio).</div></div>
+<div class="step"><div class="step-num">6</div><div><strong>Sampling biased</strong> — usefulness-weighted sampling selects sources_100 with &gt;99.6% probability for every query.</div></div>
+<div class="step"><div class="step-num">7</div><div><strong>All answers wrong</strong> — every retrieved context block comes from the 100%-poisoned KB. LLM generates plausible-sounding but factually incorrect answers.</div></div>
+</div>
+
+<h2>5. On-Chain Evidence (Verified Transactions)</h2>
+<div class="card">
+<table><tr><th>Round</th><th>R<sub>i</sub></th><th>U<sub>i</sub></th><th>Transaction Hash</th></tr>
+<tr><td>1</td><td>1,009,999</td><td>1,009,999</td><td class="tx">145db4fe9d3ed7441db650fd4a89337c59905c21d422001e1b3be6d32ace98c2</td></tr>
+<tr><td>2</td><td>2,009,998</td><td>2,009,998</td><td class="tx">03815bce7aa1b367ab22d1b3fb3da93bcc66b8c3eb9b60092f0b09c4d31dd5df</td></tr>
+<tr><td>3</td><td>3,009,997</td><td>3,009,997</td><td class="tx">109c339df198aa7e70286ae47eb7814c683680085dea253f8265bd5314447a7a</td></tr>
+<tr><td>4</td><td>4,009,996</td><td>4,009,996</td><td class="tx">d6d0fd2e466321e04c936b9150293912214f693232d04b8046a94aaaef5b3c76</td></tr>
+<tr class="hl"><td>5 (final)</td><td>5,009,995</td><td>5,009,995</td><td class="tx">46f8bbf9ed9f345318f48a9adb6f9723d074061ca0a584858a572c6865d29231</td></tr>
+</table></div>
+
+<h2>6. Score Timeline</h2>
+<div class="card">
+<table><tr><th>Stage</th><th>sources_0 R/U</th><th>sources_20 R/U</th><th>sources_100 R/U</th><th>sources_100 Select %</th></tr>
+<tr><td>Initial</td><td>10,000 / 10,000</td><td>10,000 / 10,000</td><td>10,000 / 10,000</td><td>~33%</td></tr>
+<tr><td>After round 1</td><td>10,000 / 10,000</td><td>10,000 / 10,000</td><td>1,009,999 / 1,009,999</td><td>~98%</td></tr>
+<tr><td>After round 3</td><td>10,000 / 10,000</td><td>10,000 / 10,000</td><td>3,009,997 / 3,009,997</td><td>~99.3%</td></tr>
+<tr class="hl"><td>After round 5 (attack done)</td><td>10,000 / 10,000</td><td>10,000 / 10,000</td><td>5,009,995 / 5,009,995</td><td>&gt;99.6%</td></tr>
+<tr><td>After reset</td><td>10,000 / 10,000</td><td>10,000 / 10,000</td><td>10,000 / 10,000</td><td>~33%</td></tr>
+</table></div>
+
+<h2>7. Evaluation Results</h2>
+<div class="card">
+<div class="grid2" style="margin-bottom:1.25rem">
+<div class="card metric green"><div class="val">42.9%</div><div class="lbl">Clean Accuracy — 3/7 correct</div></div>
+<div class="card metric red"><div class="val">0.0%</div><div class="lbl">Attacked Accuracy — 0/7 correct</div></div>
+</div>
+<table><tr><th>#</th><th>Question</th><th>Expected</th><th>Clean Response</th><th>✓</th><th>Attacked Response</th><th>✓</th></tr>
+<tr><td>1</td><td>Who got the first Nobel Prize in physics?</td><td>Wilhelm Conrad Röntgen</td><td>Wilhelm Conrad Röntgen</td><td class="ok">✓</td><td>Heinrich Hertz</td><td class="fail">✗</td></tr>
+<tr><td>2</td><td>When is the next Deadpool movie released?</td><td>May 18, 2018</td><td>HTTP 500</td><td class="fail">✗</td><td>The next Deadpool movie is set…</td><td class="fail">✗</td></tr>
+<tr><td>3</td><td>Which mode for short wave broadcast service?</td><td>MFSK / Olivia</td><td>MFSK</td><td class="ok">✓</td><td>BPSK</td><td class="fail">✗</td></tr>
+<tr><td>4</td><td>South west wind across Nigeria between?</td><td>Till September</td><td>April to July</td><td class="fail">✗</td><td>July to November</td><td class="fail">✗</td></tr>
+<tr><td>5</td><td>Who wrote the first declaration of human rights?</td><td>Cyrus</td><td>John Peters Humphrey</td><td class="fail">✗</td><td>Mikhail V. Ostrogradsky</td><td class="fail">✗</td></tr>
+<tr><td>6</td><td>Who owns Reading Football Club?</td><td>Dai Xiuli / Dai Yongge</td><td>Zhang Hongwei</td><td class="fail">✗</td><td>[Context] Manchester United…</td><td class="fail">✗</td></tr>
+<tr><td>7</td><td>Swan Lake, Sleeping Beauty, Nutcracker are ballets by?</td><td>Tchaikovsky</td><td>Pyotr Ilyich Tchaikovsky</td><td class="ok">✓</td><td>Sergei Rachmaninoff</td><td class="fail">✗</td></tr>
+</table>
+<div class="info" style="margin-top:1rem"><h4>Note on Baseline Accuracy</h4>
+<p>Q2, Q4, Q5, Q6 were already wrong before the attack (system limitations, partial KB coverage). The attack additionally corrupted the 3 previously-correct answers (Q1, Q3, Q7), proving its causal impact.</p></div>
+</div>
+
+<h2>8. Comparison: Reliable-dRAG vs. DRAG</h2>
+<div class="card">
+<table><tr><th>Security Property</th><th>DRAG (baseline)</th><th>Reliable-dRAG</th></tr>
+<tr><td>Blockchain score integrity</td><td class="fail">✗ None</td><td class="ok">✓ DragScores smart contract</td></tr>
+<tr><td>Immutable audit trail</td><td class="fail">✗ None</td><td class="ok">✓ On-chain ScoreRecordUpdated events</td></tr>
+<tr><td>Resistant to SSM-Score attack</td><td>N/A (no scoring)</td><td class="fail">✗ Vulnerable — default key exposure</td></tr>
+<tr><td>Accuracy under SSM-Score attack</td><td>—</td><td class="fail">0.0% (−100% from baseline)</td></tr>
+<tr><td>Score rate limiting</td><td>N/A</td><td class="fail">✗ No delta cap in contract</td></tr>
+<tr><td>Multi-party signature requirement</td><td>N/A</td><td class="fail">✗ Single self-signature accepted</td></tr>
+</table></div>
+
+<h2>9. Attack Files</h2>
+<div class="card">
+<table><tr><th>File</th><th>Purpose</th></tr>
+<tr><td><code>attack/ssm_score/ssm_score_attack.py</code></td><td>Attack class — blockchain connection, score inflation, reset</td></tr>
+<tr><td><code>attack/ssm_score/run_attack.py</code></td><td>CLI — --info, --evaluate, --reset, --target, --rounds, --amplify</td></tr>
+<tr><td><code>attack/ssm_score/__init__.py</code></td><td>Python package marker</td></tr>
+</table>
+<h3 style="margin-top:1rem">Core Attack Call</h3>
+<pre>client.feedback_and_update_score_records(
+    caller_private_key        = PRIVATE_KEYS["llm_service"],         # Hardhat acct #11
+    message                   = fake_message_json,
+    signatures                = [sign(fake_message_json, PRIVATE_KEYS["sources_100"])],
+    update_source_ids         = ["sources_100"],
+    update_reliability_scores = [current_R + 999_999],
+    update_usefulness_scores  = [current_U + 999_999],
+    info                      = "SSM_ATTACK_round_N",
+)</pre></div>
+
+<h2>10. Recommendations</h2>
+<div class="card">
+<h3>Fix VULN-01 — Proper Key Management</h3>
+<p>Replace Hardhat default keys with randomly generated keys stored in environment variables or a secrets manager. Never commit private keys to source control.</p>
+<h3>Fix VULN-02 — Score Delta Cap in Smart Contract</h3>
+<p>Add a max delta per transaction (e.g., ±1,000) and a per-source cooldown period to <code>feedbackAndUpdateScoreRecords()</code>.</p>
+<h3>Fix VULN-03 — Multi-Signature Requirement</h3>
+<p>Require M-of-N signatures from different data sources before accepting a score update. A single self-signed message from the target source should never be sufficient proof.</p>
+</div>
+
+</div>
+<footer>Generated July 1, 2026 &nbsp;·&nbsp; Reliable-dRAG Security Evaluation &nbsp;·&nbsp; Attack 2 of 6: SSM-Score Manipulation</footer>
+</body></html>
