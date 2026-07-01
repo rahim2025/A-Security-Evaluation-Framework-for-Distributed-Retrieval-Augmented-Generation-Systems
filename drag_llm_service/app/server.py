@@ -3,6 +3,7 @@
 import json
 import sys
 import os
+DS_API_KEY = os.getenv("API_KEY", "")
 import yaml
 import re
 import random
@@ -183,7 +184,7 @@ def query_data_sources(query: str, n_contexts: int, selected_sources: Optional[D
             if selected_sources:
                 payload["selected_sources"] = selected_sources
             
-            response = requests.post(url, json=payload, timeout=10)
+            response = requests.post(url, json=payload, timeout=10, headers={"X-API-Key": DS_API_KEY})
             
             if response.status_code == 200:
                 response_data = response.json()
@@ -674,7 +675,7 @@ def _query_analyze(query_text: str, ground_truth: List[str], update_scores: bool
                 if selected_sources:
                     payload["selected_sources"] = selected_sources
                 
-                response = requests.post(url, json=payload, timeout=10)
+                response = requests.post(url, json=payload, timeout=10, headers={"X-API-Key": DS_API_KEY})
                 
                 if response.status_code == 200:
                     response_data = response.json()

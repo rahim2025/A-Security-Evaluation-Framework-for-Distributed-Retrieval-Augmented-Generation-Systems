@@ -31,6 +31,29 @@ except ImportError as e:
     sign_message_personal = None
 
 app = Flask(__name__)
+DS_API_KEY = os.getenv("API_KEY", "")
+
+@app.before_request
+def check_api_key():
+    if not DS_API_KEY:
+        return  # no key configured — allow all (backwards compat)
+    if request.endpoint in ("health_check",):
+        return  # health check always accessible
+    if request.headers.get("X-API-Key", "") != DS_API_KEY:
+        logger.warning(f"[SECURITY] Unauthorized /query attempt from {request.remote_addr}")
+        return jsonify({"error": "Unauthorized", "message": "Valid X-API-Key header required"}), 401
+
+
+API_KEY = os.getenv("API_KEY", "")
+
+@app.before_request
+def check_api_key():
+    if not API_KEY:
+        return
+    if request.endpoint in ("health_check",):
+        return
+    if request.headers.get("X-API-Key", "") != API_KEY:
+        return jsonify({"error": "Unauthorized", "message": "X-API-Key header required"}), 401
 
 # Global instances
 retriever = None
@@ -260,7 +283,7 @@ def query():
                 message_json = json.dumps(message_dict, sort_keys=True)
                 
                 # Sign the message using the private key from config
-                private_key = blockchain_config.get('private_key')
+                private_key = os.getenv("PRIVATE_KEY") or blockchain_config.get('private_key')
                 if not private_key:
                     logger.warning("Private key not configured. Skipping message signing.")
                 else:

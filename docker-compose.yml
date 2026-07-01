@@ -32,6 +32,8 @@ services:
       - HF_TOKEN=${HF_TOKEN}
       - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
       - CONFIG_PATH=/app/configs/config_sources_0.yaml
+      - API_KEY=reliable-derag-secret-2026
+      - PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
     restart: unless-stopped
     networks:
       - drag_network
@@ -59,6 +61,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - CONFIG_PATH=/app/configs/config_sources_20.yaml
+      - API_KEY=reliable-derag-secret-2026
+      - PRIVATE_KEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
     restart: unless-stopped
     networks:
       - drag_network
@@ -86,6 +90,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - CONFIG_PATH=/app/configs/config_sources_100.yaml
+      - API_KEY=reliable-derag-secret-2026
+      - PRIVATE_KEY=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a
     restart: unless-stopped
     networks:
       - drag_network
@@ -129,6 +135,7 @@ services:
       - VLLM_ATTENTION_BACKEND=FLASH_ATTN
       - REPLACE_LOCALHOST_WITH=host.docker.internal
       - FLASK_DEBUG=false
+      - DS_API_KEY=reliable-derag-secret-2026
     depends_on:
       hardhat-node:
         condition: service_healthy
