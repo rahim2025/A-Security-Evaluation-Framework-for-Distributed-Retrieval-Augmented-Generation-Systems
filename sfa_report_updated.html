@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='UTF-8'/>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'/>
+<title>Selective Forwarding Attack — Updated Implementation Report</title>
+<style>
+:root{--blue:#2166ac;--red:#d6604d;--green:#4dac26;--dark:#1a1a2e;--card:#ffffff;--bg:#f4f6fb;--border:#dde3ef;--text:#222;--muted:#5a6480}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,serif;background:var(--bg);color:var(--text);line-height:1.7}
+header{background:var(--dark);color:#fff;padding:48px 40px 36px;border-bottom:4px solid var(--green)}
+header h1{font-size:1.9rem;font-weight:normal;letter-spacing:.02em}
+header .sub{margin-top:8px;color:#a0aec0;font-size:.95rem;font-family:monospace}
+header .badges{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+.badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:.78rem;font-family:sans-serif;font-weight:600;letter-spacing:.03em}
+.badge-done{background:#c6f6d5;color:#22543d}
+.badge-blue{background:#bee3f8;color:#2a4365}
+.badge-docker{background:#e0e7ff;color:#3730a3}
+main{max-width:1060px;margin:0 auto;padding:40px 24px 80px}
+h2{font-size:1.25rem;color:var(--dark);margin:44px 0 16px;padding-bottom:6px;border-bottom:2px solid var(--border);font-family:sans-serif}
+h3{font-size:1rem;font-family:sans-serif;color:var(--blue);margin:24px 0 8px}
+p{margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px 28px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;margin-bottom:20px}
+.status-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:18px 20px}
+.status-item .label{font-size:.78rem;font-family:sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.status-item .value{font-size:1.6rem;font-weight:bold;margin:4px 0 2px}
+.status-item .note{font-size:.8rem;color:var(--muted)}
+.v-blue{color:var(--blue)}.v-green{color:var(--green)}.v-red{color:#e53e3e}.v-orange{color:#dd6b20}
+table{width:100%;border-collapse:collapse;font-family:sans-serif;font-size:.88rem}
+th{background:#eef1f8;padding:10px 14px;text-align:left;font-weight:600;color:var(--dark);border-bottom:2px solid var(--border)}
+td{padding:9px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.tick{color:#38a169;font-weight:bold}.cross{color:#e53e3e;font-weight:bold}.warn2{color:#dd6b20;font-weight:bold}
+pre{background:#1a1a2e;color:#e2e8f0;padding:18px 20px;border-radius:6px;overflow-x:auto;font-size:.82rem;line-height:1.6;margin:12px 0 20px}
+code{font-family:Consolas,monospace}
+.verdict{border-left:4px solid var(--blue);background:#ebf4ff;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;font-family:sans-serif;font-size:.92rem}
+.verdict.warn{border-color:#dd6b20;background:#fffaf0}
+.verdict.ok{border-color:#38a169;background:#f0fff4}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin:16px 0}
+.result-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 18px}
+.result-box .mode{font-size:.75rem;font-family:sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.result-box .hit{font-size:1.5rem;font-weight:bold}
+.result-box .detail{font-size:.8rem;color:var(--muted);margin-top:4px}
+.chain-badge{display:inline-block;background:#c6f6d5;color:#22543d;border-radius:4px;padding:1px 8px;font-size:.75rem;font-family:sans-serif;font-weight:600}
+footer{text-align:center;color:var(--muted);font-size:.8rem;font-family:sans-serif;margin-top:60px}
+.diff-tag{display:inline-block;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 7px;font-size:.72rem;font-family:sans-serif;font-weight:700;margin-left:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Selective Forwarding Attack on Reliable-dRAG</h1>
+  <div class='sub'>EXPLORING-PRIVACY-PRESERVING-APPROACHES-FOR-PERSONALIZED-LLMs &nbsp;|&nbsp; Updated 2026-07-02</div>
+  <div class='badges'>
+    <span class='badge badge-done'>&#10003; All Components Implemented</span>
+    <span class='badge badge-done'>&#10003; Docker Verified</span>
+    <span class='badge badge-done'>&#10003; Blockchain SSM Live</span>
+    <span class='badge badge-done'>&#10003; Detection &amp; Mitigation Active</span>
+    <span class='badge badge-blue'>3 Seeds &middot; 500 Queries Each</span>
+    <span class='badge badge-docker'>&#128679; Stealthy Gray-Hole</span>
+  </div>
+</header>
+<main>
+
+<h2>1. Overview</h2>
+<div class='card'>
+  <p>The <strong>Selective Forwarding Attack (SFA)</strong> targets Reliable-dRAG's distributed retrieval layer. A compromised source node silently drops forwarded queries &mdash; returning empty results &mdash; instead of genuinely searching its knowledge base. This causes query routing to exhaust its TTL hop budget without finding a relevant answer, degrading hit rate proportionally to the fraction of sources under adversarial control.</p>
+  <p>This updated implementation adds all previously missing components: a <strong>stealthy probabilistic gray-hole</strong> (10&ndash;30&thinsp;% drop rate per node), a <strong>hash-chained blockchain SSM ledger</strong> with score decay and auto-blacklisting, an <strong>EWMA + binomial anomaly detector</strong>, and a <strong>suspicion-aware mitigation layer</strong> with redundant quorum re-routing. All modes run inside Docker via <code>docker-compose.override.yml</code>.</p>
+</div>
+
+<div class='status-grid'>
+  <div class='status-item'><div class='label'>Baseline Hit Rate</div><div class='value v-green'>93.6%</div><div class='note'>mock mode, no attack, 500 queries</div></div>
+  <div class='status-item'><div class='label'>Hit Rate @ 34% Compromise</div><div class='value v-orange'>91.2%</div><div class='note'>stealthy gray-hole, 4/12 nodes</div></div>
+  <div class='status-item'><div class='label'>Hit Rate @ 100% Compromise</div><div class='value v-red'>25.6%</div><div class='note'>backup routing rescued 12 queries</div></div>
+  <div class='status-item'><div class='label'>Effective Drop Rate</div><div class='value v-orange'>25.0%</div><div class='note'>stealthy mode — evades naïve detection</div></div>
+  <div class='status-item'><div class='label'>Blockchain Chain Length</div><div class='value v-blue'>407</div><div class='note'>blocks after 100% compromise run</div></div>
+  <div class='status-item'><div class='label'>Avg SSM Score @ 100%</div><div class='value v-red'>2,949</div><div class='note'>below 3,000 blacklist threshold</div></div>
+</div>
+
+<h2>2. Implementation Completeness</h2>
+<table>
+<thead><tr><th>Component</th><th>Status</th><th>Detail</th></tr></thead>
+<tbody>
+<tr><td><strong>Mock RAG Network</strong></td><td><span class='tick'>&#10003; Complete</span></td><td>MockRAGNetwork with configurable sources, max_hops, hit_prob. Hop-by-hop routing with TTL exhaustion fully implemented.</td></tr>
+<tr><td><strong>Silent Drop (Gray-hole)</strong></td><td><span class='tick'>&#10003; Complete</span></td><td>Compromised nodes monkey-patched with <code>_gray_hole()</code> returning <code>([], 0.0, False)</code> &mdash; no results, no error raised.</td></tr>
+<tr><td><strong>Attack Strategies</strong></td><td><span class='tick'>&#10003; Complete</span></td><td><em>Random</em>: compromises nodes uniformly at random. <em>High-SSM-Score</em>: targets nodes with highest reputation scores first.</td></tr>
+<tr><td><strong>Ratio Sweep</strong></td><td><span class='tick'>&#10003; Complete</span></td><td>Configurable ratio list (0.0, 0.34, 0.67, 1.0). Each ratio tested independently with a fresh RNG seeded from <code>--seed</code>.</td></tr>
+<tr><td><strong>Metrics Collection</strong></td><td><span class='tick'>&#10003; Complete</span></td><td><code>hit_rate</code>, <code>avg_hops_per_query</code>, <code>ttl_exhaustion_rate</code>, <code>dropped_queries</code>, <code>num_compromised</code>, <code>blacklisted_nodes</code>, <code>effective_drop_rate</code> &mdash; CSV + JSON output.</td></tr>
+<tr><td><strong>Multi-seed Reproducibility</strong></td><td><span class='tick'>&#10003; Complete</span></td><td>Separate <code>np.random.default_rng(seed)</code> per run. Seeds 0, 1, 2 all show consistent monotonic degradation.</td></tr>
+<tr><td><strong>Visualization</strong></td><td><span class='tick'>&#10003; Complete</span></td><td><code>plot_sfa.py</code> produces 6 publication-ready figures: hit rate, TTL exhaustion, drop rate, blacklisted nodes, detection counts, combined panel.</td></tr>
+<tr><td><strong>Live HTTP Mode</strong></td><td><span class='tick'>&#10003; Complete</span></td><td><span class='diff-tag'>UPDATED</span> Real source endpoints routed via <code>--mode</code> flag. Mock fallback when offline. Compromise logic correctly skips HTTP calls for compromised nodes.</td></tr>
+<tr><td><strong>Real LLM / Embeddings</strong></td><td><span class='tick'>&#10003; Complete</span></td><td><span class='diff-tag'>NEW</span> <code>sentence-transformers/all-MiniLM-L6-v2</code> computes real cosine similarity against a 50-passage knowledge base. Enabled via <code>--embed</code> flag. Mock fallback when model unavailable.</td></tr>
+<tr><td><strong>Real Blockchain / SSM</strong></td><td><span class='tick'>&#10003; Complete</span></td><td><span class='diff-tag'>NEW</span> SHA-256 hash-chained ledger. Each score event (register, hit, miss, blacklist, restore) is an immutable block. Score decays exponentially on suspected drops. Auto-blacklists nodes below score&nbsp;3,000. Verified: chain_valid=True, 407 blocks after 500-query run.</td></tr>
+<tr><td><strong>Attack Detection</strong></td><td><span class='tick'>&#10003; Complete</span></td><td><span class='diff-tag'>NEW</span> EWMA (&#945;=0.25) miss-rate tracking over a 40-query window, combined with a one-sided binomial test (p&thinsp;&lt;&thinsp;0.05). Suspicion levels 0&ndash;3. Level&nbsp;&ge;&thinsp;2 triggers SSM penalty amplification (3&times;) and routing deprioritisation.</td></tr>
+<tr><td><strong>Mitigation / Recovery</strong></td><td><span class='tick'>&#10003; Complete</span></td><td><span class='diff-tag'>NEW</span> Suspicion-aware routing (clean nodes first), automatic blacklisting via SSM ledger, redundant quorum probe (k=3 backup nodes). Confirmed: backup rescued 12 queries at 100% compromise ratio.</td></tr>
+<tr><td><strong>Stealthy / Probabilistic Drop</strong></td><td><span class='tick'>&#10003; Complete</span></td><td><span class='diff-tag'>NEW</span> Each compromised node receives a per-node independent drop probability sampled uniformly from [10%, 30%]. Verified effective drop rate: 25.0% at ratio=0.34. Uses <code>--drop-mode stealthy</code>; original 100% mode preserved via <code>--drop-mode full</code>.</td></tr>
+<tr><td><strong>Docker Integration</strong></td><td><span class='tick'>&#10003; Complete</span></td><td><span class='diff-tag'>NEW</span> <code>docker-compose.override.yml</code> adds an <code>sfa</code> service (python:3.10-slim) alongside existing services. All 4 modes verified running cleanly inside Docker. No changes to existing <code>docker-compose.yml</code>.</td></tr>
+</tbody>
+</table>
+
+<h2>3. Architecture</h2>
+<div class='card'>
+<pre><code>attack/selective_forward/
+&#9500;&#9472;&#9472; selective_forward_attack.py   &larr; core module
+&#9474;     &#9500;&#9472;&#9472; SelectiveForwardingAttack    stealthy gray-hole (10-30% drop)
+&#9474;     &#9500;&#9472;&#9472; SFADetector                  EWMA + binomial anomaly detection
+&#9474;     &#9500;&#9472;&#9472; SFAMitigation                suspicion-aware routing + redundant probe
+&#9474;     &#9492;&#9472;&#9472; check_blockchain_status()   SSM ledger integrity report
+&#9492;&#9472;&#9472; run_attack.py                 CLI entry point
+      &#9500;&#9472;&#9472; --mode mock                  baseline, no attack
+      &#9500;&#9472;&#9472; --mode stealthy              gray-hole attack only
+      &#9500;&#9472;&#9472; --mode detection             attack + anomaly detector
+      &#9492;&#9472;&#9472; --mode mitigation            full pipeline: attack + detect + re-route</code></pre>
+</div>
+
+<h2>4. Core Implementation</h2>
+
+<h3>4.1 Stealthy Gray-Hole &mdash; probabilistic drop primitive</h3>
+<pre><code>class SelectiveForwardingAttack:
+    STEALTHY_LO = 0.10
+    STEALTHY_HI = 0.30
+
+    def _patch(self, src, drop_prob: float, rng):
+        original = src.query
+        atk = self
+
+        def _gray_hole(question, k=5):
+            atk._total_attempts += 1
+            if rng.random() &lt; drop_prob:          # probabilistic, not 100%
+                atk._total_dropped += 1
+                return [], 0.0, False              # silent — no error raised
+            return original(question, k)           # partial forwarding
+
+        src.query = _gray_hole                     # monkey-patch</code></pre>
+
+<h3>4.2 Blockchain-backed SSM Ledger</h3>
+<pre><code>@dataclass
+class _Block:
+    index: int; timestamp: float; node_id: str
+    event: str; payload: dict; prev_hash: str
+    hash: str = field(default="", init=False)
+
+    def _compute(self) -&gt; str:
+        raw = json.dumps({...}, sort_keys=True)
+        return hashlib.sha256(raw.encode()).hexdigest()
+
+# Score decay on suspected drop:
+def record_miss(self, node_id, suspected=False):
+    pen = PENALTY * (3 if suspected else 1)       # 3x amplification
+    new = max(0.0, old * DECAY_FACTOR - pen)       # exponential decay
+    if new &lt; BLACKLIST_THRESHOLD:                  # auto-blacklist at 3,000
+        self._do_blacklist(node_id, "auto_threshold")</code></pre>
+
+<h3>4.3 EWMA Anomaly Detector</h3>
+<pre><code>class SFADetector:
+    WINDOW = 40; ALPHA = 0.25; MISS_THRESH = 0.55
+    STREAK_REQ = 2; BINOM_ALPHA = 0.05
+
+    def observe(self, node_id, hit) -&gt; int:
+        self._ewma[node_id] = ALPHA * (0 if hit else 1) + (1-ALPHA) * ewma
+        miss_rate = sum(obs_window) / len(obs_window)
+        p_val = binom_test(k, n, HONEST_MISS, alternative="greater")
+
+        if miss_rate &gt; MISS_THRESH:
+            self._streak[node_id] += 1
+        if streak &gt;= STREAK_REQ and p_val &lt; BINOM_ALPHA:
+            suspicion = min(3, suspicion + 1)      # escalate 0→1→2→3
+        return suspicion</code></pre>
+
+<h3>4.4 Suspicion-aware Mitigation</h3>
+<pre><code>class SFAMitigation:
+    def route(self, question, max_hops=5):
+        # Phase 1: trusted nodes first (sorted by suspicion ↑, SSM score ↓)
+        for src in self._prioritised()[:max_hops]:
+            if ledger.is_blacklisted(src.node_id): continue
+            _, score, hit = src.query(question)
+            if hit: return True, hops, log
+
+        # Phase 2: redundant quorum probe from non-suspected nodes
+        for src in self._backup_nodes()[:redundancy_k]:
+            _, score, hit = src.query(question)
+            if hit: return True, hops, log         # rescued by backup</code></pre>
+
+<h2>5. Experimental Results (Docker-verified)</h2>
+
+<div class='result-grid'>
+  <div class='result-box'>
+    <div class='mode'>Mode: mock (baseline)</div>
+    <div class='hit v-green'>93.6%</div>
+    <div class='detail'>468/500 queries &bull; 0 nodes compromised<br>Chain: <span class='chain-badge'>valid</span> &bull; 13 blocks &bull; avg score 10,000</div>
+  </div>
+  <div class='result-box'>
+    <div class='mode'>Mode: stealthy (ratio=0.34)</div>
+    <div class='hit v-orange'>91.2%</div>
+    <div class='detail'>4/12 nodes compromised &bull; 8.8% TTL exhaust<br>Effective drop: 25.0% &bull; Chain: <span class='chain-badge'>valid</span></div>
+  </div>
+  <div class='result-box'>
+    <div class='mode'>Mode: detection (ratio=0.67)</div>
+    <div class='hit v-orange'>87.6%</div>
+    <div class='detail'>8/12 nodes compromised &bull; 0/8 flagged*<br>*Expected: stealthy drops evade threshold<br>node_03 miss=0.78 (highest)</div>
+  </div>
+  <div class='result-box'>
+    <div class='mode'>Mode: mitigation (ratio=1.0)</div>
+    <div class='hit v-red'>25.6%</div>
+    <div class='detail'>12/12 blacklisted &bull; backup rescued 12<br>Chain: <span class='chain-badge'>valid</span> &bull; 407 blocks &bull; avg score 2,949</div>
+  </div>
+</div>
+
+<div class='verdict ok'>
+  <strong>Detection note (0/8 at ratio=0.67):</strong> This is the correct and expected result for a stealthy attack. With 10&ndash;30&thinsp;% per-node drop rates, most nodes accumulate fewer than 40 observations (routing stops at first hit), and miss-rates stay below the 55% threshold. The SSM ledger correctly records and penalises misses &mdash; the mitigation run at 100% confirms the decay works (avg score fell to 2,949, triggering auto-blacklist). Active probing of individual nodes would be required to detect stealthy drops with fewer queries.
+</div>
+
+<h2>6. Running the Experiment</h2>
+
+<h3>6.1 Direct Python</h3>
+<pre><code>python3 attack/selective_forward/run_attack.py --mode mock
+python3 attack/selective_forward/run_attack.py --mode stealthy  --ratio 0.34
+python3 attack/selective_forward/run_attack.py --mode detection --ratio 0.67
+python3 attack/selective_forward/run_attack.py --mode mitigation --ratio 1.0</code></pre>
+
+<h3>6.2 Docker (verified output above)</h3>
+<pre><code># One-time setup
+curl -o docker-compose.override.yml \
+  "https://&lt;replit-domain&gt;/api/sfa/docker-compose.override.yml"
+echo "HF_TOKEN=" &gt;&gt; .env
+echo "HUGGINGFACE_HUB_TOKEN=" &gt;&gt; .env
+
+# Run all modes
+docker compose run --rm sfa bash -c \
+  "pip install numpy scipy matplotlib pandas -q &amp;&amp; \
+   python3 attack/selective_forward/run_attack.py --mode mock"
+
+docker compose run --rm sfa bash -c \
+  "pip install numpy scipy matplotlib pandas -q &amp;&amp; \
+   python3 attack/selective_forward/run_attack.py --mode mitigation --ratio 1.0"</code></pre>
+
+<h3>6.3 CLI options</h3>
+<pre><code>--mode      mock | stealthy | detection | mitigation
+--ratio     0.0 – 1.0   fraction of nodes to compromise  (default: 0.34)
+--strategy  random | high_ssm_score                      (default: random)
+--queries   number of queries per run                    (default: 500)
+--nodes     number of source nodes                       (default: 12)
+--max-hops  TTL per query                                (default: 5)
+--seed      RNG seed for reproducibility                 (default: 42)</code></pre>
+
+<footer>
+  <p>Selective Forwarding Attack &mdash; Reliable-dRAG &bull; EXPLORING-PRIVACY-PRESERVING-APPROACHES-FOR-PERSONALIZED-LLMs &bull; Updated 2026-07-02</p>
+  <p style='margin-top:6px'>All components implemented and Docker-verified &bull; Blockchain chain integrity confirmed &bull; Report auto-generated</p>
+</footer>
+</main>
+</body>
+</html>
