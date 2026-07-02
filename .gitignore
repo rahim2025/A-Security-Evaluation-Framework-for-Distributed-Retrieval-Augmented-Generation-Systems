@@ -80,4 +80,5 @@ dmypy.json
 *.cache
 
 .demo/
-demo/
+demo/.env
+drag_data_source/configs/config_sources_*.yaml

@@ -132,7 +132,7 @@ class SSMScoreAttack:
             try:
                 sig_bytes = self._sign_fake_message(source_id)
                 fake_message = json.dumps({
-                    "query": "reset",
+                    "query": "attack_probe",
                     "selected_sources": {sid: [0, 0] for sid in DEFAULT_DATA_SOURCES}
                 }, sort_keys=True)
                 tx = client.feedback_and_update_score_records(

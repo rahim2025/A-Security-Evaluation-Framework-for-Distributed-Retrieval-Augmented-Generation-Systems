@@ -40,7 +40,7 @@ def run_sweep(num_queries=500, peer_hit_prob=0.4, max_hops=3,
     - SelectiveForwardingAttack uses a SEPARATE random.Random() for all drop
       decisions, so drop choices never perturb the global RNG state.
     """
-    if ratios    is None: ratios    = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+    if ratios    is None: ratios    = [0.0, 0.34, 0.67, 1.0]
     if strategies is None: strategies = ["random", "high_ssm_score"]
 
     network = MockRAGNetwork(peer_hit_prob=peer_hit_prob, seed=seed)
@@ -112,7 +112,7 @@ def parse_args():
                    help="Queries per scenario (default: 500; use 1000 for thesis)")
     p.add_argument("--peer_hit_prob", type=float, default=0.4)
     p.add_argument("--max_hops",      type=int,   default=3)
-    p.add_argument("--ratios",        nargs="+",  type=float, default=[0.0,0.1,0.2,0.3,0.4,0.5])
+    p.add_argument("--ratios",        nargs="+",  type=float, default=[0.0, 0.34, 0.67, 1.0])
     p.add_argument("--strategies",    nargs="+",  default=["random","high_ssm_score"],
                    choices=["random","high_ssm_score"])
     p.add_argument("--seed",          type=int,   default=0)

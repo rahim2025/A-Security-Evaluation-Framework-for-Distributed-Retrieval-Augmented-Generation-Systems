@@ -17,6 +17,8 @@ sys.path.insert(0, '/app/drag_python_client')
 from flask import Flask, request, jsonify
 from src.retriever.retriever import FastRetriever, Document
 
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -31,20 +33,8 @@ except ImportError as e:
     sign_message_personal = None
 
 app = Flask(__name__)
+limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["60 per minute"])
 DS_API_KEY = os.getenv("API_KEY", "")
-
-@app.before_request
-def check_api_key():
-    if not DS_API_KEY:
-        return  # no key configured — allow all (backwards compat)
-    if request.endpoint in ("health_check",):
-        return  # health check always accessible
-    if request.headers.get("X-API-Key", "") != DS_API_KEY:
-        logger.warning(f"[SECURITY] Unauthorized /query attempt from {request.remote_addr}")
-        return jsonify({"error": "Unauthorized", "message": "Valid X-API-Key header required"}), 401
-
-
-API_KEY = os.getenv("API_KEY", "")
 
 @app.before_request
 def check_api_key():
@@ -52,6 +42,9 @@ def check_api_key():
         return
     if request.endpoint in ("health_check",):
         return
+    logging.info("ACCESS ip=%s path=%s key_present=%s",
+                 request.remote_addr, request.path,
+                 bool(request.headers.get("X-API-Key")))
     if request.headers.get("X-API-Key", "") != API_KEY:
         return jsonify({"error": "Unauthorized", "message": "X-API-Key header required"}), 401
 
@@ -255,7 +248,7 @@ def query():
             return jsonify({"error": "Missing required field 'query'"}), 400
         
         query_text = data['query']
-        k = data.get('k', 10)
+        k = min(int(data.get("k", 5)), 5)
         selected_sources = data.get('selected_sources', {})
         
         if retriever is None:

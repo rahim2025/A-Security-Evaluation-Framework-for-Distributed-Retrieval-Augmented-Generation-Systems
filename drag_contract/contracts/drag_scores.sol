@@ -85,6 +85,15 @@ contract DragScores {
         scoreRecordMustExist(sourceID)
         onlyOwner
     {
+            // VULN-02 FIX: enforce max score delta to prevent single-TX inflation
+            int32 MAX_DELTA = 100000;
+            int32 reliDelta = updateReliabilityScores[i] - scoreRecords[sourceID].reliabilityScore;
+            if (reliDelta < 0) reliDelta = -reliDelta;
+            require(reliDelta <= MAX_DELTA, "Reliability score delta exceeds cap");
+            int32 useDelta = updateUsefulnessScores[i] - scoreRecords[sourceID].usefulnessScore;
+            if (useDelta < 0) useDelta = -useDelta;
+            require(useDelta <= MAX_DELTA, "Usefulness score delta exceeds cap");
+            require(updateReliabilityScores[i] >= 0 && updateReliabilityScores[i] <= 1000000, "Score out of bounds");
         ScoreRecord storage scoreRecord = scoreRecords[sourceID];
         scoreRecord.timestamp = timestamp;
         scoreRecord.reserved = reserved;
