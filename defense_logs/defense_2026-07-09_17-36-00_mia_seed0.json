@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-07-09_17-36-00",
+  "defense_type": "mia_response_sanitization",
+  "config": {
+    "llm_service_url": "http://localhost:9000",
+    "corpus_jsonl": "C:\\Users\\user3\\Desktop\\Rahim\\EXPLORING-PRIVACY-PRESERVING-APPROACHES-FOR-PERSONALIZED-LARGE-LANGUAGE-MODELS-reliable-derag\\data\\polluted_token\\sources_0.jsonl",
+    "n_members": 25,
+    "n_nonmembers": 25,
+    "probes_per_doc": 1,
+    "threshold_pct": 50,
+    "random_seed": 0,
+    "max_response_words": 40,
+    "max_overlap_words": 8
+  },
+  "result": {
+    "n_members_tested": 25,
+    "n_non_members_tested": 25,
+    "score_weights": {
+      "similarity": 0.2,
+      "certainty": 0.1,
+      "length_ratio": 0.3,
+      "decision_match": 0.4
+    },
+    "undefended": {
+      "auc_roc": 0.6432,
+      "accuracy": 0.6,
+      "precision": 0.6,
+      "recall": 0.6,
+      "f1_score": 0.6,
+      "mean_member_similarity": -0.0302,
+      "mean_non_member_similarity": -0.0288,
+      "auc_roc_answer_match": 0.62,
+      "mean_member_answer_match_rate": 0.72,
+      "mean_non_member_answer_match_rate": 0.48,
+      "auc_roc_length_ratio": 0.6464,
+      "mean_member_length_ratio": 0.0514,
+      "mean_non_member_length_ratio": 0.0407,
+      "auc_roc_certainty": 0.52,
+      "mean_member_certainty": 1.0,
+      "mean_non_member_certainty": 0.96
+    },
+    "defended": {
+      "auc_roc": 0.6432,
+      "accuracy": 0.6,
+      "precision": 0.6,
+      "recall": 0.6,
+      "f1_score": 0.6,
+      "mean_member_similarity": -0.0302,
+      "mean_non_member_similarity": -0.0288,
+      "auc_roc_answer_match": 0.62,
+      "mean_member_answer_match_rate": 0.72,
+      "mean_non_member_answer_match_rate": 0.48,
+      "auc_roc_length_ratio": 0.6464,
+      "mean_member_length_ratio": 0.0514,
+      "mean_non_member_length_ratio": 0.0407,
+      "auc_roc_certainty": 0.52,
+      "mean_member_certainty": 1.0,
+      "mean_non_member_certainty": 0.96
+    },
+    "auc_roc_reduction": 0.0
+  }
+}

@@ -171,6 +171,19 @@ def main() -> None:
     assert r_final == upd_rel_10 and u_final == upd_use_10
 
 
+# drag_data_source configs store "LOADED_FROM_ENV" as a placeholder -- the
+# data-source containers resolve it from their own PRIVATE_KEY env var at
+# runtime (see drag_data_source/app/server.py), but this seeding script runs
+# once from the hardhat-node container, which has no per-source env vars.
+# Fall back to the same fixed Hardhat test keys docker-compose.yml assigns to
+# each data source.
+KNOWN_TEST_PRIVATE_KEYS = {
+    "sources_0":   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    "sources_20":  "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+    "sources_100": "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
+}
+
+
 def test_create_default_sources_from_configs() -> None:
     """
     Creates 3 default sources using source names and private keys from drag_data_source configs.
@@ -178,28 +191,30 @@ def test_create_default_sources_from_configs() -> None:
     """
     provider_url = "http://127.0.0.1:8545"
     project_root = get_project_root()
-    
+
     # Path to drag_data_source configs directory
     configs_dir = Path(project_root) / "drag_data_source" / "configs"
-    
+
     # Load the 3 config files
     config_files = [
         "config_sources_0.yaml",
         "config_sources_20.yaml",
         "config_sources_100.yaml",
     ]
-    
+
     sources_data = []
     for config_file in config_files:
         config_path = configs_dir / config_file
         if not config_path.exists():
             raise FileNotFoundError(f"Config file not found: {config_path}")
-        
+
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
-        
+
         source_name = config['data']['dataset_name']
         private_key = config['blockchain']['private_key']
+        if private_key in (None, "LOADED_FROM_ENV") or not private_key.startswith("0x"):
+            private_key = KNOWN_TEST_PRIVATE_KEYS[source_name]
         source_address = Account.from_key(private_key).address
         
         sources_data.append({

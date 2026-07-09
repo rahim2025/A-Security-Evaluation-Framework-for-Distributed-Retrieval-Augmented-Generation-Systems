@@ -1,0 +1,54 @@
+{
+  "timestamp": "2026-07-09_16-19-12",
+  "defense_type": "mia_response_sanitization",
+  "config": {
+    "llm_service_url": "http://localhost:9000",
+    "corpus_jsonl": "C:\\Users\\user3\\Desktop\\Rahim\\EXPLORING-PRIVACY-PRESERVING-APPROACHES-FOR-PERSONALIZED-LARGE-LANGUAGE-MODELS-reliable-derag\\data\\polluted_token\\sources_0.jsonl",
+    "n_members": 5,
+    "n_nonmembers": 5,
+    "probes_per_doc": 1,
+    "threshold_pct": 50,
+    "random_seed": 42,
+    "max_response_words": 40,
+    "max_overlap_words": 8
+  },
+  "result": {
+    "n_members_tested": 5,
+    "n_non_members_tested": 5,
+    "score_weights": {
+      "similarity": 0.85,
+      "length_ratio": 0.15
+    },
+    "undefended": {
+      "auc_roc": 0.6,
+      "accuracy": 0.6,
+      "precision": 0.6,
+      "recall": 0.6,
+      "f1_score": 0.6,
+      "mean_member_similarity": 0.3297,
+      "mean_non_member_similarity": 0.274,
+      "auc_roc_answer_match": 0.5,
+      "mean_member_answer_match_rate": 0.0,
+      "mean_non_member_answer_match_rate": 0.0,
+      "auc_roc_length_ratio": 0.7,
+      "mean_member_length_ratio": 1.0,
+      "mean_non_member_length_ratio": 0.9526
+    },
+    "defended": {
+      "auc_roc": 0.6,
+      "accuracy": 0.6,
+      "precision": 0.6,
+      "recall": 0.6,
+      "f1_score": 0.6,
+      "mean_member_similarity": 0.3297,
+      "mean_non_member_similarity": 0.2809,
+      "auc_roc_answer_match": 0.5,
+      "mean_member_answer_match_rate": 0.0,
+      "mean_non_member_answer_match_rate": 0.0,
+      "auc_roc_length_ratio": 0.7,
+      "mean_member_length_ratio": 1.0,
+      "mean_non_member_length_ratio": 0.9526
+    },
+    "auc_roc_reduction": 0.0
+  }
+}

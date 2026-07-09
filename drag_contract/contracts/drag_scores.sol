@@ -34,16 +34,41 @@ contract DragScores {
     error DataSourceNotExists();
     error DataSourceNotFound(string sourceID);
     error InvalidUpdateCount(uint256 numUpdates);
-    
-    address public owner;
 
-    constructor() {
+    // ── SSM-Score attack defense (see attack/ssm_score) ────────────────────
+    // The attack forges score-update transactions that arbitrarily inflate a
+    // source's on-chain reliability/usefulness. These checks bound how much
+    // and how often any single feedback transaction can move a score, and
+    // restrict who may submit feedback at all.
+    error UnauthorizedCaller();
+    error ScoreDeltaTooLarge(string sourceID, int32 requestedDelta, int32 cap);
+    error UpdateTooFrequent(string sourceID, uint256 secondsRemaining);
+    error ScoreOutOfBounds(string sourceID, int32 requestedScore);
+
+    int32 public constant MAX_SCORE = 1_000_000;
+    int32 public constant MIN_SCORE = -1_000_000;
+    int32 public constant MAX_DELTA_PER_UPDATE = 5_000; // largest single-tx move allowed
+    uint256 public constant MIN_UPDATE_INTERVAL = 2; // seconds a source must wait between updates
+
+    address public owner;
+    address public llmService; // only address allowed to call feedbackAndUpdateScoreRecords
+
+    constructor(address _llmService) {
         owner = msg.sender;
+        llmService = _llmService;
     }
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner can call this function");
         _;
+    }
+
+    function setLLMService(address _llmService) public onlyOwner {
+        llmService = _llmService;
+    }
+
+    function _abs32(int32 x) internal pure returns (int32) {
+        return x < 0 ? -x : x;
     }
 
     function hello() public pure returns (string memory) {
@@ -85,15 +110,6 @@ contract DragScores {
         scoreRecordMustExist(sourceID)
         onlyOwner
     {
-            // VULN-02 FIX: enforce max score delta to prevent single-TX inflation
-            int32 MAX_DELTA = 100000;
-            int32 reliDelta = updateReliabilityScores[i] - scoreRecords[sourceID].reliabilityScore;
-            if (reliDelta < 0) reliDelta = -reliDelta;
-            require(reliDelta <= MAX_DELTA, "Reliability score delta exceeds cap");
-            int32 useDelta = updateUsefulnessScores[i] - scoreRecords[sourceID].usefulnessScore;
-            if (useDelta < 0) useDelta = -useDelta;
-            require(useDelta <= MAX_DELTA, "Usefulness score delta exceeds cap");
-            require(updateReliabilityScores[i] >= 0 && updateReliabilityScores[i] <= 1000000, "Score out of bounds");
         ScoreRecord storage scoreRecord = scoreRecords[sourceID];
         scoreRecord.timestamp = timestamp;
         scoreRecord.reserved = reserved;
@@ -129,6 +145,9 @@ contract DragScores {
         int32[] memory updateUsefulnessScores, // usefulness scores to update
         string memory info // info about the feedback
     ) public {
+        if (msg.sender != llmService) {
+            revert UnauthorizedCaller();
+        }
         require(signatures.length == updateSourceIDs.length, "Array lengths must match: signatures and updateSourceIDs");
         require(signatures.length == updateReliabilityScores.length, "Array lengths must match: signatures and updateReliabilityScores");
         require(signatures.length == updateUsefulnessScores.length, "Array lengths must match: signatures and updateUsefulnessScores");
@@ -137,7 +156,7 @@ contract DragScores {
         uint256 numUpdates = signatures.length;
         for (uint256 i = 0; i < numUpdates; i++) {
             string memory sourceID = updateSourceIDs[i];
-            
+
             if (!isScoreRecordExists[sourceID]) {
                 revert DataSourceNotExists();
             }
@@ -151,6 +170,35 @@ contract DragScores {
             }
 
             ScoreRecord storage scoreRecord = scoreRecords[sourceID];
+
+            // SSM-Score defense: rate limit -- a source's score may only move
+            // once per MIN_UPDATE_INTERVAL, which blocks rapid multi-round
+            // inflation bursts like the SSM-Score attack's 5-round loop.
+            if (timestamp < scoreRecord.timestamp + MIN_UPDATE_INTERVAL) {
+                revert UpdateTooFrequent(sourceID, scoreRecord.timestamp + MIN_UPDATE_INTERVAL - timestamp);
+            }
+
+            // SSM-Score defense: bound how far a single feedback tx can move
+            // reliability/usefulness, so no single (possibly forged) update
+            // can catapult a source's score past legitimate feedback noise.
+            int32 reliDelta = _abs32(updateReliabilityScores[i] - scoreRecord.reliabilityScore);
+            if (reliDelta > MAX_DELTA_PER_UPDATE) {
+                revert ScoreDeltaTooLarge(sourceID, reliDelta, MAX_DELTA_PER_UPDATE);
+            }
+            int32 useDelta = _abs32(updateUsefulnessScores[i] - scoreRecord.usefulnessScore);
+            if (useDelta > MAX_DELTA_PER_UPDATE) {
+                revert ScoreDeltaTooLarge(sourceID, useDelta, MAX_DELTA_PER_UPDATE);
+            }
+
+            // SSM-Score defense: absolute bounds so scores can't be driven to
+            // extreme values even by many small, individually-legal updates.
+            if (updateReliabilityScores[i] < MIN_SCORE || updateReliabilityScores[i] > MAX_SCORE) {
+                revert ScoreOutOfBounds(sourceID, updateReliabilityScores[i]);
+            }
+            if (updateUsefulnessScores[i] < MIN_SCORE || updateUsefulnessScores[i] > MAX_SCORE) {
+                revert ScoreOutOfBounds(sourceID, updateUsefulnessScores[i]);
+            }
+
             scoreRecord.reliabilityScore = updateReliabilityScores[i];
             scoreRecord.usefulnessScore = updateUsefulnessScores[i];
             scoreRecord.timestamp = timestamp;

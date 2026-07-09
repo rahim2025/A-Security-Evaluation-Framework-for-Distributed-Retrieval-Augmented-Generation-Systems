@@ -295,10 +295,23 @@ class SFADetector:
 
     WINDOW       = 40
     ALPHA        = 0.25      # EWMA smoothing
-    MISS_THRESH  = 0.55      # miss-rate above this → bad
+    # MISS_THRESH/HONEST_MISS were originally tuned for a generic many-node
+    # mock topology (see _MockSource: score ~ Beta(2,3), hit iff score>=0.45,
+    # giving an "honest" miss rate around 0.6-0.7). That does not hold for
+    # the real Reliable-dRAG deployment: RealSource.query() reports a hit
+    # whenever the source returns *any* top-k document, which happens for
+    # essentially every query regardless of relevance -- measured empirically
+    # against the live data-source containers (60 real SQuAD questions x 3
+    # sources), the genuine honest miss rate is 0.000 (0/180). Calibrated
+    # against that reality instead of the mock assumption: a stealthy
+    # attacker drops 10-30% of queries (SelectiveForwardingAttack.STEALTHY_*),
+    # so the threshold only needs to sit above natural noise and below the
+    # weakest attacker, and the binomial null hypothesis needs to reflect
+    # the true ~0 honest baseline rather than 0.68.
+    MISS_THRESH  = 0.08      # miss-rate above this -> bad (honest ~0, weakest attacker ~0.10)
     STREAK_REQ   = 2         # consecutive windows above threshold to escalate
     BINOM_ALPHA  = 0.05      # p-value threshold
-    HONEST_MISS  = 0.68      # expected honest miss rate (baseline beta(2,3))
+    HONEST_MISS  = 0.05      # expected honest miss rate on the real deployment (measured ~0, small margin for noise)
 
     def __init__(self):
         self._obs:       Dict[str, deque]  = {}
@@ -476,3 +489,24 @@ class SFAMitigation:
 
     def active_count(self) -> int:
         return sum(1 for s in self._sources if not self._ledger.is_blacklisted(s.node_id))
+
+
+def naive_route(sources: list, question: str, max_hops: int = 5) -> Tuple[bool, int, List[str]]:
+    """
+    Fair "undefended" comparison point for SFAMitigation.route(): same
+    first-hit-stops routing mechanism and hop budget, but with no suspicion
+    tracking, no blacklist, and no score-based reordering -- just tries
+    `sources` in the order given. Comparing SFAMitigation.route() against
+    this (rather than against _evaluate()'s aggregate-all-sources accuracy)
+    isolates what the suspicion-aware routing itself contributes, instead of
+    conflating it with a completely different counting method.
+    """
+    log: List[str] = []
+    hops = 0
+    for src in sources[:max_hops]:
+        hops += 1
+        _, score, hit = src.query(question)
+        log.append(f"{src.node_id}: {'HIT' if hit else 'MISS'} score={score:.3f}")
+        if hit:
+            return True, hops, log
+    return False, hops, log

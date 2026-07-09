@@ -1,4 +1,5 @@
 Flask==2.3.3
+Flask-Limiter>=3.5.0
 numpy==2.2.6
 PyYAML==6.0.1
 tqdm==4.67.1

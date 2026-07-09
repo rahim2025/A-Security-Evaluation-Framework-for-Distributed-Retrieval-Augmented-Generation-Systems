@@ -38,14 +38,14 @@ DS_API_KEY = os.getenv("API_KEY", "")
 
 @app.before_request
 def check_api_key():
-    if not API_KEY:
+    if not DS_API_KEY:
         return
     if request.endpoint in ("health_check",):
         return
     logging.info("ACCESS ip=%s path=%s key_present=%s",
                  request.remote_addr, request.path,
                  bool(request.headers.get("X-API-Key")))
-    if request.headers.get("X-API-Key", "") != API_KEY:
+    if request.headers.get("X-API-Key", "") != DS_API_KEY:
         return jsonify({"error": "Unauthorized", "message": "X-API-Key header required"}), 401
 
 # Global instances

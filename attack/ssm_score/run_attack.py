@@ -37,11 +37,40 @@ HEADERS = {"Content-Type": "application/json"}
 
 
 # ── HuggingFace SQuAD loader ──────────────────────────────────────────────────
+def _load_corpus_contexts():
+    """
+    Passages actually served by the Docker data sources (all three sources
+    share the same document indices; sources_0.jsonl is the 0%-polluted /
+    clean copy, so its "html" text is the ground-truth passage per doc).
+    """
+    path = os.path.join(PROJECT_ROOT, "data", "polluted_token", "sources_0.jsonl")
+    contexts = set()
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            rec = json.loads(line)
+            html = rec.get("html", "")
+            if html:
+                contexts.add(html)
+    return contexts
+
+
 def load_squad_eval(n=EVAL_SAMPLE_SIZE, seed=RANDOM_SEED):
-    print(f"[HF] Loading rajpurkar/squad validation split ...")
-    ds = load_dataset("rajpurkar/squad", split="validation")
+    """
+    Sample QA pairs restricted to contexts actually present in the running
+    corpus. The data sources are seeded from the SQuAD *train* split (see
+    data/polluted_token/sources_0.jsonl); sampling from *validation* asks
+    about articles never loaded into any source, pinning accuracy near 0
+    regardless of the attack.
+    """
+    print(f"[HF] Loading rajpurkar/squad train split ...")
+    ds = load_dataset("rajpurkar/squad", split="train")
+    corpus_contexts = _load_corpus_contexts()
+    print(f"[HF] Matching questions against {len(corpus_contexts)} loaded source documents ...")
+
     seen, rows = set(), []
     for item in ds:
+        if item["context"] not in corpus_contexts:
+            continue
         q = item["question"].strip()
         if q in seen:
             continue
@@ -50,9 +79,16 @@ def load_squad_eval(n=EVAL_SAMPLE_SIZE, seed=RANDOM_SEED):
         if not ans_list:
             continue
         rows.append({"question": q, "answer": ans_list[0]})
+
+    if not rows:
+        raise RuntimeError(
+            "No SQuAD questions matched the loaded source documents — "
+            "check data/polluted_token/sources_0.jsonl."
+        )
+
     random.seed(seed)
     sampled = random.sample(rows, min(n, len(rows)))
-    print(f"[HF] Sampled {len(sampled)} questions (seed={seed})")
+    print(f"[HF] Sampled {len(sampled)} questions answerable from the running corpus (seed={seed})")
     return sampled
 
 

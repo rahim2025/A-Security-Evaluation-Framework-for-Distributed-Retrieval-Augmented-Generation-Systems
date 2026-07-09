@@ -1,0 +1,51 @@
+{
+  "timestamp": "2026-07-09T18:56:38.175845",
+  "attack_type": "membership_inference",
+  "attack_config": {
+    "llm_service_url": "http://localhost:9000",
+    "corpus_jsonl": "C:\\Users\\user3\\Desktop\\Rahim\\EXPLORING-PRIVACY-PRESERVING-APPROACHES-FOR-PERSONALIZED-LARGE-LANGUAGE-MODELS-reliable-derag\\data\\polluted_token\\sources_0.jsonl",
+    "n_members": 25,
+    "n_nonmembers": 25,
+    "probes_per_doc": 1,
+    "threshold_pct": 50,
+    "random_seed": 13,
+    "dry_run": false
+  },
+  "metrics": {
+    "confusion_matrix": {
+      "tp": 14,
+      "tn": 14,
+      "fp": 11,
+      "fn": 11
+    },
+    "attack_accuracy": 0.56,
+    "precision": 0.56,
+    "recall": 0.56,
+    "f1_score": 0.56,
+    "auc_roc": 0.4832,
+    "privacy_risk": "NEGLIGIBLE — attack ineffective (AUC ≈ random)",
+    "n_members_tested": 25,
+    "n_non_members_tested": 25,
+    "mean_member_similarity": -0.0234,
+    "mean_non_member_similarity": -0.0162,
+    "similarity_delta": -0.0072,
+    "score_weights": {
+      "similarity": 0.2,
+      "certainty": 0.1,
+      "length_ratio": 0.15,
+      "decision_match": 0.55
+    },
+    "auc_roc_answer_match": 0.56,
+    "mean_member_answer_match_rate": 0.52,
+    "mean_non_member_answer_match_rate": 0.4,
+    "answer_match_delta": 0.12,
+    "auc_roc_length_ratio": 0.4256,
+    "mean_member_length_ratio": 0.0407,
+    "mean_non_member_length_ratio": 0.0493,
+    "length_ratio_delta": -0.0086,
+    "auc_roc_certainty": 0.5008,
+    "mean_member_certainty": 0.99,
+    "mean_non_member_certainty": 0.96,
+    "certainty_delta": 0.03
+  }
+}

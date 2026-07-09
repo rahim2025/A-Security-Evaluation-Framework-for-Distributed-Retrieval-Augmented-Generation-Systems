@@ -26,25 +26,63 @@ PROBE_SAMPLE_SIZE = int(os.getenv("PROBE_SAMPLE_SIZE", "54"))
 TOP_K             = int(os.getenv("TOP_K", "10"))
 RANDOM_SEED       = int(os.getenv("RANDOM_SEED", "42"))
 
-LOG_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "attack_logs")
+PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
+LOG_DIR = os.path.join(PROJECT_ROOT, "attack_logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 HEADERS_WITH_KEY    = {"Content-Type": "application/json", "X-API-Key": API_KEY}
 HEADERS_WITHOUT_KEY = {"Content-Type": "application/json"}
 
 
+def _load_corpus_contexts():
+    """
+    Passages actually served by the Docker data sources (all three sources
+    share the same document indices; sources_0.jsonl is the 0%-polluted /
+    clean copy, so its "html" text is the ground-truth passage per doc).
+    """
+    path = os.path.join(PROJECT_ROOT, "data", "polluted_token", "sources_0.jsonl")
+    contexts = set()
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            rec = json.loads(line)
+            html = rec.get("html", "")
+            if html:
+                contexts.add(html)
+    return contexts
+
+
 def load_squad_probes(n=PROBE_SAMPLE_SIZE, seed=RANDOM_SEED):
-    print(f"[HF] Loading rajpurkar/squad validation split ...")
-    ds = load_dataset("rajpurkar/squad", split="validation")
+    """
+    Sample probe questions restricted to contexts actually present in the
+    running corpus. The data sources are seeded from the SQuAD *train*
+    split (see data/polluted_token/sources_0.jsonl); probing with
+    *validation* questions asks about articles never loaded into any
+    source, so probes could never retrieve a relevant document regardless
+    of extraction strategy.
+    """
+    print(f"[HF] Loading rajpurkar/squad train split ...")
+    ds = load_dataset("rajpurkar/squad", split="train")
+    corpus_contexts = _load_corpus_contexts()
+    print(f"[HF] Matching questions against {len(corpus_contexts)} loaded source documents ...")
+
     seen, questions = set(), []
     for item in ds:
+        if item["context"] not in corpus_contexts:
+            continue
         q = item["question"].strip()
         if q not in seen:
             seen.add(q)
             questions.append(q)
+
+    if not questions:
+        raise RuntimeError(
+            "No SQuAD questions matched the loaded source documents — "
+            "check data/polluted_token/sources_0.jsonl."
+        )
+
     random.seed(seed)
     sampled = random.sample(questions, min(n, len(questions)))
-    print(f"[HF] Sampled {len(sampled)} probe questions (seed={seed})")
+    print(f"[HF] Sampled {len(sampled)} probe questions answerable from the running corpus (seed={seed})")
     return sampled
 
 
