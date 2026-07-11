@@ -153,7 +153,7 @@ def main():
     parser.add_argument('--poison-type', default='wrong_answer',
                         choices=['wrong_answer', 'misleading', 'noise', 'answer_swap'])
     parser.add_argument('--ratio',   type=float, default=0.5)
-    parser.add_argument('--amplify', type=int,   default=3)
+    parser.add_argument('--amplify', type=int,   default=1)
     parser.add_argument('--variants',type=int,   default=2)
     parser.add_argument('--reset',    action='store_true')
     parser.add_argument('--evaluate', action='store_true')
@@ -169,6 +169,7 @@ def main():
         amplification_factor=args.amplify,
         question_variants=args.variants,
         llm_service_url=LLM_SERVICE_URL,
+        target_queries=[item["question"] for item in EVAL_DATA],
     )
 
     # ── Info ──────────────────────────────────────────────────────────────

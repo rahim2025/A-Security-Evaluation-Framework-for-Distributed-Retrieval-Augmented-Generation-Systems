@@ -23,11 +23,7 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
-venv/
-env/
-ENV/
-.venv
+#
 
 # IDEs
 .vscode/
@@ -44,9 +40,6 @@ ENV/
 *.log
 logs/
 
-# Environment variables
-.env
-.env.local
 
 # Jupyter Notebook
 .ipynb_checkpoints

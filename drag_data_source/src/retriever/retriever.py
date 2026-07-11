@@ -97,6 +97,35 @@ class FastRetriever:
             tokenized = [_tokenize(t) for t in texts]
             self.bm25 = BM25Okapi(tokenized)
 
+    def add_documents(self, new_docs: List[Document]) -> None:
+        """
+        Incrementally add documents to an already-fit index, embedding only
+        the new documents instead of re-embedding the whole corpus.
+
+        Falls back to fit() if the retriever hasn't been fit yet.
+        """
+        if self.emb is None or not self.docs:
+            self.fit(new_docs)
+            return
+
+        new_texts = [d.text for d in new_docs]
+        new_emb = self._embed_texts(new_texts, show_progress=False)
+
+        if self.normalize:
+            new_emb = _normalize_rows(new_emb)
+
+        self.docs = self.docs + list(new_docs)
+        self.emb = np.vstack([self.emb, new_emb])
+
+        if self.use_faiss and self.faiss_index is not None:
+            self.faiss_index.add(new_emb)
+        elif self.use_faiss:
+            self._build_faiss(self.emb)
+
+        if _BM25_AVAILABLE:
+            tokenized = [_tokenize(d.text) for d in self.docs]
+            self.bm25 = BM25Okapi(tokenized)
+
     def _embed_texts(self, texts: List[str], show_progress: bool = False) -> np.ndarray:
         embs: List[np.ndarray] = []
         it = range(0, len(texts), self.batch_size)
