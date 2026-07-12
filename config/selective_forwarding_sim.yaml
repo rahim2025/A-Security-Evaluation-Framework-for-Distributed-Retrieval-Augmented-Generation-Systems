@@ -1,0 +1,61 @@
+# config/selective_forwarding_sim.yaml
+#
+# Config for attack/selective_forward_sim -- a Selective Forwarding
+# Attack (SFA) simulation module, separate from the existing
+# attack/selective_forward (real-Docker gray-hole) module.
+#
+# mode: mock  -- entirely in-process (networkx Barabasi-Albert graph of
+#                synthetic MockPeers). No Docker/blockchain required;
+#                good for fast ratio/strategy sweeps.
+# mode: live  -- targets the real docker-compose data sources
+#                (source_0/20/100) and reads real on-chain reliability
+#                scores from the deployed DragScores contract for
+#                "high_connectivity" targeting and reporting.
+#                Requires `docker compose up -d` at the repo root.
+
+mode: mock
+
+selective_forwarding:
+  attack_ratio: 0.3            # fraction of peers to compromise (0.0-1.0)
+  strategy: high_connectivity  # random | high_connectivity
+  drop_rate: 1.0                # 1.0 = black-hole (always drops, trivially detected by a
+                                 # fixed response-rate threshold); "stealthy" = each
+                                 # compromised peer independently drops at a rate drawn
+                                 # from Uniform(0.10, 0.30) -- the harder case a fixed
+                                 # threshold defense can't see (needs
+                                 # defense.detection_mode: binomial to catch, see
+                                 # config/sfa_sim_defense.yaml)
+  seed: 42
+
+sweep:
+  ratios: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+  strategies: [random, high_connectivity]
+
+# mode: mock network parameters
+network:
+  num_peers: 20
+  num_attachments: 4           # Barabasi-Albert m parameter (edges per new node)
+  num_query_neighbor: 4        # max BFS neighbours expanded per hop
+  query_ttl: 6                 # max hops before a query is declared TTL-exhausted
+  query_confidence_threshold: 0.5
+
+simulation:
+  num_queries: 100
+  peer_hit_prob: 0.4           # P(a MockPeer answers a given query)
+  seed: 0
+
+# mode: live network parameters (real docker-compose sources + on-chain reads)
+live:
+  source_urls:
+    source_0: "http://localhost:8001"
+    source_20: "http://localhost:8002"
+    source_100: "http://localhost:8003"
+  api_key: "reliable-derag-secret-2026"
+  blockchain_url: "http://localhost:8545"
+  num_query_neighbor: 2
+  query_ttl: 3
+  n_questions: 50
+  use_onchain_scores: true
+
+output:
+  log_dir: "attack_logs/selective_forward_sim"

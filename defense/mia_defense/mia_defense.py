@@ -72,9 +72,12 @@ drag_llm_service/app/server.py.
 from __future__ import annotations
 
 import os
+import random
+import re
+import statistics
 import sys
 from difflib import SequenceMatcher
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from sklearn.metrics import (
@@ -100,11 +103,13 @@ from attack.Mia_attack.mia_attack import (  # noqa: E402
     DECISION_WEIGHT,
     LEN_WEIGHT,
     SIM_WEIGHT,
+    _DECISION_SYNONYMS,
     _answer_length_ratio,
     _certainty_score,
     _cosine_similarity,
     _decision_match,
     _decision_match_adaptive,
+    _decision_match_semantic,
     _normalize_similarity,
     _query_llm,
     load_membership_documents,
@@ -183,8 +188,11 @@ def obfuscate_decision(response_text: str) -> str:
     return DECISION_HEDGE_PREFIX + response_text
 
 
-# Cycled to pad short responses -- deliberately generic/uninformative content so
-# padding never accidentally states or hints at the correct decision.
+# Pool sampled from at random (Revision 6), not cycled in a fixed order
+# (Revision 5). Deliberately generic/uninformative content so padding never
+# accidentally states or hints at the correct decision -- each word was
+# checked against `_DECISION_SYNONYMS` (attack/Mia_attack/mia_attack.py) to
+# confirm no overlap with yes/no/maybe or their synonyms.
 LENGTH_FILLER_WORDS = [
     "additional", "clinical", "context", "and", "further", "review", "of",
     "the", "available", "evidence", "would", "be", "needed", "to", "fully",
@@ -192,40 +200,179 @@ LENGTH_FILLER_WORDS = [
 ]
 
 
-def normalize_length(response_text: str, target_chars: int = 150) -> str:
+def calibrate_target_length(sample_responses: List[str], fallback: int = 150, floor: int = 100) -> int:
+    """
+    Revision 6: measures a `normalize_length()` target from the corpus's
+    actual response lengths instead of guessing a round number. Revision 5's
+    `target_chars=150` was chosen by inspection, not measurement (see
+    reports/MIA_Security_Analysis_Report.md §13.3, risk 1) -- if member and
+    non-member responses have systematically different natural lengths, an
+    unmeasured fixed target could truncate one group more than the other,
+    reintroducing the very length-based signal this defense exists to
+    remove.
+
+    `sample_responses` must be drawn from BOTH members and non-members
+    together, not one group alone -- calibrating on only one group's typical
+    length would bias the target toward that group and could *create* a
+    length-based signal rather than remove one. Returns the median character
+    length across the sample, or `fallback` if no non-empty sample is given.
+
+    `floor` (Revision 6 addition, added after a live run exposed the failure
+    mode): the deployed LLM was observed, during this project's own live
+    evaluation, to sometimes return extremely terse responses (as short as
+    10 characters, e.g. a bare "yes"/"no" with a leaked chat-template role
+    token) alongside much longer ones for other queries -- an unrelated
+    server-side formatting issue in drag_llm_service, not something this
+    defense module can or should fix. Naively calibrating to the *median*
+    of such a sample can collapse to a degenerate tiny target (measured:
+    10 chars across all three tested seeds), at which point
+    `normalize_length()` truncates nearly every substantive response down
+    to a fragment -- destroying response content rather than neutralizing
+    a length signal, and producing uninterpretable AUC swings in every
+    other defended world as a side effect (measured: some "defended" worlds
+    scored a *higher* AUC than undefended). `floor` guarantees the target
+    never drops below a value that preserves enough content for a normal
+    response, regardless of what a given sample's median happens to be --
+    `max(measured_median, floor)`, not `measured_median` alone.
+    """
+    lengths = [len(r) for r in sample_responses if r and r.strip()]
+    if not lengths:
+        return fallback
+    return max(int(statistics.median(lengths)), floor)
+
+
+def normalize_length(
+    response_text: str,
+    target_chars: int = 150,
+    _rng: Optional[random.Random] = None,
+) -> str:
     """
     Defends against the `length_ratio` leak channel (measured the second-
     strongest individual signal in this project, AUC 0.59-0.65, and the only
     one of the four composite signals with no defense built against it prior
-    to this revision -- see reports/MIA_Security_Analysis_Report.md).
+    to Revision 5).
 
     Pads or truncates to an exact **character** count -- not word count.
     `_answer_length_ratio()` computes `len(response)/len(gold_answer)` using
     Python's `len()` on the raw strings, i.e. character length, not word
-    count. An earlier version of this function normalized to a fixed *word*
-    count (30 words), which only approximately constrains character length
-    (padding/truncating a fixed number of words still leaves the actual
-    character count to vary with which words happen to be present) --
-    measured to reduce `length_ratio`'s AUC only partially (0.6464 -> 0.6144,
-    not fully to 0.50, unlike `decision_match`'s clean neutralization).
-    Targeting character count directly, matching what the detector actually
-    measures, is expected to close that gap: since gold-answer length is
-    itself independent of membership (both groups are sampled from the same
-    PubMedQA distribution), fixing the *response's* character length to a
-    true constant makes the residual `length_ratio` value a
-    membership-independent function of the gold answer's length alone.
+    count (Revision 4 normalized to a fixed *word* count, which only
+    approximately constrained character length and left residual signal --
+    see the report's revision history).
 
-    Should be applied *last*, after `sanitize_response()` and
-    `obfuscate_decision()`, so the final returned length is the one actually
-    fixed -- applying it earlier and then appending more text (e.g. the
-    obfuscation hedge prefix) would undo the normalization.
+    `target_chars` defaults to 150 for standalone callers, but production
+    use should pass `calibrate_target_length()`'s measured value instead of
+    relying on the default (see that function's docstring).
+
+    Padding (Revision 6 change): each padding word is drawn independently at
+    random from `LENGTH_FILLER_WORDS`, not cycled through in a fixed
+    repeating sequence. Revision 5's fixed cycle always started at
+    "additional" and repeated identically every time, which an attacker who
+    noticed the pattern could strip as a known suffix before recomputing
+    `length_ratio` -- fully defeating that version of the defense. Random
+    per-call word choice removes that specific exploit, though it does not
+    guarantee an attacker cannot statistically distinguish "generic padding"
+    from organic text by other means (not tested here -- see report
+    limitations). Pass `_rng` with a seeded `random.Random` for reproducible
+    evaluation runs; production calls should omit it so padding differs
+    across responses and can't be fingerprinted as a single fixed string.
+
+    Should be applied *last*, after `sanitize_response()` and a decision
+    defense, so the final returned length is the one actually fixed --
+    applying it earlier and then appending more text would undo the
+    normalization.
     """
     if len(response_text) >= target_chars:
         return response_text[:target_chars].rstrip()
-    filler_text = " " + " ".join(LENGTH_FILLER_WORDS)
+    rng = _rng if _rng is not None else random
     pad_needed = target_chars - len(response_text)
-    reps = pad_needed // len(filler_text) + 1
-    return (response_text + (filler_text * reps))[:target_chars]
+    pieces: List[str] = []
+    total = 0
+    while total < pad_needed:
+        piece = " " + rng.choice(LENGTH_FILLER_WORDS)
+        pieces.append(piece)
+        total += len(piece)
+    return (response_text + "".join(pieces))[:target_chars]
+
+
+# Vague, decision-neutral paraphrases the content-level defense substitutes
+# for a detected decision token. Multiple options per category, chosen at
+# random per call, so the substitution itself isn't a fixed fingerprintable
+# string either.
+#
+# Every template below was checked against ALL THREE _DECISION_SYNONYMS sets
+# (not just its own category) -- an earlier draft failed this check: the
+# "yes" templates included "...being true" and the "maybe" templates included
+# "...is mixed", both of which are themselves synonyms in _DECISION_SYNONYMS,
+# so _decision_match_semantic() (which also matches synonyms, not just the
+# literal word) still caught a residual signal even though the literal
+# yes/no/maybe token had been removed -- measured as auc_roc_decision_match_semantic
+# staying at 0.52-0.58 for the content-obfuscated world instead of dropping to
+# 0.50 like the adaptive (literal-token-only) check did. Fixed by rewriting
+# both templates to avoid every synonym in every category.
+_VAGUE_REPLACEMENTS: Dict[str, List[str]] = {
+    "yes": ["the evidence available points in that direction",
+            "there is some support for this in what was reviewed"],
+    "no": ["the evidence available does not point that way",
+           "this does not appear to be well supported by what was reviewed"],
+    "maybe": ["the available information on this does not settle the question",
+              "this remains an open question based on what was reviewed"],
+}
+
+
+def _detect_decision_token(response_text: str) -> Optional[str]:
+    """
+    Scans `response_text` for a yes/no/maybe commitment (or a known synonym,
+    via `_DECISION_SYNONYMS` imported from attack/Mia_attack/mia_attack.py)
+    and returns the canonical category found, or None.
+
+    Deliberately does NOT take the gold/ground-truth decision as an input --
+    a real server-side deployment of this defense has no access to which
+    document(s) were retrieved for a query or what the "correct" answer is
+    supposed to be; it can only see the text it is about to return. Detecting
+    the token from the response itself, the same way an attacker would, is
+    what makes this usable as an actual production defense rather than an
+    oracle-assisted simulation.
+    """
+    words = {w.strip(".,;:!?").lower() for w in response_text.split()}
+    for canonical, synonyms in _DECISION_SYNONYMS.items():
+        if words & synonyms:
+            return canonical
+    return None
+
+
+def obfuscate_decision_content(response_text: str, _rng: Optional[random.Random] = None) -> str:
+    """
+    Content-level decision defense (Revision 6), targeting the gap
+    `obfuscate_decision()` (Revision 4) was always disclosed not to close:
+    that defense only relocates the decision token past a positional window,
+    so an attacker who scans the whole response
+    (`_decision_match_adaptive`/`_decision_match_semantic`) sees it
+    unchanged -- confirmed empirically in Revision 5 (§12.7 of the report).
+
+    This defense instead detects which canonical decision the response
+    commits to (`_detect_decision_token`, using only the response text
+    itself, never a gold label) and replaces the first matching token or
+    synonym with a randomly-chosen vague paraphrase for that category. If no
+    decision token is detected, the response is returned unchanged.
+
+    Whether this actually reduces `_decision_match_semantic`'s AUC (as
+    opposed to `obfuscate_decision()`, which measurably does not) is an
+    empirical question answered by live evaluation, not assumed here -- see
+    the report for the measured result before treating this as a proven fix.
+    """
+    detected = _detect_decision_token(response_text)
+    if detected is None:
+        return response_text
+    rng = _rng if _rng is not None else random
+    replacement = rng.choice(_VAGUE_REPLACEMENTS[detected])
+
+    candidates = [detected] + sorted(_DECISION_SYNONYMS.get(detected, []))
+    for token in candidates:
+        pattern = re.compile(r"\b" + re.escape(token) + r"\b", re.IGNORECASE)
+        new_text, n = pattern.subn(replacement, response_text, count=1)
+        if n:
+            return new_text
+    return response_text
 
 
 def _auc_or_half(y_true: np.ndarray, scores: np.ndarray) -> float:
@@ -326,16 +473,59 @@ class MIADefenseEvaluator:
                 max_overlap_words=self.max_overlap_words,
             ) if raw.strip() else raw
 
-        # Four worlds, each a strict superset of the previous one's defenses --
-        # every response is scored on the identical underlying LLM call, no extra
-        # network round-trips. "full" is normalize_length() applied LAST (see its
-        # docstring for why order matters) on top of sanitize+obfuscate, so it
-        # targets length_ratio in addition to decision_match and verbatim overlap.
+        # Pass 1: query the LLM exactly once per probe and cache the raw
+        # response. Needed before WORLDS can be defined, because the "full"/
+        # "full_content" worlds' normalize_length() target is calibrated from
+        # the actual observed response lengths (calibrate_target_length(),
+        # Revision 6) rather than an unmeasured constant (Revision 5's 150) --
+        # calibration requires seeing all raw responses first. Caching here
+        # means the second pass re-processes already-fetched text only, no
+        # extra network round-trips.
+        all_records: List[Dict[str, Any]] = []
+        for label, documents in (("MEMBER", members), ("NON-MEMBER", non_members)):
+            print(f"\n  === Fetching {label} responses ===")
+            for i, qa_list in enumerate(documents, 1):
+                doc_records = []
+                for qa in qa_list:
+                    raw_response = _query_llm(qa["question"], self.llm_service_url, self.api_key)
+                    doc_records.append({
+                        "raw": raw_response,
+                        "context": qa["context"],
+                        "gold": qa["answer"],
+                        "decision": qa.get("decision", ""),
+                    })
+                all_records.append({"label": label, "doc_idx": i, "n_docs": len(documents), "probes": doc_records})
+                preview = qa_list[0]["question"][:40] if qa_list else ""
+                print(f"    [{label}] doc {i:>2}/{len(documents)}  probes={len(qa_list)}  q0='{preview}'")
+
+        target_chars = calibrate_target_length(
+            [p["raw"] for rec in all_records for p in rec["probes"]]
+        )
+        print(f"\n  [MIA-Defense] Calibrated length-normalization target: {target_chars} chars "
+              f"(median of {sum(len(rec['probes']) for rec in all_records)} observed responses, "
+              "member+non-member combined -- see calibrate_target_length() docstring)")
+
+        pad_rng = random.Random(self.random_seed)
+
+        def _content_defended(raw: str, ctx: str) -> str:
+            return obfuscate_decision_content(_sanitize(raw, ctx), _rng=pad_rng)
+
+        # Six worlds. The first four match Revision 5 exactly (field names kept
+        # for backward compatibility); "content_obfuscated"/"full_content" (NEW,
+        # Revision 6) swap the positional obfuscate_decision() for the
+        # content-level obfuscate_decision_content(), to test whether that
+        # closes the gap _decision_match_adaptive/_decision_match_semantic
+        # showed obfuscate_decision() leaves open (see reports/
+        # MIA_Security_Analysis_Report.md §12.7).
         WORLDS: List[Tuple[str, Any]] = [
             ("undefended", lambda raw, ctx: raw),
             ("sanitized", lambda raw, ctx: _sanitize(raw, ctx)),
             ("obfuscated", lambda raw, ctx: obfuscate_decision(_sanitize(raw, ctx))),
-            ("full", lambda raw, ctx: normalize_length(obfuscate_decision(_sanitize(raw, ctx)))),
+            ("full", lambda raw, ctx: normalize_length(
+                obfuscate_decision(_sanitize(raw, ctx)), target_chars=target_chars, _rng=pad_rng)),
+            ("content_obfuscated", _content_defended),
+            ("full_content", lambda raw, ctx: normalize_length(
+                _content_defended(raw, ctx), target_chars=target_chars, _rng=pad_rng)),
         ]
 
         composite = {name: [] for name, _ in WORLDS}
@@ -343,65 +533,68 @@ class MIADefenseEvaluator:
         len_diag = {name: [] for name, _ in WORLDS}
         match_diag = {name: [] for name, _ in WORLDS}
         cert_diag = {name: [] for name, _ in WORLDS}
-        # Adaptive-attacker diagnostic (full-response scan, not just first 5 words) --
-        # not part of any composite score, evaluates whether obfuscate_decision()'s
-        # protection survives a more sophisticated attacker. See _decision_match_adaptive.
+        # Adaptive/semantic-attacker diagnostics (full-response scan; semantic
+        # also accepts synonyms) -- not part of any composite score, evaluate
+        # whether each defense's protection survives a more sophisticated
+        # attacker. See _decision_match_adaptive, _decision_match_semantic.
         adapt_diag = {name: [] for name, _ in WORLDS}
+        semantic_diag = {name: [] for name, _ in WORLDS}
 
-        for label, documents in (("MEMBER", members), ("NON-MEMBER", non_members)):
-            print(f"\n  === Probing {label} documents ===")
-            for i, qa_list in enumerate(documents, 1):
-                per_probe_sims = {name: [] for name, _ in WORLDS}
-                per_probe_lens = {name: [] for name, _ in WORLDS}
-                per_probe_matches = {name: [] for name, _ in WORLDS}
-                per_probe_certs = {name: [] for name, _ in WORLDS}
-                per_probe_adapts = {name: [] for name, _ in WORLDS}
+        for rec in all_records:
+            label, i, n_docs = rec["label"], rec["doc_idx"], rec["n_docs"]
+            per_probe_sims = {name: [] for name, _ in WORLDS}
+            per_probe_lens = {name: [] for name, _ in WORLDS}
+            per_probe_matches = {name: [] for name, _ in WORLDS}
+            per_probe_certs = {name: [] for name, _ in WORLDS}
+            per_probe_adapts = {name: [] for name, _ in WORLDS}
+            per_probe_semantic = {name: [] for name, _ in WORLDS}
 
-                for qa in qa_list:
-                    context, gold, decision = qa["context"], qa["answer"], qa.get("decision", "")
-                    raw_response = _query_llm(qa["question"], self.llm_service_url, self.api_key)
-                    emb_context = self._encoder.encode([context], convert_to_numpy=True)[0]
+            for p in rec["probes"]:
+                raw_response, context, gold, decision = p["raw"], p["context"], p["gold"], p["decision"]
+                emb_context = self._encoder.encode([context], convert_to_numpy=True)[0]
 
-                    for name, transform in WORLDS:
-                        resp = transform(raw_response, context)
-                        if resp.strip():
-                            emb = self._encoder.encode([resp], convert_to_numpy=True)[0]
-                            sim = _cosine_similarity(emb, emb_context)
-                        else:
-                            sim = 0.0
-                        per_probe_sims[name].append(sim)
-                        per_probe_lens[name].append(_answer_length_ratio(resp, gold))
-                        per_probe_matches[name].append(1.0 if _decision_match(resp, decision) else 0.0)
-                        per_probe_certs[name].append(_certainty_score(resp))
-                        per_probe_adapts[name].append(1.0 if _decision_match_adaptive(resp, decision) else 0.0)
+                for name, transform in WORLDS:
+                    resp = transform(raw_response, context)
+                    if resp.strip():
+                        emb = self._encoder.encode([resp], convert_to_numpy=True)[0]
+                        sim = _cosine_similarity(emb, emb_context)
+                    else:
+                        sim = 0.0
+                    per_probe_sims[name].append(sim)
+                    per_probe_lens[name].append(_answer_length_ratio(resp, gold))
+                    per_probe_matches[name].append(1.0 if _decision_match(resp, decision) else 0.0)
+                    per_probe_certs[name].append(_certainty_score(resp))
+                    per_probe_adapts[name].append(1.0 if _decision_match_adaptive(resp, decision) else 0.0)
+                    per_probe_semantic[name].append(_decision_match_semantic(resp, decision))
 
-                # Each world's attacker only ever observes its own responses, so the
-                # "best try across probes" is selected independently per world -- an
-                # undefended attacker and a defended-world attacker can pick different
-                # probes as their strongest, exactly mirroring the live attack's logic.
-                for name, _ in WORLDS:
-                    sims, lens_, matches = per_probe_sims[name], per_probe_lens[name], per_probe_matches[name]
-                    certs, adapts = per_probe_certs[name], per_probe_adapts[name]
-                    best = int(np.argmax(sims)) if sims else 0
-                    sim = sims[best] if sims else 0.0
-                    length = lens_[best] if lens_ else 0.0
-                    cert = certs[best] if certs else 0.0
-                    match_rate = (sum(matches) / len(matches)) if matches else 0.0
-                    adapt_rate = (sum(adapts) / len(adapts)) if adapts else 0.0
+            # Each world's attacker only ever observes its own responses, so the
+            # "best try across probes" is selected independently per world -- an
+            # undefended attacker and a defended-world attacker can pick different
+            # probes as their strongest, exactly mirroring the live attack's logic.
+            for name, _ in WORLDS:
+                sims, lens_, matches = per_probe_sims[name], per_probe_lens[name], per_probe_matches[name]
+                certs, adapts, sems = per_probe_certs[name], per_probe_adapts[name], per_probe_semantic[name]
+                best = int(np.argmax(sims)) if sims else 0
+                sim = sims[best] if sims else 0.0
+                length = lens_[best] if lens_ else 0.0
+                cert = certs[best] if certs else 0.0
+                match_rate = (sum(matches) / len(matches)) if matches else 0.0
+                adapt_rate = (sum(adapts) / len(adapts)) if adapts else 0.0
+                sem_rate = (sum(sems) / len(sems)) if sems else 0.0
 
-                    composite[name].append(
-                        DECISION_WEIGHT * match_rate + SIM_WEIGHT * _normalize_similarity(sim)
-                        + CERTAINTY_WEIGHT * cert + LEN_WEIGHT * length
-                    )
-                    sim_diag[name].append(sim)
-                    len_diag[name].append(length)
-                    match_diag[name].append(match_rate)
-                    cert_diag[name].append(cert)
-                    adapt_diag[name].append(adapt_rate)
+                composite[name].append(
+                    DECISION_WEIGHT * match_rate + SIM_WEIGHT * _normalize_similarity(sim)
+                    + CERTAINTY_WEIGHT * cert + LEN_WEIGHT * length
+                )
+                sim_diag[name].append(sim)
+                len_diag[name].append(length)
+                match_diag[name].append(match_rate)
+                cert_diag[name].append(cert)
+                adapt_diag[name].append(adapt_rate)
+                semantic_diag[name].append(sem_rate)
 
-                preview = qa_list[0]["question"][:40] if qa_list else ""
-                scores_str = "  ".join(f"{name}={composite[name][-1]:.4f}" for name, _ in WORLDS)
-                print(f"    [{label}] doc {i:>2}/{len(documents)}  probes={len(qa_list)}  {scores_str}  q0='{preview}'")
+            scores_str = "  ".join(f"{name}={composite[name][-1]:.4f}" for name, _ in WORLDS)
+            print(f"    [{label}] doc {i:>2}/{n_docs}  {scores_str}")
 
         y_true = np.array([1] * len(members) + [0] * len(non_members))
         metrics = {
@@ -412,59 +605,81 @@ class MIADefenseEvaluator:
             )
             for name, _ in WORLDS
         }
-        # Adaptive-attacker AUC per world -- not part of any composite score,
-        # reported purely as a scope-limitation check (see _decision_match_adaptive).
+        # Adaptive/semantic-attacker AUC per world -- not part of any composite
+        # score, reported purely as a scope-limitation check.
         adaptive_aucs = {name: round(_auc_or_half(y_true, np.array(adapt_diag[name])), 4) for name, _ in WORLDS}
+        semantic_aucs = {name: round(_auc_or_half(y_true, np.array(semantic_diag[name])), 4) for name, _ in WORLDS}
 
         result = {
             "n_members_tested": len(members),
             "n_non_members_tested": len(non_members),
+            "calibrated_target_chars": target_chars,
             "score_weights": {"similarity": SIM_WEIGHT, "certainty": CERTAINTY_WEIGHT,
                               "length_ratio": LEN_WEIGHT, "decision_match": DECISION_WEIGHT},
             "undefended": metrics["undefended"],
             "defended": metrics["sanitized"],
             "decision_defended": metrics["obfuscated"],
             "fully_defended": metrics["full"],
+            "content_decision_defended": metrics["content_obfuscated"],
+            "fully_content_defended": metrics["full_content"],
             "auc_roc_reduction": round(metrics["undefended"]["auc_roc"] - metrics["sanitized"]["auc_roc"], 4),
             "auc_roc_reduction_decision_defended": round(metrics["undefended"]["auc_roc"] - metrics["obfuscated"]["auc_roc"], 4),
             "auc_roc_reduction_fully_defended": round(metrics["undefended"]["auc_roc"] - metrics["full"]["auc_roc"], 4),
-            "auc_roc_decision_match_adaptive": {
-                "undefended": adaptive_aucs["undefended"],
-                "defended": adaptive_aucs["sanitized"],
-                "decision_defended": adaptive_aucs["obfuscated"],
-                "fully_defended": adaptive_aucs["full"],
-            },
+            "auc_roc_reduction_content_decision_defended": round(metrics["undefended"]["auc_roc"] - metrics["content_obfuscated"]["auc_roc"], 4),
+            "auc_roc_reduction_fully_content_defended": round(metrics["undefended"]["auc_roc"] - metrics["full_content"]["auc_roc"], 4),
+            "auc_roc_decision_match_adaptive": {name: adaptive_aucs[name] for name, _ in WORLDS},
+            "auc_roc_decision_match_semantic": {name: semantic_aucs[name] for name, _ in WORLDS},
         }
         self._print_summary(result)
         return result
 
     @staticmethod
     def _print_summary(r: Dict[str, Any]) -> None:
-        print("\n" + "=" * 70)
-        print("  MIA Defense — Undefended vs. 3 Defense Layers")
-        print("=" * 70)
+        print("\n" + "=" * 100)
+        print("  MIA Defense — Undefended vs. 5 Defense Layers (Revision 6: + content-level decision defense)")
+        print("=" * 100)
         w = r["score_weights"]
         print(f"  Gated composite: decision_match*{w['decision_match']} dominates; "
               f"similarity*{w['similarity']} + certainty*{w['certainty']} + "
               f"length_ratio*{w['length_ratio']} only re-rank within a gate tier")
-        u, d, e, f = r["undefended"], r["defended"], r["decision_defended"], r["fully_defended"]
-        print(f"  {'Metric':<30}{'Undef.':>11}{'Sanit.':>11}{'+Obfusc.':>11}{'+LenNorm':>11}")
+        print(f"  Calibrated length-normalization target (Revision 6): {r['calibrated_target_chars']} chars "
+              "(measured median of observed responses -- see calibrate_target_length())")
+        u = r["undefended"]
+        cols = [
+            ("Undef.", u),
+            ("Sanit.", r["defended"]),
+            ("+Obfusc.", r["decision_defended"]),
+            ("+LenNorm", r["fully_defended"]),
+            ("+ContentObf.", r["content_decision_defended"]),
+            ("+Content+Len", r["fully_content_defended"]),
+        ]
+        header = "  " + f"{'Metric':<28}" + "".join(f"{name:>14}" for name, _ in cols)
+        print(header)
         for key in ("auc_roc", "accuracy", "precision", "recall", "f1_score",
                     "mean_member_similarity", "mean_non_member_similarity",
                     "auc_roc_answer_match", "mean_member_answer_match_rate",
                     "mean_non_member_answer_match_rate", "auc_roc_length_ratio",
                     "mean_member_length_ratio", "mean_non_member_length_ratio",
                     "auc_roc_certainty", "mean_member_certainty", "mean_non_member_certainty"):
-            print(f"  {key:<30}{u[key]:>11.4f}{d[key]:>11.4f}{e[key]:>11.4f}{f[key]:>11.4f}")
-        print(f"\n  AUC-ROC reduction, sanitized only            : {r['auc_roc_reduction']:+.4f}")
-        print(f"  AUC-ROC reduction, sanitized+obfuscated       : {r['auc_roc_reduction_decision_defended']:+.4f}")
-        print(f"  AUC-ROC reduction, sanitized+obfuscated+lennorm: {r['auc_roc_reduction_fully_defended']:+.4f}")
+            row = "  " + f"{key:<28}" + "".join(f"{m[key]:>14.4f}" for _, m in cols)
+            print(row)
+        print(f"\n  AUC-ROC reduction, sanitized only                    : {r['auc_roc_reduction']:+.4f}")
+        print(f"  AUC-ROC reduction, sanitized+obfuscated              : {r['auc_roc_reduction_decision_defended']:+.4f}")
+        print(f"  AUC-ROC reduction, sanitized+obfuscated+lennorm      : {r['auc_roc_reduction_fully_defended']:+.4f}")
+        print(f"  AUC-ROC reduction, sanitized+content_obfuscated      : {r['auc_roc_reduction_content_decision_defended']:+.4f}")
+        print(f"  AUC-ROC reduction, sanitized+content_obfuscated+len  : {r['auc_roc_reduction_fully_content_defended']:+.4f}")
         print(f"  (positive = defense reduced leakage; check distance-from-0.5 too if undefended AUC is near random)")
         a = r["auc_roc_decision_match_adaptive"]
+        s = r["auc_roc_decision_match_semantic"]
+        _labels = (
+            ("undef", "undefended"), ("sanit", "sanitized"), ("+obfusc", "obfuscated"),
+            ("+lennorm", "full"), ("+contentObf", "content_obfuscated"),
+            ("+content+len", "full_content"),
+        )
         print(f"\n  [adaptive attacker check -- scans WHOLE response, not just first 5 words]")
-        print(f"  decision_match_adaptive AUC : undefended={a['undefended']:.4f}  "
-              f"sanitized={a['defended']:.4f}  +obfusc.={a['decision_defended']:.4f}  "
-              f"+lennorm={a['fully_defended']:.4f}")
-        print(f"  (if these stay close to undefended, the obfuscation/lennorm defenses' "
-              f"protection is positional/length-only -- confirms/refutes the honest scope limitation)")
-        print("=" * 70)
+        print(f"  decision_match_adaptive AUC : " + "  ".join(f"{name}={a[key]:.4f}" for name, key in _labels))
+        print(f"\n  [semantic attacker check -- full response + yes/no/maybe synonyms]")
+        print(f"  decision_match_semantic AUC : " + "  ".join(f"{name}={s[key]:.4f}" for name, key in _labels))
+        print(f"  (if +ContentObf./+Content+Len drop noticeably below undefended here, unlike +Obfusc./+LenNorm,")
+        print(f"   the content-level defense is closing the gap the positional one was shown not to close)")
+        print("=" * 100)

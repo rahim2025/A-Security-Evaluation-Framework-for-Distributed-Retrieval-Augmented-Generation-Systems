@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-07-10T20:08:34.004556",
+  "defense_type": "kb_extraction_query_diversity_throttle",
+  "config": {
+    "source_index": 1,
+    "window_size": 30,
+    "max_topics_per_window": 5,
+    "min_queries_before_check": 8,
+    "cooldown_queries": 20,
+    "probe_sample_size": 40
+  },
+  "attack_only": {
+    "status": "ok",
+    "probes_sent": 40,
+    "blocked_count": 0,
+    "docs_extracted": 143,
+    "chars_extracted": 118020,
+    "kb_size_mb": 0.1126,
+    "error_count": 5,
+    "elapsed_sec": 0.81,
+    "correct_extractions": 143,
+    "extraction_rate": 0.286,
+    "extraction_accuracy": 1.0,
+    "query_efficiency": 3.575,
+    "topic_coverage": 1.0,
+    "topics_touched": 10,
+    "topics_total": 10
+  },
+  "attack_plus_defense": {
+    "status": "ok",
+    "probes_sent": 40,
+    "blocked_count": 33,
+    "docs_extracted": 0,
+    "chars_extracted": 0,
+    "kb_size_mb": 0.0,
+    "error_count": 7,
+    "elapsed_sec": 0.03,
+    "correct_extractions": 0,
+    "extraction_rate": 0.0,
+    "extraction_accuracy": 0.0,
+    "query_efficiency": 0.0,
+    "topic_coverage": 0.0,
+    "topics_touched": 0,
+    "topics_total": 10
+  },
+  "throttle_stats": {
+    "clients_tracked": 1,
+    "total_flagged": 2,
+    "total_blocked": 33,
+    "flagged_at_query": {
+      "attacker_peer": 29
+    },
+    "final_topics_touched": {
+      "attacker_peer": 7
+    }
+  },
+  "reduction": {
+    "extraction_rate_reduction": 0.286,
+    "topic_coverage_reduction": 1.0,
+    "queries_blocked": 33,
+    "queries_blocked_fraction": 0.825
+  }
+}

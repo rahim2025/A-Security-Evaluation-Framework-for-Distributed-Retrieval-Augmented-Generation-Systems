@@ -36,68 +36,68 @@ Caveat: PubMedQA has ~1 question per abstract (unlike SQuAD's ~4.5), so the
 best-of-1 for this dataset -- documented here rather than silently assumed
 to still provide the same variance reduction it did for SQuAD.
 
-The attack -- gated composite score, 3rd revision
-----------------------------------------------------
-Two prior linear-blend revisions (documented in full in
-reports/MIA_Security_Analysis_Report.md) measured that `decision_match`
-(does the response commit to the correct gold yes/no/maybe judgment) is by
-far the strongest and only-ever-positive signal across every seed tested,
-while `length_ratio` and raw `similarity` are individually weaker and
-occasionally invert. A plain linear blend of all four let a bad seed's
-noise in the weaker signals occasionally outweigh a genuinely correct
-`decision_match` reading (seed 42: composite dropped back to NEGLIGIBLE
-even though `decision_match` alone was still positive that same run).
+The attack -- empirically re-tuned composite, 7th revision
+------------------------------------------------------------
+Revisions 2-4 hand-tuned a four-signal composite (decision_match, similarity,
+certainty, length_ratio) by observing 3 seeds (0, 1, 42), settling on a
+GATED formula where decision_match's weight (0.55) exceeded the other three
+combined (0.45). Revisions 5-6 measured that this composite's held-out
+generalization was NOT statistically distinguishable from chance (10-seed
+held-out AUC 0.522, 95% CI [0.472, 0.572]) -- the weights had never been
+validated against data withheld during the tuning process itself.
 
-This revision makes `decision_match` a **gating** signal rather than one
-linearly-blended term: it guarantees any document with a correct
-decision-match scores strictly higher than any document without one,
-regardless of how the other three signals land, while still using those
-three to rank *within* each gate tier (so they aren't discarded, just
-subordinated):
+Revision 7 fixes this properly rather than diagnosing it again: a grid
+search over the full weight simplex (`attack/Mia_attack/tune_weights.py
+search`), maximizing mean per-seed AUC on 650 real per-document signal rows
+pooled across all 13 seeds this project has ever observed (the "dev set" --
+not held-out in any meaningful sense, since every one of their outcomes had
+already been examined in Revisions 5-6). The winning weights were then
+LOCKED and evaluated exactly once against 5 seeds generated fresh for this
+purpose and never queried before that evaluation ran.
 
     membership_score = DECISION_WEIGHT * decision_match
                       + SIM_WEIGHT * normalized_similarity
                       + CERTAINTY_WEIGHT * certainty
                       + LEN_WEIGHT * length_ratio
 
-with `DECISION_WEIGHT (0.55) > SIM_WEIGHT + CERTAINTY_WEIGHT + LEN_WEIGHT
-(0.20+0.10+0.15=0.45)` by construction -- this inequality is what makes the
-gate strict: the maximum possible secondary-signal contribution (0.45)
-cannot outscore the minimum decision-match contribution (0.55), so
-`decision_match=1` always ranks above `decision_match=0` no matter what the
-other three signals do. `normalized_similarity = (cosine_similarity + 1) / 2`
-remaps raw cosine similarity from `[-1, 1]` to `[0, 1]` so it can't violate
-this bound.
+Winning weights: `DECISION_WEIGHT=1.0, SIM_WEIGHT=0.0, CERTAINTY_WEIGHT=0.0,
+LEN_WEIGHT=0.0` -- the composite is now, empirically, just `decision_match`
+alone. The grid search found that `similarity`, `certainty`, and (contrary
+to Revision 6's ablation diagnostic, which only tested dropping
+similarity/certainty) `length_ratio` all add net noise rather than net
+signal on the dev data -- not just the two signals previously suspected.
 
-  1. decision_match (0.55, gating): fraction of probes where the response's
-     first few words include the correct gold `final_decision` (yes/no/maybe)
-     token. Was a blind diagnostic in an earlier revision (checked a full
-     `long_answer` sentence verbatim, which never matched -- 0.0000 for both
-     groups, every run); fixed to check the short decision token instead,
-     which measured the strongest, most consistent signal in this project
-     (AUC 0.56-0.64, delta always positive, never inverted across all seeds
-     tested) -- strong enough to justify gating rather than blending.
-  2. similarity (0.20): cosine similarity, response vs. true context, remapped to [0,1].
-  3. certainty (0.10): yes/no/maybe-commitment vs. hedge detection (see
-     `_certainty_score`) -- redesigned from an earlier hedge-word-only
-     version that measured completely degenerate on PubMedQA's terse
-     answers. Still the weakest, most inconsistent signal.
-  4. length_ratio (0.15): min(len(response)/len(gold_answer), 1.0) --
-     individually strong (AUC 0.59-0.65) but not sign-consistent across
-     seeds at larger sample sizes, so kept as a tie-breaker rather than
-     given the dominant weight a linear blend previously gave it.
+Fresh-seed result (the number that actually matters): mean AUC **0.620**,
+95% CI **[0.546, 0.695]** -- excludes chance, and is *higher* than the
+dev-set search score (0.572), indicating the search did not overfit to the
+13 dev seeds. This is the first revision where the production composite's
+generalization to genuinely unseen data is both measured and confirmed,
+rather than assumed, hoped for, or found wanting.
+
+`similarity`, `certainty`, and `length_ratio` remain computed and reported
+as diagnostics (unchanged functions below) -- they are not deleted from the
+codebase, only zeroed out of the score that decides membership, in case a
+future revision with more dev data finds a role for them again.
+
+  1. decision_match (1.0): fraction of probes where the response's first few
+     words include the correct gold `final_decision` (yes/no/maybe) token --
+     measured the strongest, most consistent signal in this project across
+     all seven revisions (AUC 0.50-0.66 across all 13 dev seeds, never
+     inverted; held-out mean 0.568, 95% CI excluding chance, Revision 6 §2.5).
+  2. similarity (0.0, diagnostic only): cosine similarity, response vs. true context, remapped to [0,1].
+  3. certainty (0.0, diagnostic only): yes/no/maybe-commitment vs. hedge detection (see `_certainty_score`).
+  4. length_ratio (0.0, diagnostic only): min(len(response)/len(gold_answer), 1.0).
 
 Hypothesis
 ----------
 For a *member* document the retriever can surface the real context, so its
 best-try answer should ground in and resemble that passage, with a
-confident, direct commitment to the correct yes/no/maybe judgment -> gated
-into the higher tier, then ranked further by similarity/certainty/length
-within that tier. For a *non-member* document, no source holds that
-passage, so an honest answer should fail to commit correctly -> gated into
-the lower tier -- unless the base LLM already knows the fact from
-pretraining, in which case decision_match may be high for non-members too,
-capping the available signal regardless of scoring strategy.
+confident, direct commitment to the correct yes/no/maybe judgment. For a
+*non-member* document, no source holds that passage, so an honest answer
+should fail to commit correctly -- unless the base LLM already knows the
+fact from pretraining, in which case decision_match may be high for
+non-members too, capping the available signal regardless of scoring
+strategy.
 AUC-ROC ~= 0.50 -> no privacy leakage (attack fails).
 AUC-ROC > 0.70  -> genuine privacy vulnerability.
 
@@ -158,34 +158,63 @@ EMBEDDING_MODEL    = "all-MiniLM-L6-v2"
 DEFAULT_MEMBERS    = 25
 DEFAULT_NONMEMBERS = 25
 
-# Gated composite membership score (3rd revision):
+# Composite membership score, Revision 7 -- empirically re-tuned under a genuine
+# train/test split (see reports/MIA_Security_Analysis_Report.md §2.9 for full
+# methodology and reports/../attack_logs/tune_weights_*.json for raw results):
 #   DECISION_WEIGHT * decision_match
 #   + SIM_WEIGHT * normalized_similarity + CERTAINTY_WEIGHT * certainty + LEN_WEIGHT * length_ratio
 #
-# History of re-calibration (see reports/MIA_Security_Analysis_Report.md for full detail):
+# History of re-calibration:
 #   1st revision (linear, DRAG-inspired prior): SIM=0.85, LEN=0.15.
 #   2nd revision (linear, empirically re-weighted twice): SIM=0.20, CERTAINTY=0.10,
-#     LEN=0.30, DECISION=0.40 -- decision_match measured strongest & most consistent
-#     (AUC 0.56-0.64, never inverted), length_ratio measured individually strong
-#     (AUC 0.59-0.65) but NOT sign-consistent at n=25 (seed 42: delta -0.0403,
-#     inverted) -- a linear blend let that inversion outweigh a still-positive
-#     decision_match reading in the same seed, regressing the composite back to
-#     NEGLIGIBLE.
-#   3rd revision (this one, GATED not linearly blended): decision_match's weight
-#     (0.55) is set to exceed the combined maximum of the other three (0.20+0.10+0.15
-#     = 0.45), so decision_match=1 always scores above decision_match=0 regardless of
-#     the other signals -- they can only re-rank documents within a gate tier, never
-#     override the gate itself. This directly targets the seed-42 failure mode: a
-#     weak/inverted secondary signal can no longer drag a correctly-gated document
-#     across the gate boundary.
-DECISION_WEIGHT  = 0.55   # gate weight -- exceeds SIM+CERTAINTY+LEN by construction
-SIM_WEIGHT       = 0.20
-CERTAINTY_WEIGHT = 0.10
-LEN_WEIGHT       = 0.15
+#     LEN=0.30, DECISION=0.40.
+#   3rd revision (GATED, not linearly blended): DECISION=0.55 set to exceed
+#     SIM+CERTAINTY+LEN (0.45) combined, so decision_match=1 always outranks
+#     decision_match=0 regardless of the other signals. These weights (through
+#     Revision 6) were chosen by human judgment and pattern-matching against 3
+#     tuning seeds (0, 1, 42), never validated against data withheld during the
+#     choice -- Revisions 5-6 both measured that the resulting composite's
+#     held-out generalization was NOT statistically distinguishable from chance
+#     (10-seed held-out AUC 0.522, 95% CI [0.472, 0.572], includes 0.50).
+#   7th revision (this one, EMPIRICALLY RE-TUNED): weights chosen by a grid
+#     search over the 4-weight simplex, maximizing mean per-seed AUC on 650
+#     real per-document signal rows across all 13 seeds this project has ever
+#     observed (`attack/Mia_attack/tune_weights.py search`) -- then evaluated
+#     EXACTLY ONCE, with no further changes, against 5 seeds generated fresh
+#     and never queried before that evaluation (865, 659, 693, 783, 154).
+#     Winner: DECISION_WEIGHT=1.0, everything else=0.0 -- similarity, certainty,
+#     AND length_ratio all measured to add net noise rather than net signal on
+#     the dev data, not just similarity/certainty as Revision 6's ablation
+#     diagnostic suggested. Fresh-seed result: mean AUC 0.620, 95% CI [0.546,
+#     0.695] -- EXCLUDES chance, and is *higher* than the dev-set score (0.572),
+#     indicating no overfitting to the search. This is the first revision in
+#     this project's history where the production composite's generalization
+#     to genuinely unseen data is both measured and statistically confirmed.
+DECISION_WEIGHT  = 1.00
+SIM_WEIGHT       = 0.00
+CERTAINTY_WEIGHT = 0.00
+LEN_WEIGHT       = 0.00
 assert DECISION_WEIGHT > SIM_WEIGHT + CERTAINTY_WEIGHT + LEN_WEIGHT, (
     "DECISION_WEIGHT must strictly exceed the other three combined for the gate "
     "to be unconditional -- see module docstring."
 )
+
+# Ablation weights (Revision 6, diagnostic only -- NOT the production composite,
+# and NOT imported by defense/mia_defense/mia_defense.py). Tests the hypothesis
+# that SIM_WEIGHT and CERTAINTY_WEIGHT are adding noise rather than signal on
+# held-out seeds (Revision 5, reports/MIA_Security_Analysis_Report.md §12.10):
+# certainty was never shown to help in any revision, and similarity is weaker
+# and noisier than decision_match/length_ratio. Reported alongside the primary
+# composite's AUC as a diagnostic comparison -- does NOT replace DECISION_WEIGHT
+# etc. above, since changing the production weights based on the same held-out
+# seeds used to evaluate them would repeat the exact overfitting mistake this
+# ablation is meant to detect.
+ABLATION_DECISION_WEIGHT  = 0.70
+ABLATION_SIM_WEIGHT       = 0.00
+ABLATION_CERTAINTY_WEIGHT = 0.00
+ABLATION_LEN_WEIGHT       = 0.30
+assert abs((ABLATION_DECISION_WEIGHT + ABLATION_SIM_WEIGHT
+            + ABLATION_CERTAINTY_WEIGHT + ABLATION_LEN_WEIGHT) - 1.0) < 1e-9
 
 HEDGE_WORDS = frozenset({
     "may", "might", "could", "possibly", "generally", "often",
@@ -462,6 +491,89 @@ def _decision_match_adaptive(response: str, gold_decision: str) -> bool:
         return False
     words = [w.strip(".,;:!?").lower() for w in response.split()]
     return gold in words
+
+
+# Synonym vocabulary for `_decision_match_semantic` (Revision 6). Each set was
+# checked against `normalize_length()`'s LENGTH_FILLER_WORDS (defense/mia_defense/
+# mia_defense.py) to confirm no overlap -- an overlap would mean the length
+# defense's padding accidentally counts as a semantic decision match.
+_DECISION_SYNONYMS: Dict[str, frozenset] = {
+    "yes":   frozenset({"yes", "correct", "true", "indeed", "affirmative", "confirmed"}),
+    "no":    frozenset({"no", "incorrect", "false", "negative", "unlikely", "refuted"}),
+    "maybe": frozenset({"maybe", "possibly", "unclear", "uncertain", "inconclusive", "mixed"}),
+}
+
+
+def _decision_match_semantic(response: str, gold_decision: str) -> float:
+    """
+    Combines two extensions to `_decision_match()`, proposed and tested in
+    Revision 6 (reports/MIA_Security_Analysis_Report.md) as a stronger
+    candidate attacker: (a) scans the *entire* response like
+    `_decision_match_adaptive()`, not just the first 5 words, and (b) also
+    accepts a small set of synonyms for yes/no/maybe (see `_DECISION_SYNONYMS`),
+    so a defense or a model phrasing that avoids the literal gold token (e.g.
+    "correct" instead of "yes") is still caught.
+
+    Returns 1.0 for an exact gold-token match anywhere in the response, 0.5
+    for a synonym-only match, 0.0 otherwise -- diagnostic-only, like
+    `_decision_match_adaptive`, not folded into the production composite
+    (see ABLATION_* weights above for why: any composite change must be
+    validated on seeds the change wasn't tuned against, not swapped in based
+    on the same run that motivated it).
+    """
+    gold = gold_decision.strip().lower()
+    if not gold:
+        return 0.0
+    words = {w.strip(".,;:!?").lower() for w in response.split()}
+    if gold in words:
+        return 1.0
+    if words & _DECISION_SYNONYMS.get(gold, frozenset()):
+        return 0.5
+    return 0.0
+
+
+def _consistency_score(
+    question: str,
+    gold_decision: str,
+    llm_service_url: str,
+    api_key: str = "",
+    n_probes: int = 5,
+) -> float:
+    """
+    Multi-probe consistency signal (Revision 6, new hypothesis): queries the
+    *same* question `n_probes` times and measures what fraction of responses
+    agree with the majority `_decision_match_semantic` reading (1.0 exact
+    match / 0.5 synonym / 0.0 no match, rounded to the nearest of those three
+    buckets for majority-voting purposes).
+
+    Rationale (untested before Revision 6): a member document has a real
+    passage the retriever can consistently surface, so repeated queries
+    should keep landing on the same yes/no/maybe judgment. A non-member has
+    no backing passage, so the LLM is answering from general
+    knowledge/guessing each time, which should vary more across repeated
+    identical queries. This is independent of any single response's content,
+    so `obfuscate_decision()`, `sanitize_response()`, and `normalize_length()`
+    -- all of which only transform individual responses -- have no
+    documented mechanism to defend against it. Whether that expectation
+    holds was tested empirically, not assumed; see the report for the
+    measured result before treating this as a proven attack vector.
+
+    Costs `n_probes` additional live LLM calls per document -- not wired
+    into the default per-document probing loop, since PubMedQA's ~1
+    question/document would make this `n_probes` times more expensive across
+    every document in every run. Intended to be run as a separate, smaller
+    pilot measurement.
+    """
+    from collections import Counter
+
+    buckets = []
+    for _ in range(n_probes):
+        response = _query_llm(question, llm_service_url, api_key)
+        buckets.append(_decision_match_semantic(response, gold_decision))
+    if not buckets:
+        return 0.0
+    majority_count = Counter(buckets).most_common(1)[0][1]
+    return majority_count / len(buckets)
 
 
 # ── Core attack class ────────────────────────────────────────────────────────

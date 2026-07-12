@@ -1,0 +1,36 @@
+# config/ddos_sim_defense.yaml
+#
+# Config for defense/ddos_sim_defense.DDoSDefense, the countermeasure for
+# attack/ddos_sim.DDoSAttack. Mirrors config/sfa_sim_defense.yaml's shape.
+
+ddos_defense:
+  deprioritize_threshold: 0.5      # observed response_rate below this -> deprioritized (routing-bypassed)
+  min_queries_before_action: 5     # min interactions before deprioritization is allowed
+  reputation_decay: 0.6            # EMA decay; alpha = 1 - reputation_decay
+  redundancy_k: 2                  # bounded extra backup-probe attempts once the primary TTL-bounded
+                                    # BFS exhausts its hop budget without a hit
+  max_blacklist_fraction: 0.5      # deprioritization never excludes more than this fraction of the
+                                    # known peer population (and never all of them)
+  backoff_waves: 2                 # recovery-aware backoff: a deprioritized peer gets a fresh
+                                    # evaluation after this many waves, since congestion (unlike a
+                                    # compromised peer) clears itself after a fixed duration
+
+output:
+  log_dir: "defense_logs/ddos_sim_defense"
+
+# Tuning guide
+# ------------
+# deprioritize_threshold  too low  -> misses congested peers (under-deprioritization)
+#                          too high -> flags honest peers with naturally noisy responses
+# min_queries_before_action  too low  -> deprioritizes on insufficient evidence
+#                             too high -> slow to react to a real congestion wave
+# reputation_decay        too low  -> reputation swings on every single query
+#                          too high -> reputation barely moves even after many drops
+# redundancy_k             too low  -> detection can be correct and still recover nothing once
+#                                       the primary hop budget is exhausted
+#                           too high -> approaches "just try everyone," defeating a hop-limited test
+# max_blacklist_fraction   too low  -> caps out mitigation early even when more would be correct
+#                           too high (near 1.0) -> a miscalibrated threshold can deprioritize
+#                                       most/all peers and empty the backup-probe candidate pool
+# backoff_waves            too low  -> re-trusts a peer while its congestion wave is still active
+#                           too high -> slow to recover availability after a wave legitimately clears

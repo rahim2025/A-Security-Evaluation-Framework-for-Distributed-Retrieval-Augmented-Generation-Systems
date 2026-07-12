@@ -1,0 +1,73 @@
+# config/ddos_sim.yaml
+#
+# Config for attack/ddos_sim -- a congestion-based (application-layer)
+# DDoS simulation, following the same mock/live dual-mode pattern as
+# attack/selective_forward_sim. See reports/SFA_Security_Analysis_Report.md
+# for the full design writeup this module implements.
+#
+# mode: mock  -- entirely in-process (networkx Barabasi-Albert graph of
+#                synthetic MockPeers, reused from selective_forward_sim).
+#                No Docker/blockchain required.
+# mode: live  -- targets the real docker-compose data sources
+#                (source_0/20/100). Requires `docker compose up -d` at
+#                the repo root.
+
+mode: mock
+
+ddos:
+  attack_ratio: 0.3          # fraction of peers targeted per wave (0.0-1.0)
+  strategy: random           # random | targeted | sequential
+  target_peers: []           # explicit peer index list; overrides `strategy` every wave when non-empty
+  iterations: 5              # number of attack waves
+  ddos_duration: 60.0        # seconds until an attacked/cascaded peer auto-recovers
+  wave_interval_s: 30.0      # assumed real-world seconds one wave represents (converts
+                              # ddos_duration -> waves_to_recover = round(ddos_duration / wave_interval_s))
+  intensity_min: 0.5         # uniform sampling bounds for per-peer attack intensity
+  intensity_max: 1.0
+  cascade_factor: 0.25       # fraction of a direct target's intensity spilled onto graph neighbours
+  max_cascade_intensity: 0.6 # cap on cascaded (indirect) intensity -- cascade victims are always
+                              # less damaged than direct targets
+  seed: 42
+
+sweep:
+  ratios: [0.1, 0.3, 0.6]
+  strategies: [random, targeted, sequential]
+
+# mode: mock network parameters (same shape as selective_forwarding_sim.yaml)
+network:
+  num_peers: 20
+  num_attachments: 4
+  num_query_neighbor: 4
+  query_ttl: 6
+  query_confidence_threshold: 0.5
+
+simulation:
+  num_queries: 100
+  peer_hit_prob: 0.4
+  seed: 0
+
+# mode: live network parameters (real docker-compose sources)
+live:
+  source_urls:
+    source_0: "http://localhost:8001"
+    source_20: "http://localhost:8002"
+    source_100: "http://localhost:8003"
+  api_key: "reliable-derag-secret-2026"
+  blockchain_url: "http://localhost:8545"
+  num_query_neighbor: 2
+  query_ttl: 3
+  n_questions: 30
+  use_onchain_scores: true
+
+output:
+  log_dir: "attack_logs/ddos_sim"
+
+# Tuning guide
+# ------------
+# attack_ratio x iterations x ddos_duration jointly determine whether the
+# network experiences a temporary dip or a sustained full outage: a high
+# ratio combined with a recovery window (ddos_duration) that is long
+# relative to wave_interval_s means the network never gets a chance to
+# recover between waves. Reproduce the report's worst-case example with:
+#   python attack/ddos_sim/run_attack.py --mode mock --single \
+#       --ratio 0.6 --strategy sequential --duration 600 --iterations 4

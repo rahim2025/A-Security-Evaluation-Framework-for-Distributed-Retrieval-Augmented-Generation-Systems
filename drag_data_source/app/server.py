@@ -33,7 +33,16 @@ except ImportError as e:
     sign_message_personal = None
 
 app = Flask(__name__)
-limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["60 per minute"])
+# Overridable per-deployment via RATE_LIMIT_DEFAULT (Flask-Limiter string syntax,
+# e.g. "600 per minute" or "1000 per hour") -- defaults to the original hardcoded
+# "60 per minute" so existing behavior is unchanged unless explicitly opted into.
+# A full SFA sweep can exceed 60/min-per-IP within seconds; raising this for a
+# test deployment avoids multi-hour client-side-throttled runs while keeping the
+# limiter itself (and its default) intact for anyone who relies on the default.
+# See reports/SFA_Security_Analysis_Report.md sec 12.9 for the confirmed root-cause
+# writeup of what happens when this limit is hit unthrottled.
+RATE_LIMIT_DEFAULT = os.getenv("RATE_LIMIT_DEFAULT", "60 per minute")
+limiter = Limiter(app=app, key_func=get_remote_address, default_limits=[RATE_LIMIT_DEFAULT])
 DS_API_KEY = os.getenv("API_KEY", "")
 
 @app.before_request

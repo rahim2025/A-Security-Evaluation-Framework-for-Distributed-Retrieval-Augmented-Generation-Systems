@@ -1,0 +1,28 @@
+[
+  {
+    "seed": 7,
+    "n_members": 25,
+    "n_non_members": 25,
+    "auc_primary_composite": 0.4224,
+    "auc_ablation_composite": 0.488,
+    "auc_decision_positional": 0.54,
+    "auc_decision_adaptive": 0.54,
+    "auc_decision_semantic": 0.54,
+    "auc_similarity": 0.4128,
+    "auc_length_ratio": 0.4,
+    "auc_certainty": 0.5024
+  },
+  {
+    "seed": 13,
+    "n_members": 25,
+    "n_non_members": 25,
+    "auc_primary_composite": 0.4832,
+    "auc_ablation_composite": 0.5192,
+    "auc_decision_positional": 0.56,
+    "auc_decision_adaptive": 0.56,
+    "auc_decision_semantic": 0.56,
+    "auc_similarity": 0.4432,
+    "auc_length_ratio": 0.4256,
+    "auc_certainty": 0.5008
+  }
+]
