@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 sys.path.insert(0, '/app/drag_python_client')
 
 from src.retriever.reranker import Reranker
+from src.retriever.defense import select_top_k_with_defense
 from src.utils.helper_functions import _normalize_for_match, _norm_join
 from src.mc_shap.base import ModelBase, LocalModel, OpenAIModel
 from src.mc_shap.mc_shap import TokenSHAP, StringSplitter
@@ -577,12 +578,27 @@ def query():
             return jsonify({"error": "No candidates retrieved from data sources"}), 500
         
         # Rerank
-        if retrieval_config['rerank_with_reliability']:
+        defense_cfg = retrieval_config.get('defense', {})
+        if defense_cfg.get('enabled', False):
+            reliability_scores = (
+                {name: scores.get(name, {}).get('reliability', 0.0) for name in source_names}
+                if retrieval_config['rerank_with_reliability'] else None
+            )
+            selected = select_top_k_with_defense(
+                reranker,
+                query_text,
+                candidates,
+                top_k,
+                reliability_scores=reliability_scores,
+                reliability_weight=retrieval_config.get('reliability_weight', 0.0),
+                cfg=defense_cfg,
+            )
+        elif retrieval_config['rerank_with_reliability']:
             # Get reliability scores from blockchain
             source_names = [src['name'] for src in data_source_configs]
             scores = get_scores_from_blockchain(source_names)
             reliability_scores = {name: scores.get(name, {}).get('reliability', 0.0) for name in source_names}
-            
+
             selected = reranker.rerank_with_reliability(
                 query_text,
                 candidates,
@@ -593,9 +609,9 @@ def query():
             )
         else:
             selected = reranker.rerank(query_text, candidates, top_k=top_k)
-        
+
         selected = selected[::-1]  # Reverse to make last context most reliable
-        
+
         # Build prompt
         context_blocks: List[str] = []
         for c in selected:
@@ -722,12 +738,27 @@ def _query_analyze(query_text: str, ground_truth: List[str], update_scores: bool
     # Rerank
     if stream_mode:
         yield _format_sse_event('reranking', {'status': 'starting'})
-    if retrieval_config['rerank_with_reliability']:
+    defense_cfg = retrieval_config.get('defense', {})
+    if defense_cfg.get('enabled', False):
+        reliability_scores = (
+            {name: scores.get(name, {}).get('reliability', 0.0) for name in source_names}
+            if retrieval_config['rerank_with_reliability'] else None
+        )
+        selected = select_top_k_with_defense(
+            reranker,
+            query_text,
+            candidates,
+            top_k,
+            reliability_scores=reliability_scores,
+            reliability_weight=retrieval_config.get('reliability_weight', 0.0),
+            cfg=defense_cfg,
+        )
+    elif retrieval_config['rerank_with_reliability']:
         # Get reliability scores from blockchain
         source_names = [src['name'] for src in data_source_configs]
         scores = get_scores_from_blockchain(source_names)
         reliability_scores = {name: scores.get(name, {}).get('reliability', 0.0) for name in source_names}
-        
+
         selected = reranker.rerank_with_reliability(
             query_text,
             candidates,

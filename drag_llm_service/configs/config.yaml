@@ -64,6 +64,17 @@ retrieval:
   rerank_with_reliability: true
   reliability_weight: 0.5
 
+  # Defense against data-poisoning attacks (near-duplicate suppression +
+  # cross-source consensus discounting). enabled: false reverts to the exact
+  # pre-defense rerank_with_reliability/rerank behavior.
+  defense:
+    enabled: true
+    dedup_enabled: true
+    dedup_similarity_threshold: 0.93  # cosine sim to collapse as near-duplicates
+    dedup_same_source_only: true      # attack always duplicates within one source; keep true
+    consensus_weight: 0.25            # 0 disables; blended like reliability_weight
+    consensus_min_sources: 2          # skip consensus if fewer distinct sources in pool
+
 # Reranker settings
 reranker:
   method: "hybrid"
