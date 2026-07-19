@@ -41,8 +41,16 @@ class DataPoisoningAttack:
     -----------------
     random          – random subset of data sources
     targeted        – specific sources by name
-    high_reliability – target sources with the highest blockchain reliability
-                       scores (most trusted → highest impact when poisoned)
+    data_rich       – target the source(s) holding the most documents (serves
+                      the most queries → highest impact when poisoned). Replaces
+                      the earlier "high_reliability" strategy, which relied on the
+                      on-chain reliability score — a signal that never actually
+                      differentiates between sources in this deployment (the
+                      blockchain feedback loop that would update it is never
+                      exercised by the plain /query path this harness uses), so
+                      it silently always poisoned the same source regardless of
+                      "reliability". data_rich uses each source's live /info doc
+                      count instead, which is a real, observable signal.
 
     Poison types
     ------------
@@ -61,7 +69,6 @@ class DataPoisoningAttack:
         target_source_names: Optional[List[str]] = None,
         amplification_factor: int = 1,
         question_variants: int = 2,
-        llm_service_url: str = "http://localhost:9000",
         target_queries: Optional[List[str]] = None,
     ):
         """
@@ -70,12 +77,11 @@ class DataPoisoningAttack:
         data_sources        : list of {"name": ..., "url": ...} dicts.
                               Defaults to DEFAULT_DATA_SOURCES.
         poisoning_ratio     : fraction of data sources to compromise (0.0–1.0).
-        attack_strategy     : "random" | "targeted" | "high_reliability".
+        attack_strategy     : "random" | "targeted" | "data_rich".
         poison_type         : "wrong_answer" | "misleading" | "noise" | "answer_swap".
         target_source_names : names of sources to target (used with "targeted").
         amplification_factor: how many copies of each poisoned doc to inject.
         question_variants   : how many textual variants of each doc to create.
-        llm_service_url     : URL of the LLM orchestrator (for score lookup).
         target_queries       : known queries to craft retrieval-relevant poisoned
                                docs for (query-aware attack). If empty, the attack
                                falls back to poisoning random corpus documents.
@@ -87,7 +93,6 @@ class DataPoisoningAttack:
         self.target_source_names = target_source_names or []
         self.amplification_factor = amplification_factor
         self.question_variants = question_variants
-        self.llm_service_url = llm_service_url
         self.target_queries = target_queries or []
 
         self.poisoned_source_names: List[str] = []
@@ -284,13 +289,15 @@ class DataPoisoningAttack:
                 targets += random.sample(extras, min(num_malicious - len(targets), len(extras)))
             return targets[:num_malicious]
 
-        elif self.attack_strategy == "high_reliability":
-            # Target sources that have the highest reliability scores on-chain
-            # (most trusted sources → maximum impact when poisoned)
-            scores = self._get_blockchain_scores()
+        elif self.attack_strategy == "data_rich":
+            # Target sources holding the most documents (serve the most
+            # queries → maximum impact when poisoned). Uses each source's
+            # live /info doc count instead of the on-chain reliability score,
+            # since that score never differentiates sources in this deployment.
+            counts = self._get_doc_counts()
             sorted_sources = sorted(
                 self.data_sources,
-                key=lambda s: scores.get(s["name"], {}).get("reliability", 0.0),
+                key=lambda s: counts.get(s["name"], 0),
                 reverse=True
             )
             return [s["name"] for s in sorted_sources[:num_malicious]]
@@ -299,28 +306,17 @@ class DataPoisoningAttack:
             logger.warning(f"Unknown strategy '{self.attack_strategy}', falling back to random.")
             return [s["name"] for s in random.sample(self.data_sources, num_malicious)]
 
-    def _get_blockchain_scores(self) -> Dict[str, Dict]:
-        """Fetch reliability/usefulness scores from the LLM service."""
-        try:
-            source_names = [s["name"] for s in self.data_sources]
-            r = requests.get(
-                f"{self.llm_service_url}/score_events",
-                timeout=10
-            )
-            if r.status_code == 200:
-                events = r.json().get("events", [])
-                scores: Dict[str, Dict] = {}
-                for ev in events:
-                    name = ev.get("sourceName") or ev.get("source_name", "")
-                    if name:
-                        scores[name] = {
-                            "reliability": ev.get("reliabilityScore", 0),
-                            "usefulness": ev.get("usefulnessScore", 0),
-                        }
-                return scores
-        except Exception as e:
-            logger.warning(f"Could not fetch blockchain scores: {e}")
-        return {}
+    def _get_doc_counts(self) -> Dict[str, int]:
+        """Fetch each data source's current document count via /info."""
+        counts: Dict[str, int] = {}
+        for src in self.data_sources:
+            try:
+                r = requests.get(f"{src['url']}/info", timeout=10)
+                if r.status_code == 200:
+                    counts[src["name"]] = r.json().get("total_docs", 0)
+            except Exception as e:
+                logger.warning(f"Could not fetch doc count for {src['name']}: {e}")
+        return counts
 
     # ------------------------------------------------------------------
     # Document poisoning  (mirrors demo's _create_poisoned_datapoint)

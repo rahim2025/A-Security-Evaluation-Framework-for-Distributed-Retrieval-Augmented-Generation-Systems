@@ -10,6 +10,14 @@ python attack/datapoisoning/run_attack.py --evaluate
 python attack/datapoisoning/run_attack.py --strategy targeted --targets sources_0 sources_100 \
                              --poison-type misleading --ratio 0.67 --amplify 5 --evaluate
 
+# Reproducible run (seed controls source/decoy sampling; omit for legacy unseeded behavior)
+python attack/datapoisoning/run_attack.py --evaluate --seed 42
+
+# Black-box run: attacker does NOT know the eval questions (default embeds them
+# verbatim into poisoned docs, an oracle-knowledge threat tier -- see
+# problems/data_poisoning_gaps.md, B2)
+python attack/datapoisoning/run_attack.py --evaluate --no-query-aware
+
 # Just inject without evaluating
 python attack/datapoisoning/run_attack.py
 
@@ -23,6 +31,7 @@ python attack/datapoisoning/run_attack.py --info
 import argparse
 import json
 import os
+import random
 import sys
 import datetime
 import requests
@@ -148,7 +157,7 @@ def save_log(log: dict) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Run Data Poisoning Attack on Reliable-dRAG")
     parser.add_argument('--strategy', default='random',
-                        choices=['random', 'targeted', 'high_reliability'])
+                        choices=['random', 'targeted', 'data_rich'])
     parser.add_argument('--targets', nargs='+', default=[], metavar='SOURCE_NAME')
     parser.add_argument('--poison-type', default='wrong_answer',
                         choices=['wrong_answer', 'misleading', 'noise', 'answer_swap'])
@@ -158,7 +167,27 @@ def main():
     parser.add_argument('--reset',    action='store_true')
     parser.add_argument('--evaluate', action='store_true')
     parser.add_argument('--info',     action='store_true')
+    parser.add_argument('--seed', type=int, default=None,
+                        help="Random seed controlling source/decoy sampling. "
+                             "Omit for unseeded (legacy) behavior. Run at least "
+                             "seeds 0, 42, 123 and report variance before quoting "
+                             "any number as final (see problems/data_poisoning_gaps.md, B4/B5).")
+    parser.add_argument('--no-query-aware', action='store_true',
+                        help="Disable query-aware poisoning: do NOT give the attacker the "
+                             "eval-set questions to embed verbatim into crafted poison docs. "
+                             "This is the genuine black-box threat tier. Default (omitted) "
+                             "behavior embeds the eval questions -- an oracle-knowledge tier "
+                             "where the attacker is assumed to know the target queries. See "
+                             "problems/data_poisoning_gaps.md, B2, for why this distinction "
+                             "matters: without this flag, every strategy (including 'random') "
+                             "gets the same oracle-knowledge boost, confounding comparisons "
+                             "between strategies.")
     args = parser.parse_args()
+
+    if args.seed is not None:
+        random.seed(args.seed)
+    print(f"Seed: {args.seed if args.seed is not None else 'unseeded (legacy behavior)'}")
+    print(f"Threat tier: {'black-box (no query awareness)' if args.no_query_aware else 'oracle-knowledge (query-aware, default)'}")
 
     attack = DataPoisoningAttack(
         data_sources=DEFAULT_DATA_SOURCES,
@@ -168,8 +197,7 @@ def main():
         target_source_names=args.targets,
         amplification_factor=args.amplify,
         question_variants=args.variants,
-        llm_service_url=LLM_SERVICE_URL,
-        target_queries=[item["question"] for item in EVAL_DATA],
+        target_queries=[] if args.no_query_aware else [item["question"] for item in EVAL_DATA],
     )
 
     # ── Info ──────────────────────────────────────────────────────────────
@@ -242,6 +270,8 @@ def main():
                 "amplification_factor": args.amplify,
                 "question_variants": args.variants,
                 "target_sources": args.targets,
+                "seed": args.seed,
+                "query_aware": not args.no_query_aware,
             },
             "attack_result": attack_result,
             "evaluation": {
@@ -289,6 +319,8 @@ def main():
             "amplification_factor": args.amplify,
             "question_variants": args.variants,
             "target_sources": args.targets,
+            "seed": args.seed,
+            "query_aware": not args.no_query_aware,
         },
         "attack_result": attack_result,
         "post_attack_info": attack.get_info(),

@@ -1,0 +1,30 @@
+# Clean-baseline override (fixes A1 in problems/data_poisoning_gaps.md).
+#
+# The default docker-compose.yml points sources_20/sources_100 at the paper's
+# own pre-polluted token-pollution benchmark data (20%/100% ground-truth
+# tokens already replaced), so "clean_accuracy" measured against them isn't a
+# genuinely clean number.
+#
+# This override points all three data sources at
+# data/polluted_token/clean_baseline.jsonl instead — a verified-unpolluted
+# copy of the same 3197-document corpus (confirmed via htmlid + text
+# comparison against data/polluted_token_squad_backup/sources_0.jsonl).
+#
+# Usage:
+#   Switch to clean baseline:
+#     docker compose -f docker-compose.yml -f docker-compose.clean-baseline.yml up -d --force-recreate data-source-0 data-source-20 data-source-100
+#   Switch back to the original mixed-pollution deployment:
+#     docker compose up -d --force-recreate data-source-0 data-source-20 data-source-100
+
+services:
+  data-source-0:
+    environment:
+      - CONFIG_PATH=/app/configs/config_sources_0_clean.yaml
+
+  data-source-20:
+    environment:
+      - CONFIG_PATH=/app/configs/config_sources_20_clean.yaml
+
+  data-source-100:
+    environment:
+      - CONFIG_PATH=/app/configs/config_sources_100_clean.yaml

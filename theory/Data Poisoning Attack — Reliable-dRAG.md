@@ -52,10 +52,14 @@ random
 targeted  
   Poison specific source names passed by \--targets.
 
-high\_reliability  
-  Ask the LLM service for blockchain score events, then target sources with the highest reliability.
-
-# high\_reliability is important because your LLM service can rerank context using reliability. Poisoning a highly trusted source can have more impact than poisoning a low-trust source.
+data\_rich  
+  Target the source(s) holding the most documents (via each source's live /info doc count).
+  Replaces an earlier "high\_reliability" strategy that asked the LLM service for blockchain
+  score events and targeted the highest-reliability source — that strategy was removed because
+  the blockchain reliability feedback loop never actually engages during a normal /query, so
+  every source tied at reliability 0 and the strategy silently always picked the same source
+  regardless of "reliability" (see problems/data\_poisoning\_gaps.md, B1). data\_rich uses a real,
+  observable signal instead.
 
 Why this matters: the LLM service does not directly read the JSONL files during a question. It asks the data-source services. So the poison must be inserted into the running source service’s retriever index. 
 
@@ -119,11 +123,11 @@ Poisoned docs are retrieved but reranked out
 Wrong source is poisoned  
   If the attack poisons a source that contributes weak results, impact is small.
 
-Generic poison text is weak  
-  The default wrong\_answer text says the document is corrupted. It does not contain question-specific wrong answers, so it may not match the query well.
+Generic poison text is weak (fixed via query-aware poisoning, still applies in black-box mode)  
+  The default wrong\_answer text says the document is corrupted. It does not contain question-specific wrong answers, so it may not match the query well *unless* query-aware poisoning (the default; embeds the target question verbatim, see problems/data\_poisoning\_gaps.md, B2) is used. Pass \--no-query-aware to test the genuine black-box case where this weakness applies in full — full multi-seed results for both modes are in theory/DATA\_POISONING\_DEFENSE.md, §7-12.
 
-Default variants can dilute the poison  
-  With \--variants 2, the code often injects random corpus text, not the explicit poison\_type text.
+~~Default variants can dilute the poison~~ (fixed)  
+  Previously, with \--variants 2 (the default), the code always injected a random unrelated document's text regardless of \--poison-type, silently ignoring the configured poison type. This was a real bug (`_create_text_variants` in data\_poisoning\_attack.py), now fixed — variants honor \--poison-type correctly.
 
 LLM ignores bad context  
   Even if bad context appears, the model may still answer correctly from cleaner retrieved context or prior knowledge.
@@ -131,8 +135,13 @@ LLM ignores bad context
 Clean baseline is already bad  
   If clean accuracy is low, there may be little measurable degradation.
 
-Evaluation is substring-based  
-  A response is considered correct if it contains an expected answer substring. This is simple and can miss nuanced correctness/failure.
+Evaluation is substring-based (known limitation, not fixed — see problems/data\_poisoning\_gaps.md, B8)  
+  A response is considered correct if it contains an expected answer substring
+  (`ans.lower() in response.lower()`). This is simple and can miss nuanced correctness/failure —
+  e.g. it would mark "not till September" as correct for an expected answer of "till September"
+  (a negated match), or credit a response that mentions the right answer only in passing while
+  actually asserting something else. Reasonable simplification for short-answer QA, but should be
+  named as an explicit limitation wherever these numbers are quoted, not treated as ground truth.
 
 **FULL MINI WORKFLOW:**
 
@@ -398,6 +407,14 @@ ADVERSARY
 
 The **amplification × variants** multiplier is the critical driver for displacing clean content. By ensuring poisoned records dominate the semantic proximity search, the system effectively forces the model into an inaccurate state despite its native capabilities.
 
+**Scope limitation — this attack is not stealthy.** A 60-150% corpus size increase (3,000 → 7,500
+documents, as above) would be trivially flagged by any basic ingestion-volume monitoring. This
+attack assumes no such monitoring by the defender. The paper's own document-level pollution
+methodology also tests full-source pollution up to p=100%, so large-scale corpus alteration isn't
+unprecedented in this line of work — but a much simpler defense (cap index growth rate) would catch
+this specific attack configuration before the embedding-based dedup/consensus defense in
+`theory/DATA_POISONING_DEFENSE.md` is ever needed. See `problems/data_poisoning_gaps.md`, B6.
+
 # 
 
 # 
@@ -488,7 +505,7 @@ python attack/datapoisoning/run\_attack.py \--reset
 | \--targets | (none) | Source names for targeted strategy |
 | \--poison-type | wrong\_answer | Type of poisoning |
 | \--ratio | 0.5 | Fraction of sources to poison (0.0–1.0) |
-| \--amplify | 3 | Copies of each poisoned doc to inject |
+| \--amplify | 1 | Copies of each poisoned doc to inject |
 | \--variants | 2 | Text variants per document |
 
 # Output Example
