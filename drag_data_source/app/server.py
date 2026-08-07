@@ -195,8 +195,7 @@ def inject_poison():
             meta={**(doc.get('meta', {})), 'poisoned': True, 'dataset_name': dataset_name}
         ))
 
-    all_docs = retriever.docs + new_docs
-    retriever.fit(all_docs)
+    retriever.add_documents(new_docs)
 
     logger.warning(f"[ATTACK] Injected {len(new_docs)} poisoned documents. Total docs: {len(retriever.docs)}")
     return jsonify({

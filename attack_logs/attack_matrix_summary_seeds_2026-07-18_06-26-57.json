@@ -1,0 +1,378 @@
+{
+  "seeds": [
+    0,
+    42,
+    123
+  ],
+  "query_aware": false,
+  "runs": [
+    {
+      "label": "random / noise",
+      "strategy": "random",
+      "poison_type": "noise",
+      "seed": 0,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_04-15-42_random_noise.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.2857142857142857,
+      "degradation_pct": 33.33,
+      "is_successful": true,
+      "elapsed_sec": 669.2
+    },
+    {
+      "label": "random / noise",
+      "strategy": "random",
+      "poison_type": "noise",
+      "seed": 42,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_04-27-02_random_noise.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.2857142857142857,
+      "degradation_pct": 33.33,
+      "is_successful": true,
+      "elapsed_sec": 699.8
+    },
+    {
+      "label": "random / noise",
+      "strategy": "random",
+      "poison_type": "noise",
+      "seed": 123,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_04-38-36_random_noise.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 676.3
+    },
+    {
+      "label": "random / answer_swap",
+      "strategy": "random",
+      "poison_type": "answer_swap",
+      "seed": 0,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_04-49-52_random_answer_swap.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.2857142857142857,
+      "degradation_pct": 33.33,
+      "is_successful": true,
+      "elapsed_sec": 674.6
+    },
+    {
+      "label": "random / answer_swap",
+      "strategy": "random",
+      "poison_type": "answer_swap",
+      "seed": 42,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_05-01-18_random_answer_swap.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 684.4
+    },
+    {
+      "label": "random / answer_swap",
+      "strategy": "random",
+      "poison_type": "answer_swap",
+      "seed": 123,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_05-12-33_random_answer_swap.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 678.7
+    },
+    {
+      "label": "targeted(sources_100) / wrong_answer",
+      "strategy": "targeted",
+      "poison_type": "wrong_answer",
+      "seed": 0,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_05-16-40_targeted_wrong_answer.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 244.8
+    },
+    {
+      "label": "targeted(sources_100) / wrong_answer",
+      "strategy": "targeted",
+      "poison_type": "wrong_answer",
+      "seed": 42,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_05-20-45_targeted_wrong_answer.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 263.3
+    },
+    {
+      "label": "targeted(sources_100) / wrong_answer",
+      "strategy": "targeted",
+      "poison_type": "wrong_answer",
+      "seed": 123,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_05-25-07_targeted_wrong_answer.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 244.5
+    },
+    {
+      "label": "targeted(sources_0,sources_20) / misleading",
+      "strategy": "targeted",
+      "poison_type": "misleading",
+      "seed": 0,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_05-29-46_targeted_misleading.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 277.6
+    },
+    {
+      "label": "targeted(sources_0,sources_20) / misleading",
+      "strategy": "targeted",
+      "poison_type": "misleading",
+      "seed": 42,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_05-34-22_targeted_misleading.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 274.4
+    },
+    {
+      "label": "targeted(sources_0,sources_20) / misleading",
+      "strategy": "targeted",
+      "poison_type": "misleading",
+      "seed": 123,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_05-38-55_targeted_misleading.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 272.5
+    },
+    {
+      "label": "data_rich / wrong_answer",
+      "strategy": "data_rich",
+      "poison_type": "wrong_answer",
+      "seed": 0,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_05-42-58_data_rich_wrong_answer.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 243.9
+    },
+    {
+      "label": "data_rich / wrong_answer",
+      "strategy": "data_rich",
+      "poison_type": "wrong_answer",
+      "seed": 42,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_05-47-01_data_rich_wrong_answer.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 243.6
+    },
+    {
+      "label": "data_rich / wrong_answer",
+      "strategy": "data_rich",
+      "poison_type": "wrong_answer",
+      "seed": 123,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_05-51-04_data_rich_wrong_answer.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 241.3
+    },
+    {
+      "label": "data_rich / noise",
+      "strategy": "data_rich",
+      "poison_type": "noise",
+      "seed": 0,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_06-02-04_data_rich_noise.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.2857142857142857,
+      "degradation_pct": 33.33,
+      "is_successful": true,
+      "elapsed_sec": 662.8
+    },
+    {
+      "label": "data_rich / noise",
+      "strategy": "data_rich",
+      "poison_type": "noise",
+      "seed": 42,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_06-13-21_data_rich_noise.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.2857142857142857,
+      "degradation_pct": 33.33,
+      "is_successful": true,
+      "elapsed_sec": 677.4
+    },
+    {
+      "label": "data_rich / noise",
+      "strategy": "data_rich",
+      "poison_type": "noise",
+      "seed": 123,
+      "query_aware": false,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-18_06-24-37_data_rich_noise.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.42857142857142855,
+      "degradation_pct": 0.0,
+      "is_successful": false,
+      "elapsed_sec": 673.7
+    }
+  ],
+  "aggregated": {
+    "random / noise": {
+      "n_runs": 3,
+      "n_ok": 3,
+      "seeds": [
+        0,
+        42,
+        123
+      ],
+      "clean_accuracy": {
+        "mean": 0.42857142857142855,
+        "std": 0.0
+      },
+      "attacked_accuracy": {
+        "mean": 0.3333333333333333,
+        "std": 0.08247860988423225
+      },
+      "degradation_pct": {
+        "mean": 22.22,
+        "std": 19.243084472090224
+      },
+      "success_rate": 0.6666666666666666
+    },
+    "random / answer_swap": {
+      "n_runs": 3,
+      "n_ok": 3,
+      "seeds": [
+        0,
+        42,
+        123
+      ],
+      "clean_accuracy": {
+        "mean": 0.42857142857142855,
+        "std": 0.0
+      },
+      "attacked_accuracy": {
+        "mean": 0.38095238095238093,
+        "std": 0.08247860988423225
+      },
+      "degradation_pct": {
+        "mean": 11.11,
+        "std": 19.243084472090224
+      },
+      "success_rate": 0.3333333333333333
+    },
+    "targeted(sources_100) / wrong_answer": {
+      "n_runs": 3,
+      "n_ok": 3,
+      "seeds": [
+        0,
+        42,
+        123
+      ],
+      "clean_accuracy": {
+        "mean": 0.42857142857142855,
+        "std": 0.0
+      },
+      "attacked_accuracy": {
+        "mean": 0.42857142857142855,
+        "std": 0.0
+      },
+      "degradation_pct": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "success_rate": 0.0
+    },
+    "targeted(sources_0,sources_20) / misleading": {
+      "n_runs": 3,
+      "n_ok": 3,
+      "seeds": [
+        0,
+        42,
+        123
+      ],
+      "clean_accuracy": {
+        "mean": 0.42857142857142855,
+        "std": 0.0
+      },
+      "attacked_accuracy": {
+        "mean": 0.42857142857142855,
+        "std": 0.0
+      },
+      "degradation_pct": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "success_rate": 0.0
+    },
+    "data_rich / wrong_answer": {
+      "n_runs": 3,
+      "n_ok": 3,
+      "seeds": [
+        0,
+        42,
+        123
+      ],
+      "clean_accuracy": {
+        "mean": 0.42857142857142855,
+        "std": 0.0
+      },
+      "attacked_accuracy": {
+        "mean": 0.42857142857142855,
+        "std": 0.0
+      },
+      "degradation_pct": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "success_rate": 0.0
+    },
+    "data_rich / noise": {
+      "n_runs": 3,
+      "n_ok": 3,
+      "seeds": [
+        0,
+        42,
+        123
+      ],
+      "clean_accuracy": {
+        "mean": 0.42857142857142855,
+        "std": 0.0
+      },
+      "attacked_accuracy": {
+        "mean": 0.3333333333333333,
+        "std": 0.08247860988423225
+      },
+      "degradation_pct": {
+        "mean": 22.22,
+        "std": 19.243084472090224
+      },
+      "success_rate": 0.6666666666666666
+    }
+  }
+}

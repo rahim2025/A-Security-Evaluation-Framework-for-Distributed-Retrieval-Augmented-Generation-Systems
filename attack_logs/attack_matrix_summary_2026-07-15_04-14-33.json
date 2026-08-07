@@ -1,0 +1,68 @@
+[
+  {
+    "label": "random / noise",
+    "strategy": "random",
+    "poison_type": "noise",
+    "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-15_03-37-36_random_noise.json",
+    "clean_accuracy": 0.5714285714285714,
+    "attacked_accuracy": 0.5714285714285714,
+    "degradation_pct": 0.0,
+    "is_successful": false,
+    "elapsed_sec": 662.5
+  },
+  {
+    "label": "random / answer_swap",
+    "strategy": "random",
+    "poison_type": "answer_swap",
+    "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-15_03-48-38_random_answer_swap.json",
+    "clean_accuracy": 0.5714285714285714,
+    "attacked_accuracy": 0.2857142857142857,
+    "degradation_pct": 50.0,
+    "is_successful": true,
+    "elapsed_sec": 661.6
+  },
+  {
+    "label": "targeted(sources_100) / wrong_answer",
+    "strategy": "targeted",
+    "poison_type": "wrong_answer",
+    "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-15_03-52-41_targeted_wrong_answer.json",
+    "clean_accuracy": 0.5714285714285714,
+    "attacked_accuracy": 0.7142857142857143,
+    "degradation_pct": -25.0,
+    "is_successful": false,
+    "elapsed_sec": 243.3
+  },
+  {
+    "label": "targeted(sources_0,sources_20) / misleading",
+    "strategy": "targeted",
+    "poison_type": "misleading",
+    "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-15_03-57-13_targeted_misleading.json",
+    "clean_accuracy": 0.5714285714285714,
+    "attacked_accuracy": 0.14285714285714285,
+    "degradation_pct": 75.0,
+    "is_successful": true,
+    "elapsed_sec": 273.1
+  },
+  {
+    "label": "data_rich / wrong_answer",
+    "strategy": "data_rich",
+    "poison_type": "wrong_answer",
+    "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-15_04-01-15_data_rich_wrong_answer.json",
+    "clean_accuracy": 0.5714285714285714,
+    "attacked_accuracy": 0.7142857142857143,
+    "degradation_pct": -25.0,
+    "is_successful": false,
+    "elapsed_sec": 240.3
+  },
+  {
+    "label": "data_rich / noise",
+    "strategy": "data_rich",
+    "poison_type": "noise",
+    "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-15_04-12-12_data_rich_noise.json",
+    "clean_accuracy": 0.5714285714285714,
+    "attacked_accuracy": 0.2857142857142857,
+    "degradation_pct": 50.0,
+    "is_successful": true,
+    "elapsed_sec": 657.9
+  }
+]

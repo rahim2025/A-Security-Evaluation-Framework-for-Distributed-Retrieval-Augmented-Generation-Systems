@@ -116,6 +116,19 @@ class Reranker:
             return np.zeros(len(cand_texts), dtype=np.float32)
         return (d @ q[0]).astype(np.float32)
 
+    def embed_query_and_candidates(
+        self, query: str, cand_texts: Sequence[str]
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Encode query and candidates once, exposing both embedding arrays.
+
+        Embeddings are L2-normalized when self.normalize_dense (default True), so
+        downstream cosine similarity between candidates is a plain dot product.
+        """
+        q = self._embed_texts([query])
+        d = self._embed_texts(cand_texts)
+        q_vec = q[0] if q.size else np.zeros(0, dtype=np.float32)
+        return q_vec, d
+
     def _bm25_scores(self, query: str, cand_texts: Sequence[str]) -> np.ndarray:
         if not _BM25_AVAILABLE:
             return np.zeros(len(cand_texts), dtype=np.float32)

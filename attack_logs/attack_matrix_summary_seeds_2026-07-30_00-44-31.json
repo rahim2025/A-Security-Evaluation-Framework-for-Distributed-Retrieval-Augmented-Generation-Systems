@@ -1,0 +1,76 @@
+{
+  "seeds": [
+    0,
+    42,
+    123
+  ],
+  "query_aware": true,
+  "runs": [
+    {
+      "label": "targeted(sources_0,sources_20) / misleading",
+      "strategy": "targeted",
+      "poison_type": "misleading",
+      "seed": 0,
+      "query_aware": true,
+      "intensity": null,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-30_00-33-14_targeted_misleading.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.2857142857142857,
+      "degradation_pct": 33.33,
+      "is_successful": true,
+      "elapsed_sec": 269.7
+    },
+    {
+      "label": "targeted(sources_0,sources_20) / misleading",
+      "strategy": "targeted",
+      "poison_type": "misleading",
+      "seed": 42,
+      "query_aware": true,
+      "intensity": null,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-30_00-37-41_targeted_misleading.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.14285714285714285,
+      "degradation_pct": 66.67,
+      "is_successful": true,
+      "elapsed_sec": 270.4
+    },
+    {
+      "label": "targeted(sources_0,sources_20) / misleading",
+      "strategy": "targeted",
+      "poison_type": "misleading",
+      "seed": 123,
+      "query_aware": true,
+      "intensity": null,
+      "log_path": "C:\\Users\\user3\\Desktop\\reliable de-rag rahim\\Reliable-dRAG-main\\attack_logs\\attack_2026-07-30_00-42-11_targeted_misleading.json",
+      "clean_accuracy": 0.42857142857142855,
+      "attacked_accuracy": 0.2857142857142857,
+      "degradation_pct": 33.33,
+      "is_successful": true,
+      "elapsed_sec": 268.9
+    }
+  ],
+  "aggregated": {
+    "targeted(sources_0,sources_20) / misleading": {
+      "n_runs": 3,
+      "n_ok": 3,
+      "seeds": [
+        0,
+        42,
+        123
+      ],
+      "clean_accuracy": {
+        "mean": 0.42857142857142855,
+        "std": 0.0
+      },
+      "attacked_accuracy": {
+        "mean": 0.23809523809523808,
+        "std": 0.08247860988423225
+      },
+      "degradation_pct": {
+        "mean": 44.443333333333335,
+        "std": 19.248857974782126
+      },
+      "success_rate": 1.0
+    }
+  }
+}
