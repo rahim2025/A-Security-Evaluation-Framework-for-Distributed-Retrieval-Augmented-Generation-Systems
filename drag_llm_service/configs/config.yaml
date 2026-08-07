@@ -1,0 +1,96 @@
+# LLM Service configuration
+
+model:
+  # Model type: "local" or "openai"
+  type: "local"
+  
+  # For local models (HuggingFace)
+  local_model_name: "Qwen/Qwen2.5-1.5B-Instruct"
+  # Alternatives (all free, no access form needed):
+  # local_model_name: "TinyLlama/TinyLlama-1.1B-Chat-v1.0"   # 1.1B, very fast
+  # local_model_name: "microsoft/phi-2"                        # 2.7B, strong
+  # Uncomment the line below to go back to Llama (requires HF access approval):
+  # local_model_name: "meta-llama/Llama-3.2-1B-Instruct"
+  
+  # For OpenAI-style models
+  openai_model_name: "gpt-4o-mini"
+  openai_api_key: "sk-your-api-key"  # Set via environment variable or here
+  openai_base_url: "https://api.openai.com/v1"
+  
+  # Model settings
+  system_prompt: "You are a knowledgeable assistant tasked with answering open-domain questions. For each question you receive: Provide a single, concise answer. Do not include explanations or extra information. Avoid any punctuation or formatting that is not part of the core answer. Your answer must be in the most direct and canonical form, using standard spelling, casing, and phrasing. Your answer should not be a sentence. Your answer has at most three words. You can consider the given context."
+  temperature: 0.0
+  seed: 42
+
+# Data sources configuration
+data_sources:
+  - name: "sources_0"
+    url: "http://localhost:8001"
+
+  - name: "sources_20"
+    url: "http://localhost:8002"
+
+  - name: "sources_100"
+    url: "http://localhost:8003"
+
+# Blockchain configuration
+blockchain:
+  # Ethereum wallet address (Hardhat default account #11, derived from private_key if not set)
+  address: null
+  
+  # Ethereum wallet private key (Hardhat default account #11)
+  private_key: "0x701b615bbdfb9de65240bc28bd21bbc0d996645a3dd57e7b12bc2bdf6f192c82"
+  
+  # Ethereum provider URL (RPC endpoint)
+  provider_url: "http://localhost:8545"
+  
+  # Contract address (optional, will try to find from Hardhat Ignition if not provided)
+  contract_address: null
+  
+  # Project root path (relative to this config file, or absolute path)
+  # Used to locate drag_contract artifacts and ignition deployments
+  project_root: "../.."
+
+# Retrieval and reranking settings
+retrieval:
+  n_retrievers: 3  # Number of data sources to query
+  n_contexts: 3    # Number of contexts per source
+  top_k: 3         # Final number of contexts after reranking
+  
+  # Sampling strategy
+  sample_with_usefulness: true
+  
+  # Reranking
+  rerank_with_reliability: true
+  reliability_weight: 0.5
+
+# Reranker settings
+reranker:
+  method: "hybrid"
+  model_name: "sentence-transformers/all-MiniLM-L6-v2"
+  hybrid_alpha: 0.3
+  orig_score_weight: 0.1
+  device: "cpu"
+
+# Sentence importance evaluation
+sentence_importance:
+  # Method to use: "mc_shap" or "rora"
+  sentence_importance_method: "mc_shap"
+  
+  # MC-Shapley settings (used when sentence_importance_method is "mc_shap")
+  mc_shap:
+    split_pattern: '\.\s+|\n'   # Sentence-level splitting
+    max_tokens: 900              # Skip analysis if prompt exceeds this
+    aggregate_type: mean
+  
+  # RORA settings (used when sentence_importance_method is "rora")
+  rora:
+    model_dir: "../projects/rora/irm/dfnq_simulation_t5-base_g_0.005_10.0" # TODO: change to the actual model path
+    rationale_format: "g"
+    device: "cuda:1"
+    aggregate_type: max
+
+# Server settings
+server:
+  host: "0.0.0.0"
+  port: 9000

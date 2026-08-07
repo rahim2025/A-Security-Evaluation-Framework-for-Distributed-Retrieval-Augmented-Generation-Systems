@@ -1,0 +1,79 @@
+# config/sfa_sim_defense.yaml
+#
+# Config for defense/sfa_sim_defense.SelectiveForwardingDefense, the
+# countermeasure for attack/selective_forward_sim.SelectiveForwardingAttack.
+# Separate from the existing defense/sfa_defense (EWMA/binomial detector +
+# hash-chained ledger, for the real-Docker gray-hole attack).
+
+selective_forwarding_defense:
+  blacklist_threshold: 0.05        # response_rate below this -> blacklisted
+  min_queries_before_blacklist: 15 # min interactions before blacklisting is allowed
+  suspicion_threshold: 0.10        # reputation below this -> suspicious (soft flag)
+  reputation_decay: 0.70           # EMA decay; alpha = 1 - reputation_decay
+  min_peers_for_validation: 2      # min trusted peers required for validate()
+  redundancy_k: 2                  # bounded extra backup-probe attempts once the
+                                    # primary TTL-bounded BFS exhausts its hop budget
+                                    # without a hit (see selective_forwarding_defense.py's
+                                    # backup_candidates()). Without this, correct
+                                    # blacklisting can't translate into a recovered
+                                    # answer when the hop budget alone is too tight
+                                    # to route around a compromised peer.
+  max_blacklist_fraction: 0.5      # auto-blacklisting never excludes more than this
+                                    # fraction of the known peer population (and never
+                                    # all of them, regardless of fraction). A single
+                                    # fixed blacklist_threshold can't distinguish "this
+                                    # peer is actively dropping queries" from "the whole
+                                    # population's natural response rate is just low" --
+                                    # without this cap that ambiguity can escalate into
+                                    # blacklisting most/all peers, emptying Phase 2's
+                                    # candidate pool and collapsing recovery to zero.
+  detection_mode: threshold        # threshold (default) | binomial
+                                    # threshold: blacklist once raw response rate < blacklist_threshold.
+                                    #   Simple, but structurally blind to a stealthy attacker
+                                    #   (attack drop_rate: "stealthy" = 10-30% drop) -- 0.05 is
+                                    #   nowhere close to a 70-90% response rate.
+                                    # binomial: one-sided significance test vs honest_miss_rate,
+                                    #   escalating over streak_required consecutive significant
+                                    #   windows. Catches a stealthy attacker; requires
+                                    #   honest_miss_rate to be calibrated against this
+                                    #   deployment's real measured honest baseline, not an
+                                    #   inherited/assumed constant.
+  honest_miss_rate: 0.05           # binomial mode only: measured honest-peer miss rate to test against
+  binom_alpha: 0.05                # binomial mode only: significance threshold (p-value cutoff)
+  streak_required: 3                # binomial mode only: consecutive significant windows before blacklisting.
+                                    # Empirically tuned (not copied from the sibling module's fixed-window
+                                    # detector, whose STREAK_REQ=2 doesn't directly transfer to this module's
+                                    # growing-window test): at streak_required=2, a 5-seed stealthy-attacker
+                                    # trial had false positives on honest peers in 3/5 runs; streak_required=3
+                                    # cut that to 1/5 with similar recall. See selective_forwarding_defense.py's
+                                    # module docstring for the full verification.
+
+output:
+  log_dir: "defense_logs/sfa_sim_defense"
+
+# Tuning guide
+# ------------
+# blacklist_threshold            too low  -> misses compromised peers (under-blacklisting)
+#                                 too high -> flags honest peers with noisy responses
+# min_queries_before_blacklist   too low  -> blacklists on insufficient evidence
+#                                 too high -> slow to detect and blacklist attackers
+# suspicion_threshold            too low  -> few peers ever treated as suspicious
+#                                 too high -> many honest peers treated as suspicious
+# reputation_decay               too low  -> reputation swings on every single query (noisy)
+#                                 too high -> reputation barely moves even after many drops (slow detection)
+# redundancy_k                   too low  -> detection can be correct and still recover nothing once
+#                                             the primary hop budget is exhausted
+#                                 too high -> approaches "just try everyone regardless of hop budget",
+#                                             which defeats the point of testing a hop-limited scenario
+# max_blacklist_fraction         too low  -> caps out detection early, capping recovery even when
+#                                             the extra blacklisting would have been correct
+#                                 too high (near 1.0) -> removes the safety net; a miscalibrated
+#                                             threshold can blacklist most/all peers and empty
+#                                             Phase 2's candidate pool
+# honest_miss_rate (binomial)    too low  -> flags honest peers as significant outliers (false positives)
+#                                 too high -> a real stealthy attacker's miss rate no longer looks
+#                                             significant relative to the assumed baseline (blind spot)
+# binom_alpha (binomial)         too low  -> requires overwhelming evidence, slow to detect
+#                                 too high -> more false positives on honest peers with noisy responses
+# streak_required (binomial)     too low  -> a single unlucky significant window blacklists an honest peer
+#                                 too high -> slow to detect a real stealthy attacker

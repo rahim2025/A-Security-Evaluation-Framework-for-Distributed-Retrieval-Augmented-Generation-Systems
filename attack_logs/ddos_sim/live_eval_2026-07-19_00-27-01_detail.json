@@ -1,0 +1,159 @@
+{
+  "severities": {
+    "low": {
+      "flood_targets": [
+        "source_0"
+      ],
+      "flood_stats": {
+        "source_0": {
+          "requests_sent": 304,
+          "responses_200": 304,
+          "responses_429": 0,
+          "errors": 0
+        },
+        "source_20": {
+          "requests_sent": 0,
+          "responses_200": 0,
+          "responses_429": 0,
+          "errors": 0
+        },
+        "source_100": {
+          "requests_sent": 0,
+          "responses_200": 0,
+          "responses_429": 0,
+          "errors": 0
+        }
+      },
+      "baseline_per_question": [
+        {
+          "question": "Is motion perception deficit in schizophrenia a consequence of eye-tracking abnormality?",
+          "gold": "yes",
+          "response": "system\nno",
+          "ok": true,
+          "exact_match": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "bleu": 0.4518010018049224,
+          "rouge1": 0.0,
+          "rouge2": 0.0,
+          "rougeL": 0.0,
+          "length_ratio": 0.5,
+          "length_difference": 1,
+          "edit_distance": 2,
+          "normalized_edit_distance": 0.0,
+          "bigram_overlap": 0.0,
+          "trigram_overlap": 0.0,
+          "semantic_similarity": 0.36191725730895996
+        },
+        {
+          "question": "Can routinely collected ambulance data about assaults contribute to reduction in community violence?",
+          "gold": "maybe",
+          "response": "system\nyes",
+          "ok": true,
+          "exact_match": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "bleu": 0.4518010018049224,
+          "rouge1": 0.0,
+          "rouge2": 0.0,
+          "rougeL": 0.0,
+          "length_ratio": 0.5,
+          "length_difference": 1,
+          "edit_distance": 2,
+          "normalized_edit_distance": 0.0,
+          "bigram_overlap": 0.0,
+          "trigram_overlap": 0.0,
+          "semantic_similarity": 0.2568439841270447
+        },
+        {
+          "question": "Do risk calculators accurately predict surgical site occurrences?",
+          "gold": "no",
+          "response": "user\nno",
+          "ok": true,
+          "exact_match": 0.0,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666,
+          "bleu": 0.537284965911771,
+          "rouge1": 1.0,
+          "rouge2": 0.0,
+          "rougeL": 0.6666666666666666,
+          "length_ratio": 0.5,
+          "length_difference": 1,
+          "edit_distance": 1,
+          "normalized_edit_distance": 0.5,
+          "bigram_overlap": 0.0,
+          "trigram_overlap": 0.0,
+          "semantic_similarity": 0.5182620882987976
+        }
+      ],
+      "post_attack_per_question": [
+        {
+          "question": "Is motion perception deficit in schizophrenia a consequence of eye-tracking abnormality?",
+          "gold": "yes",
+          "response": "system\nno",
+          "ok": true,
+          "exact_match": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "bleu": 0.4518010018049224,
+          "rouge1": 0.0,
+          "rouge2": 0.0,
+          "rougeL": 0.0,
+          "length_ratio": 0.5,
+          "length_difference": 1,
+          "edit_distance": 2,
+          "normalized_edit_distance": 0.0,
+          "bigram_overlap": 0.0,
+          "trigram_overlap": 0.0,
+          "semantic_similarity": 0.36191725730895996
+        },
+        {
+          "question": "Can routinely collected ambulance data about assaults contribute to reduction in community violence?",
+          "gold": "maybe",
+          "response": "system\nyes",
+          "ok": true,
+          "exact_match": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "bleu": 0.4518010018049224,
+          "rouge1": 0.0,
+          "rouge2": 0.0,
+          "rougeL": 0.0,
+          "length_ratio": 0.5,
+          "length_difference": 1,
+          "edit_distance": 2,
+          "normalized_edit_distance": 0.0,
+          "bigram_overlap": 0.0,
+          "trigram_overlap": 0.0,
+          "semantic_similarity": 0.2568439841270447
+        },
+        {
+          "question": "Do risk calculators accurately predict surgical site occurrences?",
+          "gold": "no",
+          "response": "user\nno",
+          "ok": true,
+          "exact_match": 0.0,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666,
+          "bleu": 0.537284965911771,
+          "rouge1": 1.0,
+          "rouge2": 0.0,
+          "rougeL": 0.6666666666666666,
+          "length_ratio": 0.5,
+          "length_difference": 1,
+          "edit_distance": 1,
+          "normalized_edit_distance": 0.5,
+          "bigram_overlap": 0.0,
+          "trigram_overlap": 0.0,
+          "semantic_similarity": 0.5182620882987976
+        }
+      ]
+    }
+  }
+}

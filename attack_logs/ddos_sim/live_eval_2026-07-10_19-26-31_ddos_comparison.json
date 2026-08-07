@@ -1,0 +1,53 @@
+[
+  {
+    "baseline_results": {
+      "exact_match": 0.0,
+      "precision": 0.16666666666666666,
+      "recall": 0.3333333333333333,
+      "f1": 0.2222222222222222,
+      "bleu": 0.48029565650720524,
+      "rouge1": 0.3333333333333333,
+      "rouge2": 0.0,
+      "rougeL": 0.2222222222222222,
+      "length_ratio": 0.5,
+      "length_difference": 1.0,
+      "edit_distance": 1.6666666666666667,
+      "normalized_edit_distance": 0.16666666666666666,
+      "bigram_overlap": 0.0,
+      "trigram_overlap": 0.0,
+      "semantic_similarity": 0.3790077765782674,
+      "avg_num_hops": 1.0,
+      "avg_num_messages": 2.0,
+      "avg_query_hit": 1.0,
+      "evaluation_phase": "baseline",
+      "successful_queries": 3,
+      "failed_queries": 0,
+      "query_failure_rate": 0.0
+    },
+    "post_attack_results": {
+      "exact_match": 0.0,
+      "precision": 0.16666666666666666,
+      "recall": 0.3333333333333333,
+      "f1": 0.2222222222222222,
+      "bleu": 0.48029565650720524,
+      "rouge1": 0.3333333333333333,
+      "rouge2": 0.0,
+      "rougeL": 0.2222222222222222,
+      "length_ratio": 0.5,
+      "length_difference": 1.0,
+      "edit_distance": 1.6666666666666667,
+      "normalized_edit_distance": 0.16666666666666666,
+      "bigram_overlap": 0.0,
+      "trigram_overlap": 0.0,
+      "semantic_similarity": 0.3393724759419759,
+      "avg_num_hops": 2.0,
+      "avg_num_messages": 4.0,
+      "avg_query_hit": 1.0,
+      "evaluation_phase": "post_attack",
+      "successful_queries": 3,
+      "failed_queries": 0,
+      "query_failure_rate": 0.0
+    },
+    "attack_type": "pubmedqa_low_ddos_comparison"
+  }
+]

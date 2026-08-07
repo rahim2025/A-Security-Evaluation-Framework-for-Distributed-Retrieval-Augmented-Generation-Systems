@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-07-09T15:58:45.391217",
+  "attack_type": "membership_inference",
+  "attack_config": {
+    "llm_service_url": "http://localhost:9000",
+    "corpus_jsonl": "/mnt/c/Users/user3/Desktop/Rahim/EXPLORING-PRIVACY-PRESERVING-APPROACHES-FOR-PERSONALIZED-LARGE-LANGUAGE-MODELS-reliable-derag/data/polluted_token/sources_0.jsonl",
+    "n_members": 25,
+    "n_nonmembers": 25,
+    "probes_per_doc": 4,
+    "threshold_pct": 50,
+    "random_seed": 2,
+    "dry_run": false
+  },
+  "metrics": {
+    "confusion_matrix": {
+      "tp": 8,
+      "tn": 8,
+      "fp": 17,
+      "fn": 17
+    },
+    "attack_accuracy": 0.32,
+    "precision": 0.32,
+    "recall": 0.32,
+    "f1_score": 0.32,
+    "auc_roc": 0.3024,
+    "privacy_risk": "NEGLIGIBLE — attack ineffective (AUC ≈ random)",
+    "n_members_tested": 25,
+    "n_non_members_tested": 25,
+    "mean_member_similarity": 0.2989,
+    "mean_non_member_similarity": 0.4349,
+    "similarity_delta": -0.136,
+    "score_weights": {
+      "similarity": 0.85,
+      "length_ratio": 0.15
+    },
+    "auc_roc_answer_match": 0.3584,
+    "mean_member_answer_match_rate": 0.02,
+    "mean_non_member_answer_match_rate": 0.1067,
+    "answer_match_delta": -0.0867,
+    "auc_roc_length_ratio": 0.42,
+    "mean_member_length_ratio": 0.8772,
+    "mean_non_member_length_ratio": 0.9709,
+    "length_ratio_delta": -0.0937
+  }
+}

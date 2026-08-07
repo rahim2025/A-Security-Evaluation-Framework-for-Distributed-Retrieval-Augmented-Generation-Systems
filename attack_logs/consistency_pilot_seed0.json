@@ -1,0 +1,9 @@
+{
+  "seed": 0,
+  "n_members": 10,
+  "n_non_members": 10,
+  "n_probes": 5,
+  "mean_member_consistency": 0.96,
+  "mean_non_member_consistency": 0.78,
+  "auc_roc_consistency": 0.75
+}

@@ -1,0 +1,159 @@
+services:
+  # Contract Service (Hardhat Node)
+  hardhat-node:
+    build:
+      context: .
+      dockerfile: drag_contract/Dockerfile
+    container_name: drag-hardhat-node
+    ports:
+      - "8545:8545"
+    restart: unless-stopped
+    networks:
+      - drag_network
+    healthcheck:
+      test: ["CMD", "/healthcheck.sh"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 240s
+
+  # Data Source Services
+  data-source-0:
+    build:
+      context: .
+      dockerfile: drag_data_source/Dockerfile
+    container_name: drag-data-source-0
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data/polluted_token:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_TOKEN=${HF_TOKEN}
+      - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
+      - CONFIG_PATH=/app/configs/config_sources_0.yaml
+      - API_KEY=reliable-derag-secret-2026
+      - PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+      - RATE_LIMIT_DEFAULT=${RATE_LIMIT_DEFAULT:-60 per minute}
+    restart: unless-stopped
+    networks:
+      - drag_network
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 300s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  data-source-20:
+    build:
+      context: .
+      dockerfile: drag_data_source/Dockerfile
+    container_name: drag-data-source-20
+    ports:
+      - "8002:8001"
+    volumes:
+      - ./data/polluted_token:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CONFIG_PATH=/app/configs/config_sources_20.yaml
+      - API_KEY=reliable-derag-secret-2026
+      - PRIVATE_KEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+      - RATE_LIMIT_DEFAULT=${RATE_LIMIT_DEFAULT:-60 per minute}
+    restart: unless-stopped
+    networks:
+      - drag_network
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 300s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  data-source-100:
+    build:
+      context: .
+      dockerfile: drag_data_source/Dockerfile
+    container_name: drag-data-source-100
+    ports:
+      - "8003:8001"
+    volumes:
+      - ./data/polluted_token:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CONFIG_PATH=/app/configs/config_sources_100.yaml
+      - API_KEY=reliable-derag-secret-2026
+      - PRIVATE_KEY=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a
+      - RATE_LIMIT_DEFAULT=${RATE_LIMIT_DEFAULT:-60 per minute}
+    restart: unless-stopped
+    networks:
+      - drag_network
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 300s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # LLM Orchestrator Service
+  llm-service:
+    build:
+      context: .
+      dockerfile: drag_llm_service/Dockerfile
+      args:
+        INSTALL_VLLM: ${INSTALL_VLLM:-true}
+    container_name: drag-llm-service
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./drag_contract/artifacts:/app/drag_contract/artifacts
+      - ./drag_contract/ignition/deployments:/app/drag_contract/ignition/deployments
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_TOKEN=${HF_TOKEN}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+      - VLLM_USE_FLASHINFER_SAMPLER=0
+      - VLLM_ATTENTION_BACKEND=FLASH_ATTN
+      - REPLACE_LOCALHOST_WITH=host.docker.internal
+      - FLASK_DEBUG=false
+      - API_KEY=reliable-derag-secret-2026
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+      data-source-0:
+        condition: service_healthy
+      data-source-20:
+        condition: service_healthy
+      data-source-100:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    networks:
+      - drag_network
+
+networks:
+  drag_network:
+    driver: bridge

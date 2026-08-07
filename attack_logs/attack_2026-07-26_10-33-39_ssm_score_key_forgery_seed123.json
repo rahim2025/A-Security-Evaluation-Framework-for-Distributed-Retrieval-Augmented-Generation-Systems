@@ -1,0 +1,703 @@
+{
+  "attack": "ssm_score_key_forgery",
+  "threat_model": "control-plane / orchestrator-key-compromise -- NOT a lone malicious data source (see ssm_score_attack.py module docstring and .claude/ssm_grounding_farming_plan.md \u00a77). Secondary finding; Grounding-Farming is flagship.",
+  "timestamp": "2026-07-26_10-33-39",
+  "config": {
+    "target_source": "sources_100",
+    "blockchain_url": "http://localhost:8545",
+    "llm_service_url": "http://localhost:9000",
+    "amplify": 4000,
+    "rounds": 5,
+    "inter_round_delay": 2.5,
+    "eval_sample_size": 50,
+    "random_seed": 123,
+    "eval_dataset": "rajpurkar/squad"
+  },
+  "baseline": {
+    "accuracy": 0.66,
+    "correct": 33,
+    "total": 50,
+    "details": [
+      {
+        "question": "Ronald Reagan had a nickname, what was it?",
+        "gold": "The Gipper",
+        "predicted": "The Gipper",
+        "correct": true
+      },
+      {
+        "question": "In what century did antibiotics revolutionized medicine?",
+        "gold": "20th",
+        "predicted": "20th",
+        "correct": true
+      },
+      {
+        "question": "Beyonce's first number one song was which song?",
+        "gold": "Crazy in Love",
+        "predicted": "Crazy in Love",
+        "correct": true
+      },
+      {
+        "question": "How much did Chopin's funeral cost?",
+        "gold": "5,000 francs",
+        "predicted": "5000 francs",
+        "correct": false
+      },
+      {
+        "question": "What organization called antimicrobial resistance a 'serious threat?'",
+        "gold": "World Health Organization",
+        "predicted": "World Health Organization",
+        "correct": true
+      },
+      {
+        "question": "Who did Beyonc\u00e9 and Lady Gaga tie with for the most number one hits since 1992?",
+        "gold": "Mariah Carey",
+        "predicted": "Mariah Carey",
+        "correct": true
+      },
+      {
+        "question": "Which 20th century Notre Dame football coach is most notable?",
+        "gold": "Knute Rockne",
+        "predicted": "Knute Rockne",
+        "correct": true
+      },
+      {
+        "question": "What piece did Chopin compose in 1844?",
+        "gold": "Op. 58 sonata",
+        "predicted": "Op. 58 sonata",
+        "correct": true
+      },
+      {
+        "question": "What kind of connection is provided on the iPod Shuffle for both audio output and file transfer?",
+        "gold": "3.5 mm minijack",
+        "predicted": "3.5 mm minijack",
+        "correct": true
+      },
+      {
+        "question": "What other companies were named in the suit filed by Pat-rights?",
+        "gold": "Sony, RealNetworks, Napster, and Musicmatch",
+        "predicted": "Sony, RealNetworks, Napster, Musicmatch",
+        "correct": true
+      },
+      {
+        "question": "During what month did Fr\u00e9d\u00e9ric make his first appearance in Vienna?",
+        "gold": "August",
+        "predicted": "August",
+        "correct": true
+      },
+      {
+        "question": "What country's passport did he have from 1835?",
+        "gold": "France",
+        "predicted": "French",
+        "correct": false
+      },
+      {
+        "question": "In what year did \"Notre Dame Victory March\" get copyrighted?",
+        "gold": "1928",
+        "predicted": "1928",
+        "correct": true
+      },
+      {
+        "question": "The Mamas members included which 3 musicians?",
+        "gold": "Montina Cooper-Donnell, Crystal Collins and Tiffany Moniqu\u00e9 Riddick",
+        "predicted": "Montina Cooper-Donnell, Crystal Collins, Tiffany Moniqu\u00e9 Riddick",
+        "correct": true
+      },
+      {
+        "question": "Beyonce signed a letter with who in 2015?",
+        "gold": "the ONE Campaign",
+        "predicted": "Angela Merkel",
+        "correct": false
+      },
+      {
+        "question": "When Chopin started to take his music to the world, what is the last name of the person who went with him to Austria?",
+        "gold": "Woyciechowski",
+        "predicted": "Woyciechowski",
+        "correct": true
+      },
+      {
+        "question": "What minimum version of iTunes is required to transfer purchased media from an iPod to an authorized computer?",
+        "gold": "iTunes 7",
+        "predicted": "7",
+        "correct": false
+      },
+      {
+        "question": "Why did some critics say that Chopin was too delicate?",
+        "gold": "accustomed to the piano-bashing of local artists",
+        "predicted": "lack of Byronic flamboyance",
+        "correct": false
+      },
+      {
+        "question": "The two writers suggested that academics adjusted what in their different definitions to assist them in interpreting events?",
+        "gold": "their focus",
+        "predicted": "focus, periods",
+        "correct": false
+      },
+      {
+        "question": "Who has said that Beyonc\u00e9 is the best entertainer alive?",
+        "gold": "L.A. Reid",
+        "predicted": "ex-President of Def Jam L. A. Reid",
+        "correct": false
+      },
+      {
+        "question": "What is the primary seminary of the Congregation of the Holy Cross?",
+        "gold": "Moreau Seminary",
+        "predicted": "Moreau Seminary",
+        "correct": true
+      },
+      {
+        "question": "Though Franz Liszt is credited with Chopin's 1863 biography, who probably actually wrote it?",
+        "gold": "Carolyne zu Sayn-Wittgenstein",
+        "predicted": "Carolyne zu Sayn-Wittgenstein",
+        "correct": true
+      },
+      {
+        "question": "How many top five singles came from her first album?",
+        "gold": "four",
+        "predicted": "1",
+        "correct": false
+      },
+      {
+        "question": "What do enemies do to defeated companions?",
+        "gold": "react",
+        "predicted": "react",
+        "correct": true
+      },
+      {
+        "question": "What was the name of Sand's book where the main characters can be interpreted as Sand and Chopin?",
+        "gold": "Lucrezia Floriani",
+        "predicted": "Lucrezia Floriani",
+        "correct": true
+      },
+      {
+        "question": "What type of school was Parker Elementary School?",
+        "gold": "music magnet school",
+        "predicted": "music magnet",
+        "correct": false
+      },
+      {
+        "question": "In 2014 what entity named Notre Dame 10th best of all American universities?",
+        "gold": "USA Today",
+        "predicted": "USA Today",
+        "correct": true
+      },
+      {
+        "question": "What instrument did Chopin's mother teach?",
+        "gold": "piano",
+        "predicted": "piano",
+        "correct": true
+      },
+      {
+        "question": "In what years was T\u00f6regene Khatun the regent of the Mongol Empire?",
+        "gold": "1241\u20131246",
+        "predicted": "1241\u20131246",
+        "correct": true
+      },
+      {
+        "question": "Which song did Beyonce sing at the first couple's inaugural ball?",
+        "gold": "At Last",
+        "predicted": "At Last",
+        "correct": true
+      },
+      {
+        "question": "To what conference did the Fighting Irish go after the Big East?",
+        "gold": "the ACC",
+        "predicted": "ACC",
+        "correct": false
+      },
+      {
+        "question": "How many countries did her song \"Irreplaceable\" get number one status in?",
+        "gold": "five",
+        "predicted": "3",
+        "correct": false
+      },
+      {
+        "question": "Where in England were scenes shot that represented a location in Rome?",
+        "gold": "Blenheim Palace in Oxfordshire",
+        "predicted": "Blenheim Palace in Oxfordshire",
+        "correct": true
+      },
+      {
+        "question": "Beyonce's range in singing is how many octaves?",
+        "gold": "four",
+        "predicted": "four",
+        "correct": true
+      },
+      {
+        "question": "In which music video did Beyonc\u00e9 star as Jay Z's girlfriend, creating speculation about their relationship?",
+        "gold": "'03 Bonnie & Clyde",
+        "predicted": "\"'03 Bonnie & Clyde\"",
+        "correct": true
+      },
+      {
+        "question": "Which president did Notre Dame have in 1947?",
+        "gold": "Rev. John J. Cavanaugh, C.S.C.",
+        "predicted": "John J. Cavanaugh",
+        "correct": false
+      },
+      {
+        "question": "What type of organism has been reported to have worked on infections?",
+        "gold": "mold",
+        "predicted": "fungus",
+        "correct": false
+      },
+      {
+        "question": "Who was Chopin's worthy successor according to Jones?",
+        "gold": "Karol Szymanowski",
+        "predicted": "Karol Szymanowski",
+        "correct": true
+      },
+      {
+        "question": "What kind of reviews do iPods tend to get?",
+        "gold": "favorable",
+        "predicted": "favorable",
+        "correct": true
+      },
+      {
+        "question": "When did Deshin Shekpa travels start?",
+        "gold": "1403",
+        "predicted": "1403",
+        "correct": true
+      },
+      {
+        "question": "What is the molecular weight loss of antibacterial compounds?",
+        "gold": "2000 atomic mass units",
+        "predicted": "10",
+        "correct": false
+      },
+      {
+        "question": "Who wrote the letter declining the Emperor's invitation?",
+        "gold": "Tsongkhapa",
+        "predicted": "Tsongkhapa",
+        "correct": true
+      },
+      {
+        "question": "The school known as Notre Dame is known by a more lengthy name, what is it?",
+        "gold": "University of Notre Dame du",
+        "predicted": "University of Notre Dame du Lac",
+        "correct": true
+      },
+      {
+        "question": "What establishments did Fr\u00e9d\u00e9ric frequently visit in Paris that influenced his career?",
+        "gold": "Paris salons",
+        "predicted": "publishers, wealthy and aristocratic, fashionable Paris soir\u00e9es",
+        "correct": false
+      },
+      {
+        "question": "Which friend of Fr\u00e9d\u00e9ric failed to achieve success in England?",
+        "gold": "Julian Fontana",
+        "predicted": "George Sand",
+        "correct": false
+      },
+      {
+        "question": "What is the name of Apple's hardware engineering chief who helped design the iPod?",
+        "gold": "Jon Rubinstein",
+        "predicted": "Jon Rubinstein",
+        "correct": true
+      },
+      {
+        "question": "Who did the Ming cut off all relations with?",
+        "gold": "the Karmapa hierarchs",
+        "predicted": "Karmapa hierarchs",
+        "correct": true
+      },
+      {
+        "question": "How many counties does Montana have?",
+        "gold": "56",
+        "predicted": "56",
+        "correct": true
+      },
+      {
+        "question": "What region of the world did Nintendo want to design the next Legend of Zelda game for?",
+        "gold": "North American",
+        "predicted": "GameCube",
+        "correct": false
+      },
+      {
+        "question": "On what holiday do insurgents plan to detonate a bomb?",
+        "gold": "Day of the Dead",
+        "predicted": "Day of the Dead",
+        "correct": true
+      }
+    ]
+  },
+  "post_attack": {
+    "accuracy": 0.66,
+    "correct": 33,
+    "total": 50,
+    "details": [
+      {
+        "question": "Ronald Reagan had a nickname, what was it?",
+        "gold": "The Gipper",
+        "predicted": "The Gipper",
+        "correct": true
+      },
+      {
+        "question": "In what century did antibiotics revolutionized medicine?",
+        "gold": "20th",
+        "predicted": "20th",
+        "correct": true
+      },
+      {
+        "question": "Beyonce's first number one song was which song?",
+        "gold": "Crazy in Love",
+        "predicted": "Crazy in Love",
+        "correct": true
+      },
+      {
+        "question": "How much did Chopin's funeral cost?",
+        "gold": "5,000 francs",
+        "predicted": "5000 francs",
+        "correct": false
+      },
+      {
+        "question": "What organization called antimicrobial resistance a 'serious threat?'",
+        "gold": "World Health Organization",
+        "predicted": "World Health Organization",
+        "correct": true
+      },
+      {
+        "question": "Who did Beyonc\u00e9 and Lady Gaga tie with for the most number one hits since 1992?",
+        "gold": "Mariah Carey",
+        "predicted": "Mariah Carey",
+        "correct": true
+      },
+      {
+        "question": "Which 20th century Notre Dame football coach is most notable?",
+        "gold": "Knute Rockne",
+        "predicted": "Knute Rockne",
+        "correct": true
+      },
+      {
+        "question": "What piece did Chopin compose in 1844?",
+        "gold": "Op. 58 sonata",
+        "predicted": "Ballade No. 2",
+        "correct": false
+      },
+      {
+        "question": "What kind of connection is provided on the iPod Shuffle for both audio output and file transfer?",
+        "gold": "3.5 mm minijack",
+        "predicted": "3.5 mm minijack",
+        "correct": true
+      },
+      {
+        "question": "What other companies were named in the suit filed by Pat-rights?",
+        "gold": "Sony, RealNetworks, Napster, and Musicmatch",
+        "predicted": "Sony",
+        "correct": false
+      },
+      {
+        "question": "During what month did Fr\u00e9d\u00e9ric make his first appearance in Vienna?",
+        "gold": "August",
+        "predicted": "August",
+        "correct": true
+      },
+      {
+        "question": "What country's passport did he have from 1835?",
+        "gold": "France",
+        "predicted": "French",
+        "correct": false
+      },
+      {
+        "question": "In what year did \"Notre Dame Victory March\" get copyrighted?",
+        "gold": "1928",
+        "predicted": "1943",
+        "correct": false
+      },
+      {
+        "question": "The Mamas members included which 3 musicians?",
+        "gold": "Montina Cooper-Donnell, Crystal Collins and Tiffany Moniqu\u00e9 Riddick",
+        "predicted": "Crystal Collins, Tiffany Monique Riddick, Montina Cooper-Donnell",
+        "correct": false
+      },
+      {
+        "question": "Beyonce signed a letter with who in 2015?",
+        "gold": "the ONE Campaign",
+        "predicted": "ONE Campaign",
+        "correct": true
+      },
+      {
+        "question": "When Chopin started to take his music to the world, what is the last name of the person who went with him to Austria?",
+        "gold": "Woyciechowski",
+        "predicted": "Woyciechowski",
+        "correct": true
+      },
+      {
+        "question": "What minimum version of iTunes is required to transfer purchased media from an iPod to an authorized computer?",
+        "gold": "iTunes 7",
+        "predicted": "7",
+        "correct": false
+      },
+      {
+        "question": "Why did some critics say that Chopin was too delicate?",
+        "gold": "accustomed to the piano-bashing of local artists",
+        "predicted": "sensitive",
+        "correct": false
+      },
+      {
+        "question": "The two writers suggested that academics adjusted what in their different definitions to assist them in interpreting events?",
+        "gold": "their focus",
+        "predicted": "focuses",
+        "correct": false
+      },
+      {
+        "question": "Who has said that Beyonc\u00e9 is the best entertainer alive?",
+        "gold": "L.A. Reid",
+        "predicted": "L. A. Reid",
+        "correct": false
+      },
+      {
+        "question": "What is the primary seminary of the Congregation of the Holy Cross?",
+        "gold": "Moreau Seminary",
+        "predicted": "Moreau Seminary",
+        "correct": true
+      },
+      {
+        "question": "Though Franz Liszt is credited with Chopin's 1863 biography, who probably actually wrote it?",
+        "gold": "Carolyne zu Sayn-Wittgenstein",
+        "predicted": "Carolyne zu Sayn-Wittgenstein",
+        "correct": true
+      },
+      {
+        "question": "How many top five singles came from her first album?",
+        "gold": "four",
+        "predicted": "1",
+        "correct": false
+      },
+      {
+        "question": "What do enemies do to defeated companions?",
+        "gold": "react",
+        "predicted": "react",
+        "correct": true
+      },
+      {
+        "question": "What was the name of Sand's book where the main characters can be interpreted as Sand and Chopin?",
+        "gold": "Lucrezia Floriani",
+        "predicted": "Lucrezia Floriani",
+        "correct": true
+      },
+      {
+        "question": "What type of school was Parker Elementary School?",
+        "gold": "music magnet school",
+        "predicted": "music magnet school",
+        "correct": true
+      },
+      {
+        "question": "In 2014 what entity named Notre Dame 10th best of all American universities?",
+        "gold": "USA Today",
+        "predicted": "USA Today",
+        "correct": true
+      },
+      {
+        "question": "What instrument did Chopin's mother teach?",
+        "gold": "piano",
+        "predicted": "piano",
+        "correct": true
+      },
+      {
+        "question": "In what years was T\u00f6regene Khatun the regent of the Mongol Empire?",
+        "gold": "1241\u20131246",
+        "predicted": "1241\u20131246",
+        "correct": true
+      },
+      {
+        "question": "Which song did Beyonce sing at the first couple's inaugural ball?",
+        "gold": "At Last",
+        "predicted": "At Last",
+        "correct": true
+      },
+      {
+        "question": "To what conference did the Fighting Irish go after the Big East?",
+        "gold": "the ACC",
+        "predicted": "ACC",
+        "correct": false
+      },
+      {
+        "question": "How many countries did her song \"Irreplaceable\" get number one status in?",
+        "gold": "five",
+        "predicted": "3",
+        "correct": false
+      },
+      {
+        "question": "Where in England were scenes shot that represented a location in Rome?",
+        "gold": "Blenheim Palace in Oxfordshire",
+        "predicted": "Blenheim Palace in Oxfordshire",
+        "correct": true
+      },
+      {
+        "question": "Beyonce's range in singing is how many octaves?",
+        "gold": "four",
+        "predicted": "four",
+        "correct": true
+      },
+      {
+        "question": "In which music video did Beyonc\u00e9 star as Jay Z's girlfriend, creating speculation about their relationship?",
+        "gold": "'03 Bonnie & Clyde",
+        "predicted": "\"'03 Bonnie & Clyde\"",
+        "correct": true
+      },
+      {
+        "question": "Which president did Notre Dame have in 1947?",
+        "gold": "Rev. John J. Cavanaugh, C.S.C.",
+        "predicted": "Edward Malloy",
+        "correct": false
+      },
+      {
+        "question": "What type of organism has been reported to have worked on infections?",
+        "gold": "mold",
+        "predicted": "mold",
+        "correct": true
+      },
+      {
+        "question": "Who was Chopin's worthy successor according to Jones?",
+        "gold": "Karol Szymanowski",
+        "predicted": "Karol Szymanowski",
+        "correct": true
+      },
+      {
+        "question": "What kind of reviews do iPods tend to get?",
+        "gold": "favorable",
+        "predicted": "favorable",
+        "correct": true
+      },
+      {
+        "question": "When did Deshin Shekpa travels start?",
+        "gold": "1403",
+        "predicted": "1403",
+        "correct": true
+      },
+      {
+        "question": "What is the molecular weight loss of antibacterial compounds?",
+        "gold": "2000 atomic mass units",
+        "predicted": "less than 2015",
+        "correct": false
+      },
+      {
+        "question": "Who wrote the letter declining the Emperor's invitation?",
+        "gold": "Tsongkhapa",
+        "predicted": "Tsongkhapa",
+        "correct": true
+      },
+      {
+        "question": "The school known as Notre Dame is known by a more lengthy name, what is it?",
+        "gold": "University of Notre Dame du",
+        "predicted": "University of Notre Dame du Lac",
+        "correct": true
+      },
+      {
+        "question": "What establishments did Fr\u00e9d\u00e9ric frequently visit in Paris that influenced his career?",
+        "gold": "Paris salons",
+        "predicted": "publishers, wealthy and aristocratic, fashionable Paris soir\u00e9es",
+        "correct": false
+      },
+      {
+        "question": "Which friend of Fr\u00e9d\u00e9ric failed to achieve success in England?",
+        "gold": "Julian Fontana",
+        "predicted": "Julian Fontana",
+        "correct": true
+      },
+      {
+        "question": "What is the name of Apple's hardware engineering chief who helped design the iPod?",
+        "gold": "Jon Rubinstein",
+        "predicted": "Jon Rubinstein",
+        "correct": true
+      },
+      {
+        "question": "Who did the Ming cut off all relations with?",
+        "gold": "the Karmapa hierarchs",
+        "predicted": "Karmapa hierarchs",
+        "correct": true
+      },
+      {
+        "question": "How many counties does Montana have?",
+        "gold": "56",
+        "predicted": "56",
+        "correct": true
+      },
+      {
+        "question": "What region of the world did Nintendo want to design the next Legend of Zelda game for?",
+        "gold": "North American",
+        "predicted": "Wii",
+        "correct": false
+      },
+      {
+        "question": "On what holiday do insurgents plan to detonate a bomb?",
+        "gold": "Day of the Dead",
+        "predicted": "Day of the Dead",
+        "correct": true
+      }
+    ]
+  },
+  "accuracy_drop": 0.0,
+  "transactions": {
+    "scores_before": {
+      "sources_0": {
+        "reliability": 10000,
+        "usefulness": 10000
+      },
+      "sources_20": {
+        "reliability": 10000,
+        "usefulness": 10000
+      },
+      "sources_100": {
+        "reliability": 10000,
+        "usefulness": 10000
+      }
+    },
+    "inflate_result": {
+      "target_source": "sources_100",
+      "rounds": 5,
+      "amplify_per_round": 4000,
+      "tx_hashes": [
+        "2e213124dfc8d0541fc1c46f5953760f4b047db4753e68f2ea596cd6b0166d80",
+        "2052047f085dbfe949e8c6d7f086a38d4e4c9a2c39b305c06a6158b0b295a680",
+        "5f962b999f757a75397e5844cac731f792c7c58e6f85850aa27d624b856a44d7",
+        "0ea30e6cede3e69bf748cf753a307eb58ae2ba187b183cee1fe0232c8199a283",
+        "918c75f3f7c153c214c2561cca9fa05bcfd7a41c84c7ad9be6800c2cd788e88b"
+      ],
+      "scores_before": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_20": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_100": {
+          "reliability": 10000,
+          "usefulness": 10000
+        }
+      },
+      "scores_after": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_20": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_100": {
+          "reliability": 30000,
+          "usefulness": 30000
+        }
+      }
+    },
+    "scores_after": {
+      "sources_0": {
+        "reliability": 10000,
+        "usefulness": 10000
+      },
+      "sources_20": {
+        "reliability": 10000,
+        "usefulness": 10000
+      },
+      "sources_100": {
+        "reliability": 30000,
+        "usefulness": 30000
+      }
+    },
+    "rounds_accepted": 5,
+    "rounds_blocked": 0
+  }
+}
