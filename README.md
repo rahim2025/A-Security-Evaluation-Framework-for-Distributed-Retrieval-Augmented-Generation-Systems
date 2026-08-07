@@ -91,7 +91,55 @@ drag_data_source/     // Dockerized retrieval service
 drag_llm_service/     // Dockerized LLM orchestrator service
 drag_python_client/   // Minimal Python client for DragScores
 result/               // Result example for live visualization
+attack/                // Security evaluation framework — six CIA-triad attack modules (see below)
+defense/               // Countermeasures for a subset of the attack modules
+config/                // YAML configs for the config-driven (sim/sweep) attack + defense modules
+attack_logs/           // JSON/CSV output written by each attack/defense run
+reports/               // Per-attack security analysis write-ups (methodology + measured results)
 ```
+
+---
+
+## 🛡️ Security Evaluation Framework (Attacks)
+
+This fork adds a security evaluation layer on top of Reliable-dRAG: attack modules that probe the deployed system through its existing, legitimate interfaces (HTTP retrieval/LLM endpoints, the on-chain `DragScores` contract) exactly as an external adversary would, rather than modifying the core system itself. Attacks are organized around the CIA triad, with two structurally distinct attacks per property. This is a port of an equivalent framework validated on DRAG (Xu et al., 2025), a peer-to-peer gossip-based distributed RAG, built to demonstrate the same attack taxonomy generalizes across distributed RAG architectures.
+
+| Property | Attack | Mechanism | Module |
+|---|---|---|---|
+| Integrity | **Data Poisoning** | Data-plane — injects malicious/misleading documents into a source's own retriever | [`attack/datapoisoning`](attack/datapoisoning) |
+| Integrity | **Source Selection Manipulation (SSM)** | Control-plane — manipulates the on-chain reliability score (`R_i`/`U_i`) that decides which source gets trusted. Two variants: key-forgery (`ssm_score_attack.py`) and the flagship, no-privileged-access **grounding-farming** attack (`run_grounding_farming.py`), which games the orchestrator's substring-grounding check via ordinary queries alone | [`attack/ssm_score`](attack/ssm_score) |
+| Confidentiality | **KB Extraction** | Reconstructs a source's private document collection via systematic keyword/topic-level query probes against the public retrieval + LLM endpoints | [`attack/kb_extraction`](attack/kb_extraction) |
+| Confidentiality | **Membership Inference (MIA)** | Infers whether a specific record is present in a source via similarity/certainty/decision-match signals on the LLM's response, reported as AUC-ROC | [`attack/Mia_attack`](attack/Mia_attack) |
+| Availability | **Denial of Service (DoS)** | Overt resource exhaustion — a congestion simulation (`ddos_attack.py`) and a real concurrent HTTP flood (`live_flood.py`) against the data-source containers | [`attack/ddos_sim`](attack/ddos_sim) |
+| Availability | **Selective Forwarding** | Covert insider withholding — a compromised, trusted peer silently drops a fraction of queries instead of forwarding them. `selective_forward` is the original real-Docker implementation; `selective_forward_sim` is the newer config-driven network-simulation version used for the current results | [`attack/selective_forward`](attack/selective_forward), [`attack/selective_forward_sim`](attack/selective_forward_sim) |
+
+Countermeasures for a subset of these attacks live under [`defense/`](defense) (`ddos_sim_defense`, `kb_extraction_defense`, `mia_defense`, `sfa_defense`, `sfa_sim_defense`, `ssm_defense`); per-attack methodology and measured results are written up in [`reports/`](reports).
+
+### Running an attack
+
+Each module is runnable standalone via its `run_attack.py`; most write a JSON log (and, for the config-driven sim modules, a CSV sweep table) to `attack_logs/<module>/`. Start the system first (`docker compose up -d`), then, for example:
+
+```bash
+# Data Poisoning — inject + evaluate at a given intensity
+python attack/datapoisoning/run_attack.py --evaluate --intensity heavy --seed 42
+
+# SSM — grounding-farming (flagship, no privileged access required)
+python attack/ssm_score/run_grounding_farming.py
+
+# KB Extraction — probe the retrieval + LLM endpoints
+python attack/kb_extraction/run_attack.py
+
+# Membership Inference — members vs. non-members, report AUC-ROC
+python attack/Mia_attack/run_attack.py --seed 42
+
+# DoS — congestion simulation (mock) or a real flood (live)
+python attack/ddos_sim/run_attack.py --mode mock
+
+# Selective Forwarding — config-driven mock/live network simulation
+python attack/selective_forward_sim/run_attack.py --mode mock
+```
+
+See each module's `--help` (and, where present, its own `README.md`) for the full set of CLI flags — targeting strategy, attack ratio/intensity, mock vs. live mode, and multi-seed sweeps.
 
 <!-- ## 📚 Citation
 If you use our code or system, please cite the following paper:
