@@ -21,6 +21,19 @@ Not packet-level. No real network traffic is generated or measured; this
 is an app-layer abstraction for studying RAG-level availability metrics
 (hit rate, hops, availability %), not a network-security packet simulator.
 
+Known limitation -- shared RNG stream across mock peers: MockRAGNetwork
+(attack/selective_forward_sim/network_sim.py) passes a single random.Random
+instance to every MockPeer. Because this attack's wrapper drops some
+queries before they ever reach a peer's real .query() (see "Query-time
+interception" below), the number of RNG draws consumed from that shared
+stream differs between an attacked run and its baseline, shifting
+downstream peers' random outcomes in a path-dependent way. This adds noise,
+not bias -- it's visible in this module's own hit_rate not decaying
+monotonically with availability_percentage across some configurations --
+and is a deliberate, documented caveat rather than a fix, since giving each
+peer an independent RNG would change the shared simulation's reproducible
+output for selective_forward_sim as well (see problems/ddos_attack_gaps.md #5).
+
 Wave lifecycle (execute one wave via `run_wave()`)
 ---------------------------------------------------
 1. Recover -- any peer whose recovery timer (tracked in wave units, see

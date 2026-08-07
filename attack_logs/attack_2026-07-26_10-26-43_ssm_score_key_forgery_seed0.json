@@ -1,0 +1,703 @@
+{
+  "attack": "ssm_score_key_forgery",
+  "threat_model": "control-plane / orchestrator-key-compromise -- NOT a lone malicious data source (see ssm_score_attack.py module docstring and .claude/ssm_grounding_farming_plan.md \u00a77). Secondary finding; Grounding-Farming is flagship.",
+  "timestamp": "2026-07-26_10-26-43",
+  "config": {
+    "target_source": "sources_100",
+    "blockchain_url": "http://localhost:8545",
+    "llm_service_url": "http://localhost:9000",
+    "amplify": 4000,
+    "rounds": 5,
+    "inter_round_delay": 2.5,
+    "eval_sample_size": 50,
+    "random_seed": 0,
+    "eval_dataset": "rajpurkar/squad"
+  },
+  "baseline": {
+    "accuracy": 0.64,
+    "correct": 32,
+    "total": 50,
+    "details": [
+      {
+        "question": "Where was the fictionalized \"Chopin\" produced?",
+        "gold": "Milan",
+        "predicted": "Milan",
+        "correct": true
+      },
+      {
+        "question": "Who edited the Polish National Edition?",
+        "gold": "Jan Ekier",
+        "predicted": "Jan Ekier",
+        "correct": true
+      },
+      {
+        "question": "In what year was Father Edward Sorin given two years to create a college?",
+        "gold": "1842",
+        "predicted": "1842",
+        "correct": true
+      },
+      {
+        "question": "Which two antibiotics that have high efficacy are much less useful now?",
+        "gold": "penicillin and erythromycin",
+        "predicted": "penicillin and erythromycin",
+        "correct": true
+      },
+      {
+        "question": "When did the Kangxi Emperor occupy Lhasa?",
+        "gold": "1720",
+        "predicted": "1720",
+        "correct": true
+      },
+      {
+        "question": "Who did the Ming trade horses with?",
+        "gold": "Tibet",
+        "predicted": "Tibet",
+        "correct": true
+      },
+      {
+        "question": "Who was the organist at Chopin's funeral?",
+        "gold": "Louis Lef\u00e9bure-W\u00e9ly",
+        "predicted": "Louis Lef\u00e9bure-W\u00e9ly",
+        "correct": true
+      },
+      {
+        "question": "How old was Chopin when he left Poland?",
+        "gold": "20",
+        "predicted": "20",
+        "correct": true
+      },
+      {
+        "question": "Where did Hou Xian and Zhi Guang travel through on their way to the Karmapa?",
+        "gold": "through Qinghai or via the Silk Road to Khotan",
+        "predicted": "Qinghai or via the Silk Road to Khotan",
+        "correct": false
+      },
+      {
+        "question": "What was the name of the man who biogrpahers think Chopin was concerned about Liszt's growing relationship with?",
+        "gold": "George Sand",
+        "predicted": "George Sand",
+        "correct": true
+      },
+      {
+        "question": "What category of game is Legend of Zelda: Twilight Princess?",
+        "gold": "action-adventure",
+        "predicted": "Action-adventure",
+        "correct": true
+      },
+      {
+        "question": "What is the name of the largest freshwater lake in western United States?",
+        "gold": "Flathead Lake",
+        "predicted": "Flathead Lake",
+        "correct": true
+      },
+      {
+        "question": "When did the Wanli Emperor grant the title Master of Vajradhara to Yonten Gyatso?",
+        "gold": "1616",
+        "predicted": "1616",
+        "correct": true
+      },
+      {
+        "question": "Beyonce and Jay Z got a Guinness World record for what in 2009?",
+        "gold": "highest-earning power couple",
+        "predicted": "highest-earning power couple",
+        "correct": true
+      },
+      {
+        "question": "What can alcohol and certain antibiotics cause?",
+        "gold": "decreased effectiveness of antibiotic therapy",
+        "predicted": "Side-effects and decreased effectiveness",
+        "correct": false
+      },
+      {
+        "question": "Up until May of 2015, how much is Beyonce's total worth?",
+        "gold": "250 million",
+        "predicted": "250 million",
+        "correct": true
+      },
+      {
+        "question": "What movie did Beyonce act in 2006?",
+        "gold": "The Pink Panther",
+        "predicted": "Dreamgirls",
+        "correct": false
+      },
+      {
+        "question": "Who worked adapting the score for performance by an orchestra?",
+        "gold": "Michiru \u014cshima",
+        "predicted": "Michiru \u014cshima",
+        "correct": true
+      },
+      {
+        "question": "The centrality of intent broadens what definition, beyond the 1948 one?",
+        "gold": "group identity",
+        "predicted": "genocide definition",
+        "correct": false
+      },
+      {
+        "question": "iPods released before what year had issues with distorted bass?",
+        "gold": "2006",
+        "predicted": "2006",
+        "correct": true
+      },
+      {
+        "question": "What does Link assist Midna in collection?",
+        "gold": "Fused Shadows",
+        "predicted": "Fused Shadows",
+        "correct": true
+      },
+      {
+        "question": "What other language has she sung?",
+        "gold": "Spanish",
+        "predicted": "Spanish",
+        "correct": true
+      },
+      {
+        "question": "Where did Chopin create most of his works?",
+        "gold": "France",
+        "predicted": "France",
+        "correct": true
+      },
+      {
+        "question": "Which singer beat out Beyonce for best video performance?",
+        "gold": "Taylor Swift",
+        "predicted": "Jay-Z",
+        "correct": false
+      },
+      {
+        "question": "Who placed Girl's Tyme in Star Search?",
+        "gold": "Arne Frager",
+        "predicted": "R&B producer Arne Frager placed Girl's Tyme in Star Search.",
+        "correct": true
+      },
+      {
+        "question": "What film previously held the UK record for highest first week opening gross?",
+        "gold": "Harry Potter and the Prisoner of Azkaban",
+        "predicted": "Harry Potter and the Prisoner of Azkaban",
+        "correct": true
+      },
+      {
+        "question": "Which of Chopin's works was unknowingly dedicated to Gladkowska?",
+        "gold": "Piano Concerto No. 1 (in E minor)",
+        "predicted": "Piano Concerto No. 1 (in E minor)",
+        "correct": true
+      },
+      {
+        "question": "When did Yongle Emperor send Yang Sanbao into Tibet?",
+        "gold": "1413",
+        "predicted": "1413",
+        "correct": true
+      },
+      {
+        "question": "Is the Apple SDK available to third-party game publishers?",
+        "gold": "not",
+        "predicted": "No",
+        "correct": false
+      },
+      {
+        "question": "Who is Beyonc\u00e9's alter ego?",
+        "gold": "Sasha Fierce",
+        "predicted": "Sasha Fierce",
+        "correct": true
+      },
+      {
+        "question": "For whose benefit was the first of these concerts performed for on 2 April 1833?",
+        "gold": "Harriet Smithson",
+        "predicted": "Hector Berlioz",
+        "correct": false
+      },
+      {
+        "question": "Chopin was noted as introducing music to what?",
+        "gold": "sense of nationalism",
+        "predicted": "nationalism",
+        "correct": false
+      },
+      {
+        "question": "What two instruments did Chopin's father play?",
+        "gold": "flute and violin",
+        "predicted": "violin",
+        "correct": false
+      },
+      {
+        "question": "What was the name of the second Wind Waker game?",
+        "gold": "Phantom Hourglass",
+        "predicted": "Phantom Hourglass",
+        "correct": true
+      },
+      {
+        "question": "What does Bond take from Marco Sciarra?",
+        "gold": "his ring",
+        "predicted": "ring",
+        "correct": true
+      },
+      {
+        "question": "Where does the state's name come from?",
+        "gold": "Spanish word monta\u00f1a (mountain)",
+        "predicted": "Spanish word monta\u00f1a",
+        "correct": false
+      },
+      {
+        "question": "What company ended its deal with Apple's music store in July of 2007?",
+        "gold": "Universal Music Group",
+        "predicted": "Hewlett-Packard",
+        "correct": false
+      },
+      {
+        "question": "When did Deshin Shekpa travels start?",
+        "gold": "1403",
+        "predicted": "1403",
+        "correct": true
+      },
+      {
+        "question": "Deshin Shekpa was the head of what school?",
+        "gold": "the Karma Kagyu school",
+        "predicted": "Karma Kagyu",
+        "correct": false
+      },
+      {
+        "question": "What other popular music player did Apple compare their new product to?",
+        "gold": "the Walkman",
+        "predicted": "Sony Ericsson",
+        "correct": false
+      },
+      {
+        "question": "What does this eliminate?",
+        "gold": "bacterial infection",
+        "predicted": "attenuated whole cells",
+        "correct": false
+      },
+      {
+        "question": "What is the name of Beyonc\u00e9's alter-ego?",
+        "gold": "Sasha Fierce",
+        "predicted": "Sasha Fierce",
+        "correct": true
+      },
+      {
+        "question": "Where are the controls located on the 3rd gen iPod Shuffle?",
+        "gold": "earphone cable",
+        "predicted": "earphone cable",
+        "correct": true
+      },
+      {
+        "question": "How many students in total were at Notre Dame in 2014?",
+        "gold": "12,179",
+        "predicted": "12179",
+        "correct": false
+      },
+      {
+        "question": "What artist did Beyonce duet with in the single, \"Deja Vu''?",
+        "gold": "Jay Z",
+        "predicted": "Jay Z",
+        "correct": true
+      },
+      {
+        "question": "What city did Chopin perform at on September 27?",
+        "gold": "Glasgow",
+        "predicted": "Leipzig",
+        "correct": false
+      },
+      {
+        "question": "What company did the Williams Formula One team originally build the C-X75 prototype for?",
+        "gold": "Jaguar.",
+        "predicted": "Jaguar",
+        "correct": false
+      },
+      {
+        "question": "What is the name of the area that players with the Wolf Link Amiibo can access?",
+        "gold": "Cave of Shadows",
+        "predicted": "Cave of Shadows",
+        "correct": true
+      },
+      {
+        "question": "What sits on top of the Main Building at Notre Dame?",
+        "gold": "a golden statue of the Virgin Mary",
+        "predicted": "Golden Dome",
+        "correct": false
+      },
+      {
+        "question": "What was the working name for the Wii prior to release?",
+        "gold": "Revolution",
+        "predicted": "Revolution",
+        "correct": true
+      }
+    ]
+  },
+  "post_attack": {
+    "accuracy": 0.56,
+    "correct": 28,
+    "total": 50,
+    "details": [
+      {
+        "question": "Where was the fictionalized \"Chopin\" produced?",
+        "gold": "Milan",
+        "predicted": "Milan",
+        "correct": true
+      },
+      {
+        "question": "Who edited the Polish National Edition?",
+        "gold": "Jan Ekier",
+        "predicted": "Jan Ekier",
+        "correct": true
+      },
+      {
+        "question": "In what year was Father Edward Sorin given two years to create a college?",
+        "gold": "1842",
+        "predicted": "1847",
+        "correct": false
+      },
+      {
+        "question": "Which two antibiotics that have high efficacy are much less useful now?",
+        "gold": "penicillin and erythromycin",
+        "predicted": "rifamycins, lipiarmycins",
+        "correct": false
+      },
+      {
+        "question": "When did the Kangxi Emperor occupy Lhasa?",
+        "gold": "1720",
+        "predicted": "1720",
+        "correct": true
+      },
+      {
+        "question": "Who did the Ming trade horses with?",
+        "gold": "Tibet",
+        "predicted": "Tibet",
+        "correct": true
+      },
+      {
+        "question": "Who was the organist at Chopin's funeral?",
+        "gold": "Louis Lef\u00e9bure-W\u00e9ly",
+        "predicted": "Louis Lef\u00e9bure-W\u00e9ly",
+        "correct": true
+      },
+      {
+        "question": "How old was Chopin when he left Poland?",
+        "gold": "20",
+        "predicted": "20",
+        "correct": true
+      },
+      {
+        "question": "Where did Hou Xian and Zhi Guang travel through on their way to the Karmapa?",
+        "gold": "through Qinghai or via the Silk Road to Khotan",
+        "predicted": "Qinghai or via the Silk Road to Khotan",
+        "correct": false
+      },
+      {
+        "question": "What was the name of the man who biogrpahers think Chopin was concerned about Liszt's growing relationship with?",
+        "gold": "George Sand",
+        "predicted": "George Sand",
+        "correct": true
+      },
+      {
+        "question": "What category of game is Legend of Zelda: Twilight Princess?",
+        "gold": "action-adventure",
+        "predicted": "Action-adventure",
+        "correct": true
+      },
+      {
+        "question": "What is the name of the largest freshwater lake in western United States?",
+        "gold": "Flathead Lake",
+        "predicted": "Flathead Lake",
+        "correct": true
+      },
+      {
+        "question": "When did the Wanli Emperor grant the title Master of Vajradhara to Yonten Gyatso?",
+        "gold": "1616",
+        "predicted": "1616",
+        "correct": true
+      },
+      {
+        "question": "Beyonce and Jay Z got a Guinness World record for what in 2009?",
+        "gold": "highest-earning power couple",
+        "predicted": "highest-earning power couple",
+        "correct": true
+      },
+      {
+        "question": "What can alcohol and certain antibiotics cause?",
+        "gold": "decreased effectiveness of antibiotic therapy",
+        "predicted": "Side-effects and decreased effectiveness",
+        "correct": false
+      },
+      {
+        "question": "Up until May of 2015, how much is Beyonce's total worth?",
+        "gold": "250 million",
+        "predicted": "250 million",
+        "correct": true
+      },
+      {
+        "question": "What movie did Beyonce act in 2006?",
+        "gold": "The Pink Panther",
+        "predicted": "Dreamgirls",
+        "correct": false
+      },
+      {
+        "question": "Who worked adapting the score for performance by an orchestra?",
+        "gold": "Michiru \u014cshima",
+        "predicted": "Toru Minegishi",
+        "correct": false
+      },
+      {
+        "question": "The centrality of intent broadens what definition, beyond the 1948 one?",
+        "gold": "group identity",
+        "predicted": "genocide definition",
+        "correct": false
+      },
+      {
+        "question": "iPods released before what year had issues with distorted bass?",
+        "gold": "2006",
+        "predicted": "2026",
+        "correct": false
+      },
+      {
+        "question": "What does Link assist Midna in collection?",
+        "gold": "Fused Shadows",
+        "predicted": "Fused Shadows",
+        "correct": true
+      },
+      {
+        "question": "What other language has she sung?",
+        "gold": "Spanish",
+        "predicted": "Spanish",
+        "correct": true
+      },
+      {
+        "question": "Where did Chopin create most of his works?",
+        "gold": "France",
+        "predicted": "France",
+        "correct": true
+      },
+      {
+        "question": "Which singer beat out Beyonce for best video performance?",
+        "gold": "Taylor Swift",
+        "predicted": "Jay-Z",
+        "correct": false
+      },
+      {
+        "question": "Who placed Girl's Tyme in Star Search?",
+        "gold": "Arne Frager",
+        "predicted": "Arne Frager",
+        "correct": true
+      },
+      {
+        "question": "What film previously held the UK record for highest first week opening gross?",
+        "gold": "Harry Potter and the Prisoner of Azkaban",
+        "predicted": "Harry Potter and the Prisoner of Azkaban",
+        "correct": true
+      },
+      {
+        "question": "Which of Chopin's works was unknowingly dedicated to Gladkowska?",
+        "gold": "Piano Concerto No. 1 (in E minor)",
+        "predicted": "Larghetto",
+        "correct": false
+      },
+      {
+        "question": "When did Yongle Emperor send Yang Sanbao into Tibet?",
+        "gold": "1413",
+        "predicted": "1413",
+        "correct": true
+      },
+      {
+        "question": "Is the Apple SDK available to third-party game publishers?",
+        "gold": "not",
+        "predicted": "No",
+        "correct": false
+      },
+      {
+        "question": "Who is Beyonc\u00e9's alter ego?",
+        "gold": "Sasha Fierce",
+        "predicted": "Sasha Fierce",
+        "correct": true
+      },
+      {
+        "question": "For whose benefit was the first of these concerts performed for on 2 April 1833?",
+        "gold": "Harriet Smithson",
+        "predicted": "Harriet Smithson",
+        "correct": true
+      },
+      {
+        "question": "Chopin was noted as introducing music to what?",
+        "gold": "sense of nationalism",
+        "predicted": "nationalism",
+        "correct": false
+      },
+      {
+        "question": "What two instruments did Chopin's father play?",
+        "gold": "flute and violin",
+        "predicted": "violin",
+        "correct": false
+      },
+      {
+        "question": "What was the name of the second Wind Waker game?",
+        "gold": "Phantom Hourglass",
+        "predicted": "Phantom Hourglass",
+        "correct": true
+      },
+      {
+        "question": "What does Bond take from Marco Sciarra?",
+        "gold": "his ring",
+        "predicted": "ring",
+        "correct": true
+      },
+      {
+        "question": "Where does the state's name come from?",
+        "gold": "Spanish word monta\u00f1a (mountain)",
+        "predicted": "Spanish word \"monta\u00f1a\"",
+        "correct": false
+      },
+      {
+        "question": "What company ended its deal with Apple's music store in July of 2007?",
+        "gold": "Universal Music Group",
+        "predicted": "Hewlett-Packard",
+        "correct": false
+      },
+      {
+        "question": "When did Deshin Shekpa travels start?",
+        "gold": "1403",
+        "predicted": "1403",
+        "correct": true
+      },
+      {
+        "question": "Deshin Shekpa was the head of what school?",
+        "gold": "the Karma Kagyu school",
+        "predicted": "Karma Kagyu",
+        "correct": false
+      },
+      {
+        "question": "What other popular music player did Apple compare their new product to?",
+        "gold": "the Walkman",
+        "predicted": "iPod Mini",
+        "correct": false
+      },
+      {
+        "question": "What does this eliminate?",
+        "gold": "bacterial infection",
+        "predicted": "antibiotic resistance",
+        "correct": false
+      },
+      {
+        "question": "What is the name of Beyonc\u00e9's alter-ego?",
+        "gold": "Sasha Fierce",
+        "predicted": "Sasha Fierce",
+        "correct": true
+      },
+      {
+        "question": "Where are the controls located on the 3rd gen iPod Shuffle?",
+        "gold": "earphone cable",
+        "predicted": "small control on the earphone cable",
+        "correct": true
+      },
+      {
+        "question": "How many students in total were at Notre Dame in 2014?",
+        "gold": "12,179",
+        "predicted": "12179",
+        "correct": false
+      },
+      {
+        "question": "What artist did Beyonce duet with in the single, \"Deja Vu''?",
+        "gold": "Jay Z",
+        "predicted": "Jay Z",
+        "correct": true
+      },
+      {
+        "question": "What city did Chopin perform at on September 27?",
+        "gold": "Glasgow",
+        "predicted": "Paris",
+        "correct": false
+      },
+      {
+        "question": "What company did the Williams Formula One team originally build the C-X75 prototype for?",
+        "gold": "Jaguar.",
+        "predicted": "Jaguar",
+        "correct": false
+      },
+      {
+        "question": "What is the name of the area that players with the Wolf Link Amiibo can access?",
+        "gold": "Cave of Shadows",
+        "predicted": "Cave of Shadows",
+        "correct": true
+      },
+      {
+        "question": "What sits on top of the Main Building at Notre Dame?",
+        "gold": "a golden statue of the Virgin Mary",
+        "predicted": "bell tower",
+        "correct": false
+      },
+      {
+        "question": "What was the working name for the Wii prior to release?",
+        "gold": "Revolution",
+        "predicted": "Revolution",
+        "correct": true
+      }
+    ]
+  },
+  "accuracy_drop": 0.08,
+  "transactions": {
+    "scores_before": {
+      "sources_0": {
+        "reliability": 10000,
+        "usefulness": 10000
+      },
+      "sources_20": {
+        "reliability": 10000,
+        "usefulness": 10000
+      },
+      "sources_100": {
+        "reliability": 10000,
+        "usefulness": 10000
+      }
+    },
+    "inflate_result": {
+      "target_source": "sources_100",
+      "rounds": 5,
+      "amplify_per_round": 4000,
+      "tx_hashes": [
+        "2e213124dfc8d0541fc1c46f5953760f4b047db4753e68f2ea596cd6b0166d80",
+        "2052047f085dbfe949e8c6d7f086a38d4e4c9a2c39b305c06a6158b0b295a680",
+        "5f962b999f757a75397e5844cac731f792c7c58e6f85850aa27d624b856a44d7",
+        "0ea30e6cede3e69bf748cf753a307eb58ae2ba187b183cee1fe0232c8199a283",
+        "918c75f3f7c153c214c2561cca9fa05bcfd7a41c84c7ad9be6800c2cd788e88b"
+      ],
+      "scores_before": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_20": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_100": {
+          "reliability": 10000,
+          "usefulness": 10000
+        }
+      },
+      "scores_after": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_20": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_100": {
+          "reliability": 30000,
+          "usefulness": 30000
+        }
+      }
+    },
+    "scores_after": {
+      "sources_0": {
+        "reliability": 10000,
+        "usefulness": 10000
+      },
+      "sources_20": {
+        "reliability": 10000,
+        "usefulness": 10000
+      },
+      "sources_100": {
+        "reliability": 30000,
+        "usefulness": 30000
+      }
+    },
+    "rounds_accepted": 5,
+    "rounds_blocked": 0
+  }
+}

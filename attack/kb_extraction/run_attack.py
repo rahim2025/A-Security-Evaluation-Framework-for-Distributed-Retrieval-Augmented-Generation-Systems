@@ -68,7 +68,7 @@ CRR_SIM_THRESHOLD  = float(os.getenv("CRR_SIM_THRESHOLD", "0.8"))
 CRR_EDIT_THRESHOLD = float(os.getenv("CRR_EDIT_THRESHOLD", "0.8"))
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
-LOG_DIR = os.path.join(PROJECT_ROOT, "attack_logs")
+LOG_DIR = os.path.join(PROJECT_ROOT, "attack_logs", "kb_extraction")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 HEADERS_WITH_KEY    = {"Content-Type": "application/json", "X-API-Key": API_KEY}
@@ -109,9 +109,22 @@ def _load_corpus_contexts():
     return _load_source_contexts(0)
 
 
-def load_probe_sets(n=PROBE_SAMPLE_SIZE, seed=RANDOM_SEED) -> Dict[int, Dict]:
+def load_probe_sets(n=PROBE_SAMPLE_SIZE, seed=RANDOM_SEED, blind: bool = False) -> Dict[int, Dict]:
     """
     Builds one probe/ground-truth/topic set PER data source.
+
+    blind: if True, probes are sampled from the *entire* HF dataset for that
+    source's domain, without first filtering to questions whose context is
+    already confirmed present in this specific source's corpus. Default
+    (blind=False) is the gray-box/upper-bound condition -- every probe is
+    guaranteed to land a hit, which measures post-reconnaissance
+    query-targeting efficiency, not discovery cost (see
+    problems/kb_extraction_gaps.md #1). blind=True is the cold-start floor:
+    a real attacker who has not already identified which ~500-passage
+    subset this deployment hosts, sampling broadly and mostly missing. Both
+    are reported side by side in main() rather than blind replacing the
+    default -- the gray-box number is not invalidated by adding this, it's
+    given an honest floor to sit next to.
 
     Configuration fix: the original version of this script assumed all
     three data sources served the same document indices ("sources_0.jsonl
@@ -150,36 +163,45 @@ def load_probe_sets(n=PROBE_SAMPLE_SIZE, seed=RANDOM_SEED) -> Dict[int, Dict]:
         ground_truth = _load_source_contexts(idx)
         context_to_title: Dict[str, str] = {}
         qa_by_question: Dict[str, Dict] = {}
+        all_qa_by_question: Dict[str, Dict] = {}
         for item in squad_ds:
             ctx = item["context"]
-            if ctx not in ground_truth:
-                continue
-            context_to_title.setdefault(ctx, item["title"])
             q = item["question"].strip()
-            if q not in qa_by_question:
-                qa_by_question[q] = {"context": ctx, "title": item["title"], "answers": item["answers"]["text"]}
-        sampled = random.sample(list(qa_by_question.keys()), min(n, len(qa_by_question))) if qa_by_question else []
+            entry = {"context": ctx, "title": item["title"], "answers": item["answers"]["text"]}
+            if q not in all_qa_by_question:
+                all_qa_by_question[q] = entry
+            if ctx in ground_truth:
+                context_to_title.setdefault(ctx, item["title"])
+                if q not in qa_by_question:
+                    qa_by_question[q] = entry
+        pool = all_qa_by_question if blind else qa_by_question
+        sampled = random.sample(list(pool.keys()), min(n, len(pool))) if pool else []
         result[idx] = {"probes": sampled, "ground_truth": ground_truth, "context_to_title": context_to_title,
-                        "qa_by_question": qa_by_question, "dataset": "squad"}
+                        "qa_by_question": pool, "dataset": "squad"}
         print(f"    source_{idx} ({SOURCE_JSONL[idx]}): {len(ground_truth)} ground-truth docs, "
-              f"{len(qa_by_question)} matched questions, {len(sampled)} sampled probes")
+              f"{len(qa_by_question)} matched questions ({len(all_qa_by_question)} total unfiltered), "
+              f"{len(sampled)} sampled probes (blind={blind})")
 
     print(f"[HF] Loading {PUBMEDQA_DATASET} ({PUBMEDQA_CONFIG}) (for source_0) ...")
     pubmedqa_ds = load_dataset(PUBMEDQA_DATASET, PUBMEDQA_CONFIG, split="train")
     ground_truth_0 = _load_source_contexts(0)
     qa_0: Dict[str, Dict] = {}
+    all_qa_0: Dict[str, Dict] = {}
     for item in pubmedqa_ds:
         ctx = " ".join(c.strip() for c in item["context"]["contexts"] if c and c.strip())
-        if ctx not in ground_truth_0:
-            continue
         q = item["question"].strip()
-        if q not in qa_0:
-            qa_0[q] = {"context": ctx, "title": None, "answers": [item.get("final_decision", "")]}
-    sampled_0 = random.sample(list(qa_0.keys()), min(n, len(qa_0))) if qa_0 else []
+        entry = {"context": ctx, "title": None, "answers": [item.get("final_decision", "")]}
+        if q not in all_qa_0:
+            all_qa_0[q] = entry
+        if ctx in ground_truth_0 and q not in qa_0:
+            qa_0[q] = entry
+    pool_0 = all_qa_0 if blind else qa_0
+    sampled_0 = random.sample(list(pool_0.keys()), min(n, len(pool_0))) if pool_0 else []
     result[0] = {"probes": sampled_0, "ground_truth": ground_truth_0, "context_to_title": {},
-                 "qa_by_question": qa_0, "dataset": "pubmedqa"}
+                 "qa_by_question": pool_0, "dataset": "pubmedqa"}
     print(f"    source_0 ({SOURCE_JSONL[0]}): {len(ground_truth_0)} ground-truth docs, "
-          f"{len(qa_0)} matched questions, {len(sampled_0)} sampled probes")
+          f"{len(qa_0)} matched questions ({len(all_qa_0)} total unfiltered), "
+          f"{len(sampled_0)} sampled probes (blind={blind})")
 
     for idx, info in result.items():
         if not info["probes"]:
@@ -188,13 +210,13 @@ def load_probe_sets(n=PROBE_SAMPLE_SIZE, seed=RANDOM_SEED) -> Dict[int, Dict]:
     return result
 
 
-def load_squad_probes(n=PROBE_SAMPLE_SIZE, seed=RANDOM_SEED, source_idx: int = 1):
+def load_squad_probes(n=PROBE_SAMPLE_SIZE, seed=RANDOM_SEED, source_idx: int = 1, blind: bool = False):
     """
     Backward-compatible single-source accessor on top of load_probe_sets(),
     default source_idx=1 (sources_20, SQuAD-domain) since source_0 is now
     PubMedQA -- see load_probe_sets() docstring.
     """
-    probe_sets = load_probe_sets(n, seed)
+    probe_sets = load_probe_sets(n, seed, blind=blind)
     info = probe_sets[source_idx]
     return info["probes"], info["ground_truth"], info["context_to_title"], info["qa_by_question"]
 
@@ -211,6 +233,7 @@ def probe_source(base_url, questions, k=TOP_K, authenticated=False,
     headers = HEADERS_WITH_KEY if authenticated else HEADERS_WITHOUT_KEY
     collected_docs: List[str] = []
     errors = 0
+    rate_limited = 0  # subset of errors: specifically HTTP 429 -- see run_attack()'s warning
     blocked_count = 0
     start = time.time()
 
@@ -218,13 +241,29 @@ def probe_source(base_url, questions, k=TOP_K, authenticated=False,
         if query_gate is not None and not query_gate(q):
             blocked_count += 1
             continue
-        try:
-            resp = requests.post(
-                f"{base_url}/query",
-                headers=headers,
-                json={"query": q, "k": k},
-                timeout=15,
-            )
+
+        # One retry after respecting a 429's Retry-After, same pattern already
+        # used by attack/selective_forward_sim/live_network.py (see its
+        # docstring / §12.9 of the SFA report): this script's own probes,
+        # run back-to-back with other live evaluations against the same
+        # shared 60-per-minute-per-IP Flask-Limiter budget, previously got
+        # silently coerced into a generic error -- indistinguishable in the
+        # log from "the attack/defense genuinely found nothing."
+        for attempt in range(2):
+            try:
+                resp = requests.post(
+                    f"{base_url}/query",
+                    headers=headers,
+                    json={"query": q, "k": k},
+                    timeout=15,
+                )
+            except requests.exceptions.ConnectionError:
+                errors += 1
+                break
+            except Exception:
+                errors += 1
+                break
+
             if resp.status_code == 401:
                 return {
                     "status":          "unauthorized",
@@ -233,33 +272,42 @@ def probe_source(base_url, questions, k=TOP_K, authenticated=False,
                     "error_count":     1,
                     "elapsed_sec":     round(time.time() - start, 2),
                 }
-            resp.raise_for_status()
-            data = resp.json()
-            docs = (
-                data.get("documents") or
-                data.get("results") or
-                data.get("chunks") or []
-            )
-            for doc in docs:
-                text = (doc.get("text") or doc.get("content") or
-                        doc.get("page_content") or "")
-                if text and text not in collected_docs:
-                    collected_docs.append(text)
-        except requests.exceptions.ConnectionError:
-            errors += 1
-        except Exception:
-            errors += 1
+            if resp.status_code == 429:
+                rate_limited += 1
+                errors += 1
+                if attempt == 0:
+                    retry_after = float(resp.headers.get("Retry-After", 2.0))
+                    time.sleep(retry_after)
+                    continue
+                break
+            try:
+                resp.raise_for_status()
+                data = resp.json()
+                docs = (
+                    data.get("documents") or
+                    data.get("results") or
+                    data.get("chunks") or []
+                )
+                for doc in docs:
+                    text = (doc.get("text") or doc.get("content") or
+                            doc.get("page_content") or "")
+                    if text and text not in collected_docs:
+                        collected_docs.append(text)
+            except Exception:
+                errors += 1
+            break
 
     total_chars = sum(len(d) for d in collected_docs)
     result = {
-        "status":          "ok",
-        "probes_sent":     len(questions),
-        "blocked_count":   blocked_count,
-        "docs_extracted":  len(collected_docs),
-        "chars_extracted": total_chars,
-        "kb_size_mb":      round(total_chars / 1_048_576, 4),
-        "error_count":     errors,
-        "elapsed_sec":     round(time.time() - start, 2),
+        "status":            "ok",
+        "probes_sent":       len(questions),
+        "blocked_count":     blocked_count,
+        "docs_extracted":    len(collected_docs),
+        "chars_extracted":   total_chars,
+        "kb_size_mb":        round(total_chars / 1_048_576, 4),
+        "error_count":       errors,
+        "rate_limited_count": rate_limited,
+        "elapsed_sec":       round(time.time() - start, 2),
     }
 
     # ── ground-truth-based success metrics (previously entirely missing:
@@ -298,12 +346,25 @@ def probe_llm_leakage(questions, qa_by_question=None):
 
     for q in questions[:20]:
         try:
-            resp = requests.post(
-                f"{LLM_SERVICE_URL}/query",
-                headers=HEADERS_WITH_KEY,
-                json={"query": q, "k": TOP_K},
-                timeout=30,
-            )
+            # One retry on timeout/connection error only -- drag_llm_service
+            # fans out to all three data sources per query (§12.2 of the KB
+            # extraction report) and occasionally stalls under transient load,
+            # which previously counted as a silent, unretried error and
+            # starved chunk_recovery_rate's scored-probe count (seed 0's run
+            # scored only 6/20 for exactly this reason). Non-transient
+            # failures (bad JSON, 4xx/5xx) are not retried.
+            for attempt in range(2):
+                try:
+                    resp = requests.post(
+                        f"{LLM_SERVICE_URL}/query",
+                        headers=HEADERS_WITH_KEY,
+                        json={"query": q, "k": TOP_K},
+                        timeout=30,
+                    )
+                    break
+                except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+                    if attempt == 1:
+                        raise
             resp.raise_for_status()
             data    = resp.json()
             answer  = data.get("answer") or data.get("response") or ""
@@ -391,6 +452,26 @@ def main():
               f"extraction_accuracy: {r.get('extraction_accuracy',0):.3f}  |  "
               f"topic_coverage: {r.get('topic_coverage', 'n/a')}")
 
+    # Phase B' - the cold-start/black-box floor: same authenticated probing,
+    # but probes are sampled from the full HF dataset without pre-filtering
+    # to questions guaranteed to hit this source's own corpus. Reported
+    # alongside Phase B's gray-box/upper-bound numbers, not in place of them
+    # -- see load_probe_sets() docstring and problems/kb_extraction_gaps.md #1.
+    print("\n[*] Phase B' - Authenticated extraction, blind/cold-start probes (no ground-truth pre-filter) ...")
+    blind_probe_sets = load_probe_sets(blind=True)
+    auth_results_blind = {}
+    for i, url in enumerate(DATA_SOURCE_URLS):
+        label = f"source_{i}"
+        info = blind_probe_sets[i]
+        print(f"    Probing {label} ({url}, {info['dataset']} blind probes) with key ...")
+        auth_results_blind[label] = probe_source(url, info["probes"], k=TOP_K, authenticated=True,
+                                                  ground_truth_contexts=info["ground_truth"],
+                                                  context_to_title=info["context_to_title"])
+        r = auth_results_blind[label]
+        print(f"    -> docs: {r.get('docs_extracted',0)}  |  extraction_rate: {r.get('extraction_rate',0):.3f}  |  "
+              f"extraction_accuracy: {r.get('extraction_accuracy',0):.3f}  |  "
+              f"topic_coverage: {r.get('topic_coverage', 'n/a')}")
+
     # Phase C uses source_1's (SQuAD) probe set -- a documented simplification,
     # since 2 of 3 real sources are SQuAD-domain and drag_llm_service fans out
     # to all three sources per query regardless of which probe set is used.
@@ -419,14 +500,27 @@ def main():
         }
         for i in (0, 1, 2)
     }
+    per_source_extraction_blind = {
+        f"source_{i}": {
+            "dataset": blind_probe_sets[i]["dataset"],
+            "extraction_rate": auth_results_blind[f"source_{i}"].get("extraction_rate"),
+            "extraction_accuracy": auth_results_blind[f"source_{i}"].get("extraction_accuracy"),
+            "topic_coverage": auth_results_blind[f"source_{i}"].get("topic_coverage"),
+        }
+        for i in (0, 1, 2)
+    }
 
     print(f"\n{'-'*60}")
     print(f"  Total docs extracted (authenticated): {total_auth_docs}")
     print(f"  Total KB recovered:                   {total_auth_mb} MB")
+    print("  gray-box (ceiling) vs. blind/cold-start (floor), per source:")
     for i in (0, 1, 2):
         s = per_source_extraction[f"source_{i}"]
+        b = per_source_extraction_blind[f"source_{i}"]
         print(f"  source_{i} ({s['dataset']:<8}) extraction_rate={s['extraction_rate']}  "
               f"extraction_accuracy={s['extraction_accuracy']}  topic_coverage={s['topic_coverage']}")
+        print(f"      blind:                extraction_rate={b['extraction_rate']}  "
+              f"extraction_accuracy={b['extraction_accuracy']}  topic_coverage={b['topic_coverage']}")
     print(f"  LLM leakage:                          {llm_result['total_leaked_chars']:,} chars")
     print(f"{'-'*60}\n")
 
@@ -438,12 +532,14 @@ def main():
         "random_seed":        RANDOM_SEED,
         "phase_a_unauth":     unauth_results,
         "phase_b_auth":       auth_results,
+        "phase_b_auth_blind": auth_results_blind,
         "phase_c_llm":        llm_result,
         "summary": {
             "total_docs_extracted":  total_auth_docs,
             "total_chars_extracted": total_auth_chars,
             "total_kb_mb":           total_auth_mb,
             "per_source_extraction": per_source_extraction,
+            "per_source_extraction_blind": per_source_extraction_blind,
             "llm_leaked_chars":      llm_result["total_leaked_chars"],
             "llm_chunk_recovery_rate": llm_result.get("chunk_recovery_rate"),
         },

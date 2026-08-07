@@ -45,6 +45,17 @@ import random
 import sys
 from typing import Any, Dict, List
 
+if sys.platform == "win32":
+    # Windows consoles default stdout/stderr to the system codepage (e.g. cp1252),
+    # which can't encode the arrow/comparison glyphs used in this module's summary
+    # prints -- that raised UnicodeEncodeError *after* the LLM calls but *before*
+    # save_log(), silently discarding a full attack run's results. Force UTF-8.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 import numpy as np
 import requests
 from sklearn.metrics import (
@@ -69,7 +80,7 @@ from attack.Mia_attack.mia_attack import (   # noqa: E402
     DEFAULT_NONMEMBERS,
 )
 
-LOG_DIR = os.path.join(_ROOT, "attack_logs")
+LOG_DIR = os.path.join(_ROOT, "attack_logs", "mia")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 

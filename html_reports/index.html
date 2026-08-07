@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security Evaluation Reports — Reliable-dRAG</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Reliable-dRAG &middot; Distributed RAG Security Evaluation</p>
+    <h1>Attack &amp; Defense Reports</h1>
+    <p class="subtitle">Three attacks reverse-engineered and empirically evaluated against the live Docker deployment:
+      availability (DDoS), confidentiality (KB extraction), and routing integrity (selective forwarding). Every
+      number on these pages traces to a real log file, not a fabricated figure.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section>
+  <div class="home-grid">
+
+    <a class="home-card" href="ddos_report.html">
+      <div class="hc-title">🌊 DDoS (Congestion) Attack</div>
+      <div class="hc-sub">Application-layer congestion simulation + real HTTP flood against the live retrieval overlay.</div>
+      <div class="hc-stats">
+        <div><b>80%</b>query failure at full flood</div>
+        <div><b>0.60→0.15</b>f1 collapse</div>
+      </div>
+    </a>
+
+    <a class="home-card" href="kb_report.html">
+      <div class="hc-title">🗃️ Knowledge-Base Extraction</div>
+      <div class="hc-sub">Black-box enumeration of private document collections via the system's own query API.</div>
+      <div class="hc-stats">
+        <div><b>37–43%</b>corpus recovered</div>
+        <div><b>100%</b>extraction accuracy</div>
+      </div>
+    </a>
+
+    <a class="home-card" href="sfa_report.html">
+      <div class="hc-title">🕳️ Selective Forwarding (Gray-Hole)</div>
+      <div class="hc-sub">Compromised peers stay connected but silently discard queries routed through them.</div>
+      <div class="hc-stats">
+        <div><b>0.98→0.54</b>hit_rate, 50% compromise</div>
+        <div><b>1.00</b>hit_rate after defense</div>
+      </div>
+    </a>
+
+  </div>
+</section>
+
+<section>
+  <h2>What was fixed this session</h2>
+  <div class="card">
+    <ul class="findings">
+      <li><b>DDoS &mdash; <code>exact_match</code> bug:</b> a leaked chat-template role token
+        (<code>"system\nyes"</code> instead of <code>"yes"</code>) deflated every text-overlap metric, not just
+        <code>exact_match</code>. Fixed in <code>open_model.py</code>, confirmed live. Details on the
+        <a href="ddos_report.html#bugfix">DDoS report</a>.</li>
+      <li><b>KB extraction &mdash; rate-limit confound:</b> a defense re-run silently returned
+        <code>docs_extracted=0</code> for both conditions because of a shared 60/min-per-IP budget exhausted by
+        a preceding DDoS test, not because the attack/defense actually did nothing.
+        <code>probe_source()</code> now tracks and surfaces this explicitly. Details on the
+        <a href="kb_report.html#bugfix">KB report</a>.</li>
+      <li><b>KB extraction &mdash; 82.5% block-rate caveat:</b> the headline defense number was measured on a
+        10-topic corpus with a threshold set at half that count &mdash; real, but not yet representative at
+        production topic scale. See the <a href="kb_report.html#defense">KB defense section</a>.</li>
+    </ul>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    Generated 2026-07-13 from live logs in <code>attack_logs/</code> and <code>defense_logs/</code>. Source reports
+    in <code>reports/</code>: <a href="../reports/ddos_attack.md">ddos_attack.md</a> &middot;
+    <a href="../reports/kb.md">kb.md</a> &middot;
+    <a href="../reports/SFA_Security_Analysis_Report.md">SFA_Security_Analysis_Report.md</a>.
+  </div>
+</footer>
+
+</body>
+</html>

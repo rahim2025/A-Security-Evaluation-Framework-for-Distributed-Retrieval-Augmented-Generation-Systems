@@ -80,8 +80,17 @@ class MockRAGNetwork:
         self._rng = random.Random(seed)
 
         self.network = nx.barabasi_albert_graph(num_peers, num_attachments, seed=seed)
+        # Each peer gets its own independent RNG stream, derived deterministically
+        # from (seed, peer_id), rather than sharing the network's single `_rng`.
+        # A shared stream meant a query dropped before reaching a peer's .query()
+        # (e.g. by attack/ddos_sim's wrapper) consumed zero draws from it, so the
+        # number of draws consumed -- and therefore every downstream peer's random
+        # outcomes -- differed between an attacked run and its baseline, purely as
+        # a path-dependence artifact unrelated to the attack itself. Per-peer RNGs
+        # eliminate this: a peer's own draw sequence no longer depends on whether,
+        # or how many times, any other peer was queried first.
         self.peers: List[Optional[MockPeer]] = [
-            MockPeer(pid, peer_hit_prob, self._rng) for pid in range(num_peers)
+            MockPeer(pid, peer_hit_prob, random.Random(seed * 1_000_003 + pid)) for pid in range(num_peers)
         ]
         # Installed by SelectiveForwardingDefense.apply(); left None (defense
         # inactive) otherwise. See defense/sfa_sim_defense/selective_forwarding_defense.py.

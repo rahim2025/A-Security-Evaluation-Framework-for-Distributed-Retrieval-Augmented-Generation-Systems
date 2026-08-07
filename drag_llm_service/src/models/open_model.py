@@ -1,5 +1,22 @@
 import os
+import re
 from vllm import LLM, SamplingParams
+
+# A chat-templated model occasionally echoes a leaked role-name token
+# ("system\n", "user\n") at the start of its generation instead of only the
+# answer text; the header-id markers are already stripped below, but the
+# bare role words were not, which corrupted exact-match-style scoring
+# downstream (see reports/ddos_attack.md). Strip any leading role token(s).
+_ROLE_PREFIX = re.compile(r"^\s*(system|user|assistant)\s*\n+\s*", re.IGNORECASE)
+_HEADER_ID_TOKENS = re.compile(r"<\|start_header_id\|>|<\|end_header_id\|>")
+
+
+def _strip_leaked_role_tokens(text: str) -> str:
+    prev = None
+    while prev != text:
+        prev = text
+        text = _ROLE_PREFIX.sub("", text)
+    return text
 
 class VLLMModel:
     def __init__(self,
@@ -40,7 +57,8 @@ class VLLMModel:
     
         result = self.model.generate([self.message], sampling_params=self.config, use_tqdm=False)
         result = result[0].outputs[0].text
-        result = result.replace("<|start_header_id|>", "").replace("<|end_header_id|>", "").replace("assistant", "")
+        result = _HEADER_ID_TOKENS.sub("", result)
+        result = _strip_leaked_role_tokens(result)
         return result
 
     def restart(self):

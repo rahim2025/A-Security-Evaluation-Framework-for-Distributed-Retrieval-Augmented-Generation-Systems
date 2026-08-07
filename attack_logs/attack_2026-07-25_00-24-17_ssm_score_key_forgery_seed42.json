@@ -1,0 +1,703 @@
+{
+  "attack": "ssm_score_key_forgery",
+  "threat_model": "control-plane / orchestrator-key-compromise -- NOT a lone malicious data source (see ssm_score_attack.py module docstring and .claude/ssm_grounding_farming_plan.md \u00a77). Secondary finding; Grounding-Farming is flagship.",
+  "timestamp": "2026-07-25_00-24-17",
+  "config": {
+    "target_source": "sources_100",
+    "blockchain_url": "http://localhost:8545",
+    "llm_service_url": "http://localhost:9000",
+    "amplify": 4000,
+    "rounds": 5,
+    "inter_round_delay": 2.5,
+    "eval_sample_size": 50,
+    "random_seed": 42,
+    "eval_dataset": "rajpurkar/squad"
+  },
+  "baseline": {
+    "accuracy": 0.62,
+    "correct": 31,
+    "total": 50,
+    "details": [
+      {
+        "question": "What group does C support England joining?",
+        "gold": "Nine Eyes",
+        "predicted": "Nine Eyes",
+        "correct": true
+      },
+      {
+        "question": "Which organization did Beyonce's spokespeople confirm her donations to?",
+        "gold": "The Huffington Post",
+        "predicted": "CSPINET",
+        "correct": false
+      },
+      {
+        "question": "The amount of professors at Notre Dame increased by what amount under Malloy?",
+        "gold": "500",
+        "predicted": "500",
+        "correct": true
+      },
+      {
+        "question": "Name some adverse effects?",
+        "gold": "fever and nausea to major allergic reactions, including photodermatitis and anaphylaxis",
+        "predicted": "fever, nausea, diarrhea, anaphylaxis",
+        "correct": false
+      },
+      {
+        "question": "What two writers examined the lack of an accepted and singular definition for genocide?",
+        "gold": "Jonassohn and Bj\u00f6rnson",
+        "predicted": "Frank Chalk and Kurt Jonassohn",
+        "correct": false
+      },
+      {
+        "question": "What was Helena originally founded as?",
+        "gold": "a mining camp",
+        "predicted": "Mining camp",
+        "correct": true
+      },
+      {
+        "question": "Beyonce became the highest-paid black musician in which year?",
+        "gold": "2014",
+        "predicted": "2014",
+        "correct": true
+      },
+      {
+        "question": "A fight scene from the movie, Obsessed, won which award for Beyonce?",
+        "gold": "MTV Movie Award for Best Fight",
+        "predicted": "MTV Movie Award for Best Fight",
+        "correct": true
+      },
+      {
+        "question": "When was the main theme of Spectre made available in digital format?",
+        "gold": "25 September 2015",
+        "predicted": "2015",
+        "correct": false
+      },
+      {
+        "question": "Which airlines first agreed to install seat connections for iPods?",
+        "gold": "United, Continental, Delta, and Emirates",
+        "predicted": "United",
+        "correct": false
+      },
+      {
+        "question": "How many has \"Dangerously in Love\" sould worldwide since its debut?",
+        "gold": "11 million",
+        "predicted": "11 million",
+        "correct": true
+      },
+      {
+        "question": "Many different types of interaction can be controlled by how many buttons?",
+        "gold": "one",
+        "predicted": "two",
+        "correct": false
+      },
+      {
+        "question": "Which of Chopin's works shows more folk aspects?",
+        "gold": "mazurkas",
+        "predicted": "Ballades",
+        "correct": false
+      },
+      {
+        "question": "In what year did the Suffolk Street location start to house a Notre Dame facility?",
+        "gold": "1998",
+        "predicted": "1921",
+        "correct": false
+      },
+      {
+        "question": "Which baseball stadium is found at Notre Dame?",
+        "gold": "Frank Eck Stadium",
+        "predicted": "Notre Dame Stadium",
+        "correct": false
+      },
+      {
+        "question": "How high did ''Deja Vu'' climb on the Billboard chart?",
+        "gold": "top five",
+        "predicted": "top five",
+        "correct": true
+      },
+      {
+        "question": "What is the name of the largest reservoir in the state?",
+        "gold": "Fort Peck Reservoir",
+        "predicted": "Fort Peck Reservoir",
+        "correct": true
+      },
+      {
+        "question": "How many people were arrested from the Montana Act?",
+        "gold": "200",
+        "predicted": "200",
+        "correct": true
+      },
+      {
+        "question": "Why didn't Yonten Gyatso make it to Beijing?",
+        "gold": "he died",
+        "predicted": "because he died",
+        "correct": true
+      },
+      {
+        "question": "What does Link assist Midna in collection?",
+        "gold": "Fused Shadows",
+        "predicted": "Fused Shadows",
+        "correct": true
+      },
+      {
+        "question": "Which congregation is in charge of the Old College at Notre Dame?",
+        "gold": "Congregation of Holy Cross",
+        "predicted": "Congregation of Holy Cross",
+        "correct": true
+      },
+      {
+        "question": "In what kind of folder are files located in the iPod?",
+        "gold": "hidden",
+        "predicted": "hidden folder",
+        "correct": true
+      },
+      {
+        "question": "When will the full line appear?",
+        "gold": "April 2016",
+        "predicted": "2025",
+        "correct": false
+      },
+      {
+        "question": "What was Spectre's original name?",
+        "gold": "SPECTRE",
+        "predicted": "Spectre",
+        "correct": true
+      },
+      {
+        "question": "What are two airlines that considered implementing iPod connections but did not join the 2007 agreement?",
+        "gold": "KLM and Air France",
+        "predicted": "Air France",
+        "correct": true
+      },
+      {
+        "question": "Who edited the Polish \"National Edition\" of Chopin's works?",
+        "gold": "Jan Ekier",
+        "predicted": "Jan Ekier",
+        "correct": true
+      },
+      {
+        "question": "What is the annual precipitation?",
+        "gold": "15 inches",
+        "predicted": "15 inches",
+        "correct": true
+      },
+      {
+        "question": "Who was the superior of prince Kublai?",
+        "gold": "\u00d6gedei Khan",
+        "predicted": "\u00d6gedei Khan",
+        "correct": true
+      },
+      {
+        "question": "What secondary weapon in Twilight Princess is analogous to a weapon featured in previous games?",
+        "gold": "Clawshot",
+        "predicted": "Bow",
+        "correct": false
+      },
+      {
+        "question": "What percentage of birth control pill failure is attributed to antibiotics?",
+        "gold": "about 1%",
+        "predicted": "1%",
+        "correct": false
+      },
+      {
+        "question": "The undergrad school at the Mendoza College of Business was ranked where according to BusinessWeek?",
+        "gold": "1st overall",
+        "predicted": "1st overall",
+        "correct": true
+      },
+      {
+        "question": "The Mamas members included which 3 musicians?",
+        "gold": "Montina Cooper-Donnell, Crystal Collins and Tiffany Moniqu\u00e9 Riddick",
+        "predicted": "Montina Cooper-Donnell, Crystal Collins, Tiffany Monique Riddick",
+        "correct": false
+      },
+      {
+        "question": "What time are Chopin's polonaises written in?",
+        "gold": "triple time",
+        "predicted": "Triple time",
+        "correct": true
+      },
+      {
+        "question": "What is the name of Chopin's biographer?",
+        "gold": "Adam Zamoyski",
+        "predicted": "Franz Liszt",
+        "correct": false
+      },
+      {
+        "question": "Do antibiotics interact with birth control pills?",
+        "gold": "The majority of studies indicate antibiotics do interfere with contraceptive pills",
+        "predicted": "Yes",
+        "correct": false
+      },
+      {
+        "question": "Who does Beyonc\u00e9 feel is an all-around entertainer?",
+        "gold": "Diana Ross",
+        "predicted": "Jim Farber",
+        "correct": false
+      },
+      {
+        "question": "How much were students charged per week?",
+        "gold": "$1.75",
+        "predicted": "$1500",
+        "correct": false
+      },
+      {
+        "question": "Where did Chopin intend to go after Austria?",
+        "gold": "Italy",
+        "predicted": "Italy",
+        "correct": true
+      },
+      {
+        "question": "What genre of film was the movie, Obsessed, in which Beyonce starred in?",
+        "gold": "thriller",
+        "predicted": "thriller",
+        "correct": true
+      },
+      {
+        "question": "How many countries did her song \"Irreplaceable\" get number one status in?",
+        "gold": "five",
+        "predicted": "3",
+        "correct": false
+      },
+      {
+        "question": "In what month and year did Chopin give his final performance?",
+        "gold": "February 1848",
+        "predicted": "February 1848",
+        "correct": true
+      },
+      {
+        "question": "Which film did Beyonc\u00e9 star with Steve Martin in?",
+        "gold": "The Pink Panther",
+        "predicted": "The Pink Panther",
+        "correct": true
+      },
+      {
+        "question": "What is the name of the author Chopin met at a gathering put on by Marie d'Agoult?",
+        "gold": "George Sand",
+        "predicted": "George Sand",
+        "correct": true
+      },
+      {
+        "question": "What familial role was Albert Grzyma\u0142a compared to in regards to Fr\u00e9d\u00e9ric?",
+        "gold": "elder brother",
+        "predicted": "elder brother",
+        "correct": true
+      },
+      {
+        "question": "What does Link discover he needs to find to return to human form?",
+        "gold": "Master Sword",
+        "predicted": "Master Sword",
+        "correct": true
+      },
+      {
+        "question": "What are the type of antibiotics which are taken from still living things?",
+        "gold": "aminoglycosides",
+        "predicted": "Aminoglycosides",
+        "correct": true
+      },
+      {
+        "question": "Which entity did Notre Dame hire to build a parking structure outside of Eddy Street Commons?",
+        "gold": "the City of South Bend",
+        "predicted": "City of South Bend",
+        "correct": true
+      },
+      {
+        "question": "How did the Encyclopedia Americana describe the Yuan Dynasty?",
+        "gold": "the line of Mongol rulers in China",
+        "predicted": "The line of Mongol rulers in China",
+        "correct": true
+      },
+      {
+        "question": "What kind of connection is provided on the iPod Shuffle for both audio output and file transfer?",
+        "gold": "3.5 mm minijack",
+        "predicted": "3.5 mm minijack phone connector",
+        "correct": true
+      },
+      {
+        "question": "Beyonce described what as the \"hardest thing she had to endure\"?",
+        "gold": "miscarriage",
+        "predicted": "depression",
+        "correct": false
+      }
+    ]
+  },
+  "post_attack": {
+    "accuracy": 0.52,
+    "correct": 26,
+    "total": 50,
+    "details": [
+      {
+        "question": "What group does C support England joining?",
+        "gold": "Nine Eyes",
+        "predicted": "Nine Eyes",
+        "correct": true
+      },
+      {
+        "question": "Which organization did Beyonce's spokespeople confirm her donations to?",
+        "gold": "The Huffington Post",
+        "predicted": "Clinton Bush Haiti Fund",
+        "correct": false
+      },
+      {
+        "question": "The amount of professors at Notre Dame increased by what amount under Malloy?",
+        "gold": "500",
+        "predicted": "500",
+        "correct": true
+      },
+      {
+        "question": "Name some adverse effects?",
+        "gold": "fever and nausea to major allergic reactions, including photodermatitis and anaphylaxis",
+        "predicted": "fever, nausea, diarrhea, yeast overgrowth, tendon damage",
+        "correct": false
+      },
+      {
+        "question": "What two writers examined the lack of an accepted and singular definition for genocide?",
+        "gold": "Jonassohn and Bj\u00f6rnson",
+        "predicted": "Frank Chalk and Kurt Jonassohn",
+        "correct": false
+      },
+      {
+        "question": "What was Helena originally founded as?",
+        "gold": "a mining camp",
+        "predicted": "mining camp",
+        "correct": true
+      },
+      {
+        "question": "Beyonce became the highest-paid black musician in which year?",
+        "gold": "2014",
+        "predicted": "2004",
+        "correct": false
+      },
+      {
+        "question": "A fight scene from the movie, Obsessed, won which award for Beyonce?",
+        "gold": "MTV Movie Award for Best Fight",
+        "predicted": "MTV Movie Award",
+        "correct": false
+      },
+      {
+        "question": "When was the main theme of Spectre made available in digital format?",
+        "gold": "25 September 2015",
+        "predicted": "20 February 2031",
+        "correct": false
+      },
+      {
+        "question": "Which airlines first agreed to install seat connections for iPods?",
+        "gold": "United, Continental, Delta, and Emirates",
+        "predicted": "United",
+        "correct": false
+      },
+      {
+        "question": "How many has \"Dangerously in Love\" sould worldwide since its debut?",
+        "gold": "11 million",
+        "predicted": "11",
+        "correct": false
+      },
+      {
+        "question": "Many different types of interaction can be controlled by how many buttons?",
+        "gold": "one",
+        "predicted": "two",
+        "correct": false
+      },
+      {
+        "question": "Which of Chopin's works shows more folk aspects?",
+        "gold": "mazurkas",
+        "predicted": "Ballades",
+        "correct": false
+      },
+      {
+        "question": "In what year did the Suffolk Street location start to house a Notre Dame facility?",
+        "gold": "1998",
+        "predicted": "1956",
+        "correct": false
+      },
+      {
+        "question": "Which baseball stadium is found at Notre Dame?",
+        "gold": "Frank Eck Stadium",
+        "predicted": "Notre Dame Stadium",
+        "correct": false
+      },
+      {
+        "question": "How high did ''Deja Vu'' climb on the Billboard chart?",
+        "gold": "top five",
+        "predicted": "top five",
+        "correct": true
+      },
+      {
+        "question": "What is the name of the largest reservoir in the state?",
+        "gold": "Fort Peck Reservoir",
+        "predicted": "Fort Peck Reservoir",
+        "correct": true
+      },
+      {
+        "question": "How many people were arrested from the Montana Act?",
+        "gold": "200",
+        "predicted": "200",
+        "correct": true
+      },
+      {
+        "question": "Why didn't Yonten Gyatso make it to Beijing?",
+        "gold": "he died",
+        "predicted": "he died",
+        "correct": true
+      },
+      {
+        "question": "What does Link assist Midna in collection?",
+        "gold": "Fused Shadows",
+        "predicted": "Fused Shadows",
+        "correct": true
+      },
+      {
+        "question": "Which congregation is in charge of the Old College at Notre Dame?",
+        "gold": "Congregation of Holy Cross",
+        "predicted": "Congregation of Holy Cross",
+        "correct": true
+      },
+      {
+        "question": "In what kind of folder are files located in the iPod?",
+        "gold": "hidden",
+        "predicted": "hidden folder",
+        "correct": true
+      },
+      {
+        "question": "When will the full line appear?",
+        "gold": "April 2016",
+        "predicted": "autumn 2025",
+        "correct": false
+      },
+      {
+        "question": "What was Spectre's original name?",
+        "gold": "SPECTRE",
+        "predicted": "Spectre",
+        "correct": true
+      },
+      {
+        "question": "What are two airlines that considered implementing iPod connections but did not join the 2007 agreement?",
+        "gold": "KLM and Air France",
+        "predicted": "Air France",
+        "correct": true
+      },
+      {
+        "question": "Who edited the Polish \"National Edition\" of Chopin's works?",
+        "gold": "Jan Ekier",
+        "predicted": "Jan Ekier",
+        "correct": true
+      },
+      {
+        "question": "What is the annual precipitation?",
+        "gold": "15 inches",
+        "predicted": "15 inches",
+        "correct": true
+      },
+      {
+        "question": "Who was the superior of prince Kublai?",
+        "gold": "\u00d6gedei Khan",
+        "predicted": "\u00d6gedei Khan",
+        "correct": true
+      },
+      {
+        "question": "What secondary weapon in Twilight Princess is analogous to a weapon featured in previous games?",
+        "gold": "Clawshot",
+        "predicted": "bow",
+        "correct": false
+      },
+      {
+        "question": "What percentage of birth control pill failure is attributed to antibiotics?",
+        "gold": "about 1%",
+        "predicted": "1%",
+        "correct": false
+      },
+      {
+        "question": "The undergrad school at the Mendoza College of Business was ranked where according to BusinessWeek?",
+        "gold": "1st overall",
+        "predicted": "1st overall",
+        "correct": true
+      },
+      {
+        "question": "The Mamas members included which 3 musicians?",
+        "gold": "Montina Cooper-Donnell, Crystal Collins and Tiffany Moniqu\u00e9 Riddick",
+        "predicted": "Crystal Collins, Tiffany Monique Riddick, Montina Cooper-Donnell",
+        "correct": false
+      },
+      {
+        "question": "What time are Chopin's polonaises written in?",
+        "gold": "triple time",
+        "predicted": "triple time",
+        "correct": true
+      },
+      {
+        "question": "What is the name of Chopin's biographer?",
+        "gold": "Adam Zamoyski",
+        "predicted": "Franz Liszt",
+        "correct": false
+      },
+      {
+        "question": "Do antibiotics interact with birth control pills?",
+        "gold": "The majority of studies indicate antibiotics do interfere with contraceptive pills",
+        "predicted": "Yes",
+        "correct": false
+      },
+      {
+        "question": "Who does Beyonc\u00e9 feel is an all-around entertainer?",
+        "gold": "Diana Ross",
+        "predicted": "L. A. Reid",
+        "correct": false
+      },
+      {
+        "question": "How much were students charged per week?",
+        "gold": "$1.75",
+        "predicted": "$50",
+        "correct": false
+      },
+      {
+        "question": "Where did Chopin intend to go after Austria?",
+        "gold": "Italy",
+        "predicted": "Italy",
+        "correct": true
+      },
+      {
+        "question": "What genre of film was the movie, Obsessed, in which Beyonce starred in?",
+        "gold": "thriller",
+        "predicted": "Thriller",
+        "correct": true
+      },
+      {
+        "question": "How many countries did her song \"Irreplaceable\" get number one status in?",
+        "gold": "five",
+        "predicted": "3",
+        "correct": false
+      },
+      {
+        "question": "In what month and year did Chopin give his final performance?",
+        "gold": "February 1848",
+        "predicted": "February 1863",
+        "correct": false
+      },
+      {
+        "question": "Which film did Beyonc\u00e9 star with Steve Martin in?",
+        "gold": "The Pink Panther",
+        "predicted": "The Pink Panther",
+        "correct": true
+      },
+      {
+        "question": "What is the name of the author Chopin met at a gathering put on by Marie d'Agoult?",
+        "gold": "George Sand",
+        "predicted": "George Sand",
+        "correct": true
+      },
+      {
+        "question": "What familial role was Albert Grzyma\u0142a compared to in regards to Fr\u00e9d\u00e9ric?",
+        "gold": "elder brother",
+        "predicted": "elder brother",
+        "correct": true
+      },
+      {
+        "question": "What does Link discover he needs to find to return to human form?",
+        "gold": "Master Sword",
+        "predicted": "Master Sword",
+        "correct": true
+      },
+      {
+        "question": "What are the type of antibiotics which are taken from still living things?",
+        "gold": "aminoglycosides",
+        "predicted": "Aminoglycosides",
+        "correct": true
+      },
+      {
+        "question": "Which entity did Notre Dame hire to build a parking structure outside of Eddy Street Commons?",
+        "gold": "the City of South Bend",
+        "predicted": "Kite Realty",
+        "correct": false
+      },
+      {
+        "question": "How did the Encyclopedia Americana describe the Yuan Dynasty?",
+        "gold": "the line of Mongol rulers in China",
+        "predicted": "the line of Mongol rulers in China",
+        "correct": true
+      },
+      {
+        "question": "What kind of connection is provided on the iPod Shuffle for both audio output and file transfer?",
+        "gold": "3.5 mm minijack",
+        "predicted": "3.5 mm minijack",
+        "correct": true
+      },
+      {
+        "question": "Beyonce described what as the \"hardest thing she had to endure\"?",
+        "gold": "miscarriage",
+        "predicted": "Depression",
+        "correct": false
+      }
+    ]
+  },
+  "accuracy_drop": 0.1,
+  "transactions": {
+    "scores_before": {
+      "sources_0": {
+        "reliability": 10000,
+        "usefulness": 10000
+      },
+      "sources_20": {
+        "reliability": 10000,
+        "usefulness": 10000
+      },
+      "sources_100": {
+        "reliability": 10000,
+        "usefulness": 10000
+      }
+    },
+    "inflate_result": {
+      "target_source": "sources_100",
+      "rounds": 5,
+      "amplify_per_round": 4000,
+      "tx_hashes": [
+        "2e213124dfc8d0541fc1c46f5953760f4b047db4753e68f2ea596cd6b0166d80",
+        "2052047f085dbfe949e8c6d7f086a38d4e4c9a2c39b305c06a6158b0b295a680",
+        "5f962b999f757a75397e5844cac731f792c7c58e6f85850aa27d624b856a44d7",
+        "0ea30e6cede3e69bf748cf753a307eb58ae2ba187b183cee1fe0232c8199a283",
+        "918c75f3f7c153c214c2561cca9fa05bcfd7a41c84c7ad9be6800c2cd788e88b"
+      ],
+      "scores_before": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_20": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_100": {
+          "reliability": 10000,
+          "usefulness": 10000
+        }
+      },
+      "scores_after": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_20": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_100": {
+          "reliability": 30000,
+          "usefulness": 30000
+        }
+      }
+    },
+    "scores_after": {
+      "sources_0": {
+        "reliability": 10000,
+        "usefulness": 10000
+      },
+      "sources_20": {
+        "reliability": 10000,
+        "usefulness": 10000
+      },
+      "sources_100": {
+        "reliability": 30000,
+        "usefulness": 30000
+      }
+    },
+    "rounds_accepted": 5,
+    "rounds_blocked": 0
+  }
+}

@@ -1,7 +1,21 @@
 """
 attack/ssm_score/run_attack.py
-SSM-Score manipulation attack for Reliable-dRAG.
-Eval questions loaded from HuggingFace rajpurkar/squad (validation split).
+SSM-Score key-forgery attack for Reliable-dRAG -- control-plane /
+orchestrator-key-compromise variant (see ssm_score_attack.py's module
+docstring and .claude/ssm_grounding_farming_plan.md §7). This is the
+secondary SSM finding; Grounding-Farming
+(attack/ssm_score/run_grounding_farming.py) is the flagship, no-privileged-
+access instantiation.
+
+AMPLIFY/INTER_ROUND_DELAY default to values that respect the deployed
+transaction-layer defense's MAX_DELTA_PER_UPDATE (5,000) and
+MIN_UPDATE_INTERVAL (2s) -- a defense-aware attacker throttles itself just
+under both caps rather than tripping ScoreDeltaTooLarge/UpdateTooFrequent
+on the first round. defense/ssm_defense/run_defense.py deliberately keeps
+the old reckless defaults (999999 / 0.5s) to demonstrate the defense
+blocking that naive burst -- this script does not touch that scenario.
+
+Eval questions loaded from HuggingFace rajpurkar/squad (train split).
 """
 
 import json
@@ -23,8 +37,12 @@ from ssm_score_attack import SSMScoreAttack
 BLOCKCHAIN_URL  = os.getenv("BLOCKCHAIN_URL",  "http://localhost:8545")
 LLM_SERVICE_URL = os.getenv("LLM_SERVICE_URL", "http://localhost:9000")
 TARGET_SOURCE   = os.getenv("TARGET_SOURCE",   "sources_100")
-AMPLIFY         = int(os.getenv("AMPLIFY",     "999999"))
-ROUNDS          = int(os.getenv("ROUNDS",      "5"))
+# Defense-aware defaults: stay just under drag_scores.sol's MAX_DELTA_PER_UPDATE
+# (5,000) and MIN_UPDATE_INTERVAL (2s) so every round is accepted instead of
+# reverting on round 1 (see ssm_score_attack.py's module docstring).
+AMPLIFY            = int(os.getenv("AMPLIFY",             "4000"))
+ROUNDS              = int(os.getenv("ROUNDS",              "5"))
+INTER_ROUND_DELAY   = float(os.getenv("INTER_ROUND_DELAY", "2.5"))
 
 EVAL_SAMPLE_SIZE = int(os.getenv("EVAL_SAMPLE_SIZE", "50"))
 RANDOM_SEED      = int(os.getenv("RANDOM_SEED",      "42"))
@@ -39,33 +57,52 @@ HEADERS = {"Content-Type": "application/json"}
 # ── HuggingFace SQuAD loader ──────────────────────────────────────────────────
 def _load_corpus_contexts():
     """
-    Passages actually served by the Docker data sources (all three sources
-    share the same document indices; sources_0.jsonl is the 0%-polluted /
-    clean copy, so its "html" text is the ground-truth passage per doc).
+    Passages actually served by the Docker data sources, restricted to the
+    two sources that are still SQuAD-domain.
+
+    sources_0.jsonl was migrated to PubMedQA content by
+    data/build_pubmedqa_corpus.py (written for attack/Mia_attack's MIA fix --
+    see that script's docstring) and must not be used as ground truth here
+    any more. sources_20/100 remain independently token-polluted SQuAD
+    variants (reports/Security_Analysis_Report.md: only 207/500 rows are
+    byte-identical between them), so this pools both -- a question counts as
+    "answerable" if its original context still matches, unpolluted, in
+    *either* source. Matching only one would undercount how much of the
+    system's combined corpus can actually answer a given question, which
+    matters here because SSM-Score's accuracy metric is a system-wide
+    measurement, not a single-source one (contrast attack/kb_extraction,
+    which targets one source's content specifically and correctly matches
+    per-source instead of pooling).
+
+    Same collision, already hit and fixed the same way in
+    attack/kb_extraction/run_attack.py and
+    attack/selective_forward_sim/run_attack.py.
     """
-    path = os.path.join(PROJECT_ROOT, "data", "polluted_token", "sources_0.jsonl")
     contexts = set()
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            rec = json.loads(line)
-            html = rec.get("html", "")
-            if html:
-                contexts.add(html)
+    for fname in ("sources_20.jsonl", "sources_100.jsonl"):
+        path = os.path.join(PROJECT_ROOT, "data", "polluted_token", fname)
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                rec = json.loads(line)
+                html = rec.get("html", "")
+                if html:
+                    contexts.add(html)
     return contexts
 
 
 def load_squad_eval(n=EVAL_SAMPLE_SIZE, seed=RANDOM_SEED):
     """
-    Sample QA pairs restricted to contexts actually present in the running
-    corpus. The data sources are seeded from the SQuAD *train* split (see
-    data/polluted_token/sources_0.jsonl); sampling from *validation* asks
-    about articles never loaded into any source, pinning accuracy near 0
-    regardless of the attack.
+    Sample QA pairs restricted to contexts actually present, unpolluted, in
+    sources_20 or sources_100 (see _load_corpus_contexts -- sources_0 is
+    PubMedQA now, not SQuAD, so it's excluded from matching). The data
+    sources are seeded from the SQuAD *train* split; sampling from
+    *validation* asks about articles never loaded into any source, pinning
+    accuracy near 0 regardless of the attack.
     """
     print(f"[HF] Loading rajpurkar/squad train split ...")
     ds = load_dataset("rajpurkar/squad", split="train")
     corpus_contexts = _load_corpus_contexts()
-    print(f"[HF] Matching questions against {len(corpus_contexts)} loaded source documents ...")
+    print(f"[HF] Matching questions against {len(corpus_contexts)} loaded source documents (sources_20/100) ...")
 
     seen, rows = set(), []
     for item in ds:
@@ -82,8 +119,8 @@ def load_squad_eval(n=EVAL_SAMPLE_SIZE, seed=RANDOM_SEED):
 
     if not rows:
         raise RuntimeError(
-            "No SQuAD questions matched the loaded source documents — "
-            "check data/polluted_token/sources_0.jsonl."
+            "No SQuAD questions matched sources_20/100 -- "
+            "check data/polluted_token/sources_{20,100}.jsonl."
         )
 
     random.seed(seed)
@@ -128,6 +165,16 @@ def is_correct(predicted, gold):
 
 
 # ── Measure accuracy over the eval set ───────────────────────────────────────
+# drag_data_source/app/server.py rate-limits each client IP to
+# RATE_LIMIT_DEFAULT (60/min by default) per source, and the orchestrator
+# fans every /query out to all three sources -- a tight, unthrottled loop
+# over more than ~50-60 questions can trip 429s and silently degrade into
+# empty predictions that look like (but are not) an accuracy drop. Space
+# queries out to stay safely under that budget (same class of issue as
+# reports/SFA_Security_Analysis_Report.md sec 12.9).
+QUERY_DELAY = float(os.getenv("QUERY_DELAY", "1.3"))
+
+
 def measure_accuracy(eval_data):
     correct = 0
     results = []
@@ -143,6 +190,7 @@ def measure_accuracy(eval_data):
             "predicted": predicted,
             "correct":   hit,
         })
+        time.sleep(QUERY_DELAY)
     acc = correct / len(eval_data) if eval_data else 0.0
     return {
         "accuracy": round(acc, 4),
@@ -155,16 +203,19 @@ def measure_accuracy(eval_data):
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_file  = os.path.join(LOG_DIR, f"attack_{timestamp}_ssm_score.json")
+    log_file  = os.path.join(LOG_DIR, f"attack_{timestamp}_ssm_score_key_forgery_seed{RANDOM_SEED}.json")
 
     print(f"\n{'='*60}")
-    print("  Reliable-dRAG  -  SSM-Score Manipulation Attack")
+    print("  Reliable-dRAG  -  SSM-Score Key-Forgery Attack")
+    print("  (control-plane / orchestrator-key-compromise -- secondary")
+    print("   finding; see run_grounding_farming.py for the flagship,")
+    print("   no-privileged-access SSM instantiation)")
     print(f"{'='*60}")
-    print(f"  target_source : {TARGET_SOURCE}")
-    print(f"  blockchain    : {BLOCKCHAIN_URL}")
-    print(f"  llm_service   : {LLM_SERVICE_URL}")
-    print(f"  amplify       : {AMPLIFY}   rounds: {ROUNDS}")
-    print(f"  eval_sample   : {EVAL_SAMPLE_SIZE}   seed: {RANDOM_SEED}")
+    print(f"  target_source     : {TARGET_SOURCE}")
+    print(f"  blockchain        : {BLOCKCHAIN_URL}")
+    print(f"  llm_service       : {LLM_SERVICE_URL}")
+    print(f"  amplify           : {AMPLIFY}   rounds: {ROUNDS}   inter_round_delay: {INTER_ROUND_DELAY}s")
+    print(f"  eval_sample       : {EVAL_SAMPLE_SIZE}   seed: {RANDOM_SEED}")
     print()
 
     # 1. Load eval data from HuggingFace
@@ -183,15 +234,17 @@ def main():
     print(f"    Baseline accuracy: {baseline['accuracy']*100:.1f}%  "
           f"({baseline['correct']}/{baseline['total']})")
 
-    # 4. Run SSM attack
-    print("\n[*] Launching SSM-Score attack ...")
+    # 4. Run SSM attack (defense-aware: throttled to stay under the
+    #    deployed contract's MAX_DELTA_PER_UPDATE/MIN_UPDATE_INTERVAL caps)
+    print("\n[*] Launching SSM-Score key-forgery attack ...")
     attacker = SSMScoreAttack(
-        target_source   = TARGET_SOURCE,
-        blockchain_url  = BLOCKCHAIN_URL,
-        project_root    = PROJECT_ROOT,
-        amplify         = AMPLIFY,
-        rounds          = ROUNDS,
-        llm_service_url = LLM_SERVICE_URL,
+        target_source     = TARGET_SOURCE,
+        blockchain_url    = BLOCKCHAIN_URL,
+        project_root      = PROJECT_ROOT,
+        amplify           = AMPLIFY,
+        rounds            = ROUNDS,
+        llm_service_url   = LLM_SERVICE_URL,
+        inter_round_delay = INTER_ROUND_DELAY,
     )
     # Step 1 — snapshot scores before attack
     scores_before = attacker.get_current_scores()
@@ -201,6 +254,11 @@ def main():
     inflate_result = attacker.inflate_scores(TARGET_SOURCE)
     print(f"    inflate_scores result: {inflate_result}")
 
+    rounds_accepted = len(inflate_result["tx_hashes"])
+    rounds_blocked  = ROUNDS - rounds_accepted
+    print(f"    Rounds accepted by contract: {rounds_accepted}/{ROUNDS}")
+    print(f"    Rounds blocked by defense:   {rounds_blocked}/{ROUNDS}")
+
     # Step 3 — snapshot scores after attack
     scores_after = attacker.get_current_scores()
     print(f"    Scores AFTER:  {scores_after}")
@@ -209,6 +267,8 @@ def main():
         "scores_before":  scores_before,
         "inflate_result": inflate_result,
         "scores_after":   scores_after,
+        "rounds_accepted": rounds_accepted,
+        "rounds_blocked":  rounds_blocked,
     }
 
     # Give blockchain time to mine
@@ -225,17 +285,23 @@ def main():
 
     # 6. Save full log
     report = {
-        "attack":           "ssm_score",
+        "attack":       "ssm_score_key_forgery",
+        "threat_model": "control-plane / orchestrator-key-compromise -- "
+                         "NOT a lone malicious data source (see "
+                         "ssm_score_attack.py module docstring and "
+                         ".claude/ssm_grounding_farming_plan.md §7). "
+                         "Secondary finding; Grounding-Farming is flagship.",
         "timestamp":        timestamp,
         "config": {
-            "target_source":    TARGET_SOURCE,
-            "blockchain_url":   BLOCKCHAIN_URL,
-            "llm_service_url":  LLM_SERVICE_URL,
-            "amplify":          AMPLIFY,
-            "rounds":           ROUNDS,
-            "eval_sample_size": len(eval_data),
-            "random_seed":      RANDOM_SEED,
-            "eval_dataset":     "rajpurkar/squad",
+            "target_source":      TARGET_SOURCE,
+            "blockchain_url":     BLOCKCHAIN_URL,
+            "llm_service_url":    LLM_SERVICE_URL,
+            "amplify":            AMPLIFY,
+            "rounds":             ROUNDS,
+            "inter_round_delay":  INTER_ROUND_DELAY,
+            "eval_sample_size":   len(eval_data),
+            "random_seed":        RANDOM_SEED,
+            "eval_dataset":       "rajpurkar/squad",
         },
         "baseline":      baseline,
         "post_attack":   post,

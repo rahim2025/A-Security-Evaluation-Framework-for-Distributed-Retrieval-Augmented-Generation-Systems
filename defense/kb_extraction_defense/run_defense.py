@@ -22,6 +22,7 @@ import datetime
 import json
 import os
 import sys
+import time
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.abspath(os.path.join(_HERE, "..", ".."))
@@ -39,6 +40,44 @@ from defense.kb_extraction_defense.query_diversity_throttle import QueryDiversit
 LOG_DIR = os.path.join(_ROOT, "defense_logs", "kb_extraction_defense")
 
 
+def _probe_with_rate_limit_guard(phase_label: str, cooldown_s: float, max_retries: int,
+                                  make_kwargs, **fixed_probe_kwargs):
+    """Runs probe_source(), and if any request in this phase hit the live
+    source's 60/min rate limit (HTTP 429), retries the whole phase after a
+    cooldown instead of silently accepting a result where a rate-limited
+    probe is indistinguishable from a genuinely-blocked or genuinely-missed
+    one. Aborts rather than returning a contaminated result if the phase
+    still isn't clean after `max_retries` cooldown-and-retry attempts (see
+    problems/kb_extraction_gaps.md #6).
+
+    make_kwargs: no-arg callable returning any per-attempt probe_source()
+    kwargs that carry state across calls (e.g. a fresh QueryDiversityThrottle
+    -bound query_gate). Called once per attempt so a retry starts that state
+    clean instead of a stale throttle/gate from the rate-limited attempt
+    leaking into the retry's query count."""
+    for attempt in range(max_retries + 1):
+        probe_kwargs = {**fixed_probe_kwargs, **make_kwargs()}
+        result = probe_source(**probe_kwargs)
+        rate_limited = result.get("rate_limited_count", 0)
+        if not rate_limited:
+            return result
+        if attempt < max_retries:
+            print(f"  [!] {phase_label}: {rate_limited} request(s) hit the rate limit (HTTP 429) -- "
+                  f"waiting {cooldown_s:.0f}s for the source's rate-limit window to clear, then "
+                  f"retrying this phase (attempt {attempt + 1}/{max_retries})...")
+            time.sleep(cooldown_s)
+        else:
+            raise RuntimeError(
+                f"{phase_label}: still rate-limited ({rate_limited} request(s)) after {max_retries} "
+                "retries. Refusing to report a contaminated extraction_rate/reduction number -- a "
+                "rate-limited probe looks identical to a correctly-blocked or genuinely-missed one. "
+                "This is usually caused by running this script concurrently or back-to-back with "
+                "another live evaluation (e.g. the DDoS flood suite) against the same shared source. "
+                "Serialize live evaluations against this source and re-run."
+            )
+    return result  # unreachable
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="KB extraction attack vs. query-diversity-throttle defense")
     p.add_argument("--source_index", type=int, default=1, choices=[0, 1, 2],
@@ -52,6 +91,10 @@ def main() -> None:
     p.add_argument("--max_topics_per_window", type=int, default=12)
     p.add_argument("--min_queries_before_check", type=int, default=15)
     p.add_argument("--cooldown_queries", type=int, default=20)
+    p.add_argument("--rate_limit_cooldown_s", type=float, default=65.0,
+                    help="seconds to wait and retry a phase if it hits the live source's 60/min rate "
+                         "limit, before aborting rather than reporting a contaminated result")
+    p.add_argument("--rate_limit_max_retries", type=int, default=1)
     args = p.parse_args()
 
     kwargs = {"source_idx": args.source_index}
@@ -63,38 +106,61 @@ def main() -> None:
           f"ground truth: {len(ground_truth_contexts)} docs, {len(set(context_to_title.values()))} topics\n")
 
     print("=== ATTACK ONLY (no defense) ===")
-    attack_only = probe_source(url, probes, k=TOP_K, authenticated=True,
-                                ground_truth_contexts=ground_truth_contexts,
-                                context_to_title=context_to_title)
+    static_kwargs = dict(base_url=url, questions=probes, k=TOP_K, authenticated=True,
+                         ground_truth_contexts=ground_truth_contexts, context_to_title=context_to_title)
+    attack_only = _probe_with_rate_limit_guard(
+        "attack_only", args.rate_limit_cooldown_s, args.rate_limit_max_retries,
+        make_kwargs=lambda: {}, **static_kwargs)
     print(f"  extraction_rate={attack_only.get('extraction_rate', 0):.3f}  "
           f"extraction_accuracy={attack_only.get('extraction_accuracy', 0):.3f}  "
           f"topic_coverage={attack_only.get('topic_coverage', 0):.3f}  "
           f"docs_extracted={attack_only.get('docs_extracted', 0)}")
 
     print("\n=== ATTACK + DEFENSE (query-diversity throttle) ===")
-    throttle = QueryDiversityThrottle(
-        window_size=args.window_size,
-        max_topics_per_window=args.max_topics_per_window,
-        min_queries_before_check=args.min_queries_before_check,
-        cooldown_queries=args.cooldown_queries,
-    )
+    # Rebuilt fresh on every attempt (including retries) so a rate-limited
+    # attempt's partial query counts never leak into the throttle's window
+    # for the retry -- the throttle is stateful across calls, unlike
+    # attack_only's stateless probe_source() (see problems/kb_extraction_gaps.md #6).
+    last_throttle = {}
 
-    def gate(query_text: str) -> bool:
-        topic = qa_by_question.get(query_text, {}).get("title")
-        allowed, _reason = throttle.check_and_record("attacker_peer", query_text, topic)
-        return allowed
+    def make_defended_kwargs():
+        throttle = QueryDiversityThrottle(
+            window_size=args.window_size,
+            max_topics_per_window=args.max_topics_per_window,
+            min_queries_before_check=args.min_queries_before_check,
+            cooldown_queries=args.cooldown_queries,
+        )
+        last_throttle["throttle"] = throttle
 
-    attack_defended = probe_source(url, probes, k=TOP_K, authenticated=True,
-                                    ground_truth_contexts=ground_truth_contexts,
-                                    context_to_title=context_to_title, query_gate=gate)
+        def gate(query_text: str) -> bool:
+            topic = qa_by_question.get(query_text, {}).get("title")
+            allowed, _reason = throttle.check_and_record("attacker_peer", query_text, topic)
+            return allowed
+
+        return {"query_gate": gate}
+
+    attack_defended = _probe_with_rate_limit_guard(
+        "attack_plus_defense", args.rate_limit_cooldown_s, args.rate_limit_max_retries,
+        make_kwargs=make_defended_kwargs, **static_kwargs)
     print(f"  extraction_rate={attack_defended.get('extraction_rate', 0):.3f}  "
           f"extraction_accuracy={attack_defended.get('extraction_accuracy', 0):.3f}  "
           f"topic_coverage={attack_defended.get('topic_coverage', 0):.3f}  "
           f"docs_extracted={attack_defended.get('docs_extracted', 0)}  "
           f"blocked={attack_defended.get('blocked_count', 0)}/{len(probes)}")
 
-    throttle_stats = throttle.get_stats()
+    throttle_stats = last_throttle["throttle"].get_stats()
     print(f"\n  throttle stats: {throttle_stats}")
+
+    rl_only = attack_only.get("rate_limited_count", 0)
+    rl_defended = attack_defended.get("rate_limited_count", 0)
+    if rl_only or rl_defended:
+        print(f"\n  [!] {rl_only + rl_defended} request(s) hit the live source's rate limit (HTTP 429) "
+              "during this run -- extraction_rate above is not fully trustworthy as a defense-effect "
+              "measurement, since a rate-limited probe looks identical to a correctly-blocked or "
+              "genuinely-missed one. This is usually caused by running this script back-to-back with "
+              "another live evaluation (e.g. the DDoS flood suite) against the same shared "
+              "60-per-minute-per-IP budget on the same data source -- wait for the rate-limit window "
+              "to clear (or use a source not just flooded) and re-run.")
 
     n_probes = len(probes)
     reduction = {

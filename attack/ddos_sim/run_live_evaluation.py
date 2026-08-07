@@ -189,6 +189,10 @@ def main() -> None:
     p.add_argument("--severities", nargs="+", default=["low", "mid", "high"], choices=list(SEVERITY_TIERS))
     p.add_argument("--flood_ramp_s", type=float, default=1.0,
                     help="seconds to let flood workers ramp up before the real evaluation queries start")
+    p.add_argument("--tier_cooldown_s", type=float, default=60.0,
+                    help="seconds to wait after a tier's flood stops before the next tier starts, so the "
+                         "60/min rate-limit bucket and any queued load drain instead of carrying over "
+                         "into the next tier's baseline/attack measurement")
     args = p.parse_args()
 
     print("Loading PubMedQA yes/no/maybe questions matched against the loaded corpus...")
@@ -203,16 +207,28 @@ def main() -> None:
         print("      Start them with:  docker compose up -d   (repo root)\n")
         sys.exit(1)
 
-    print("\n=== BASELINE (no attack) ===")
-    baseline_agg, baseline_per_q = run_phase(qa_pairs, "baseline", hop_network)
-    print(f"  successful={baseline_agg['successful_queries']} failed={baseline_agg['failed_queries']} "
-          f"f1={baseline_agg['f1']:.3f} avail_hit={baseline_agg['avg_query_hit']:.3f}")
-
     results: List[Dict[str, Any]] = []
-    detail: Dict[str, Any] = {"baseline_per_question": baseline_per_q, "severities": {}}
+    detail: Dict[str, Any] = {"severities": {}}
 
-    for severity in args.severities:
+    # Each tier gets its own freshly-measured baseline (taken immediately
+    # before that tier's flood starts) and a cooldown wait before it, rather
+    # than reusing one baseline measured before any flooding happened. This
+    # keeps each tier's before/after comparison isolated from cumulative
+    # exhaustion carried over from the previous tier -- otherwise "high"
+    # would be measured on sources already flooded twice in immediate
+    # succession beforehand (see problems/ddos_attack_gaps.md #2).
+    for i, severity in enumerate(args.severities):
         tier = SEVERITY_TIERS[severity]
+        if i > 0:
+            print(f"\n  [+] Cooling down {args.tier_cooldown_s:.0f}s before the '{severity}' tier "
+                  f"(lets the rate-limit bucket and prior flood's load drain)...")
+            time.sleep(args.tier_cooldown_s)
+
+        print(f"\n=== BASELINE ({severity}, no attack) ===")
+        baseline_agg, baseline_per_q = run_phase(qa_pairs, "baseline", hop_network)
+        print(f"  successful={baseline_agg['successful_queries']} failed={baseline_agg['failed_queries']} "
+              f"f1={baseline_agg['f1']:.3f} avail_hit={baseline_agg['avg_query_hit']:.3f}")
+
         print(f"\n=== POST-ATTACK: {severity} (flood {tier['num_sources']}/3 source(s) "
               f"x {tier['workers_per_source']} workers/source) ===")
         flood = TrafficFlood(DEFAULT_SOURCE_URLS, workers_per_source=tier["workers_per_source"])
@@ -234,6 +250,7 @@ def main() -> None:
             "attack_type": f"pubmedqa_{severity}_ddos_comparison",
         })
         detail["severities"][severity] = {"flood_targets": targets, "flood_stats": flood_stats,
+                                           "baseline_per_question": baseline_per_q,
                                            "post_attack_per_question": post_per_q}
 
     log_dir = os.path.join(_ROOT, "attack_logs", "ddos_sim")

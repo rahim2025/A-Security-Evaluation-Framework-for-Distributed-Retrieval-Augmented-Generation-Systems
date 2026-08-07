@@ -10,7 +10,7 @@
 
 ### Fix status matrix
 
-Five implementation bugs were found and fixed during this analysis (details in §12.4, §12.6, §12.7, §12.8, §12.9). **Live-deployment validation of §12.4/§12.6/§12.7 was attempted, failed, was root-caused to a rate-limit confounder, fixed, and then successfully re-run** — full detail in §12.9 (diagnosis and fix) and §12.10 (the actual re-validation runs and their numbers). Three live sweeps (`n=30`, seed 42, single trial each — still small-sample) all passed the three-part acceptance test (`rate_limited_total==0`, `error_total==0`, flat attack-only `hit_rate`) and produced direct live evidence for all three fixes: Phase-2 recovering 30/30 live drops (§12.4), the blacklist cap capping correctly at `1/3` peers (§12.6), and the binomial detector catching a real stealthy attacker on live HTTP traffic (§12.7).
+Six implementation bugs were found and fixed during this analysis (details in §12.4, §12.6, §12.7, §12.8, §12.9, §12.11). **Live-deployment validation of §12.4/§12.6/§12.7 was attempted, failed, was root-caused to a rate-limit confounder, fixed, and then successfully re-run** — full detail in §12.9 (diagnosis and fix) and §12.10 (the actual re-validation runs and their numbers). Three live sweeps (`n=30`, seed 42, single trial each — still small-sample) all passed the three-part acceptance test (`rate_limited_total==0`, `error_total==0`, flat attack-only `hit_rate`) and produced direct live evidence for all three fixes: Phase-2 recovering 30/30 live drops (§12.4), the blacklist cap capping correctly at `1/3` peers (§12.6), and the binomial detector catching a real stealthy attacker on live HTTP traffic (§12.7). §12.12 adds a larger, 3-seed live validation (`n_questions=200`, seeds 0/42/123) of the black-hole/`high_connectivity`/ratio-0.3 configuration specifically — the configuration Chapter 5's live-validation table reports — bringing that one number from single-seed to seed-averaged. §12.13 adds a second severity level on the same deployment (`ratio=0.67`, 2 of 3 sources compromised, same 3 seeds): recovery holds at `hit_rate=1.000` there too, flat across seeds, and the section corrects §12.10's attribution of that recovery to "Phase-2" — on this attack-only path (no defense attached), it is ordinary BFS hop continuation, not the defense module's redundant-probe mechanism.
 
 | Fix | Mock-validated | Live-validated | At parity with sibling module |
 |---|:---:|:---:|:---:|
@@ -19,8 +19,9 @@ Five implementation bugs were found and fixed during this analysis (details in �
 | §12.7 Stealthy attack + `detection_mode: binomial` | ✅ (small-sample, 5 seeds) | ✅ (§12.10, Run 3) — real `drop_rate=stealthy` traffic against live containers, binomial detector caught it (`blacklisted=1`, `recovery=+0.400`), still small-sample (`n=30`, 1 seed) | ❌ — growing-window test, not sibling's true sliding window; measurable false-positive gap (mock-mode finding, unchanged) |
 | §12.8 Live-mode question loader silently using wrong/no dataset | ✅ (0/500 → 500/500 corpus matches) | ✅ — confirmed working live; also directly disproved by evidence as the cause of §12.9's anomalies | n/a (no sibling equivalent) |
 | §12.9 Live sweeps silently rate-limited (HTTP 429 coerced into generic misses) | n/a (live-only) | ✅ — root cause confirmed directly (`60 per 1 minute` server response reproduced), including confirming the earlier "run 1 staircase" was the *same* confound, not partial validation; client throttle+retry verified end-to-end with a local mock server; error tracking broadened beyond 429s to a general `error_total` (verified with a mock 500); server-side limit now overridable via `RATE_LIMIT_DEFAULT` for test deployments; **the three-part acceptance test was then actually run three times (§12.10) and passed all three times** | n/a (no sibling equivalent) |
+| §12.11 `MockPeer` shared-RNG path-dependence bug (mock-only) | ✅ — §8's mock sweeps re-run post-fix, conclusions unchanged, exact figures shifted ≤3pp | n/a (mock-only bug, no live code path affected) | n/a (no sibling equivalent) |
 
-All §8 figures are additionally `trials=1`, single-seed — see §15. Treat every number in this report as "real and reproducible" (every claim traces to an actual run, not a fabricated figure) but **not** yet as "statistically robust" or "production-validated." The live pipeline's rate-limit confounder is now fixed; §12.4/§12.6/§12.7 still need one clean re-run with it in place before this report can call them live-validated.
+All §8 figures are additionally `trials=1`, single-seed — see §15. Treat every number in this report as "real and reproducible" (every claim traces to an actual run, not a fabricated figure) but **not** yet as "statistically robust" or "production-validated." The live pipeline's rate-limit confounder is now fixed; §12.4/§12.6/§12.7 still need one clean re-run with it in place before this report can call them live-validated. **All §8 mock-mode figures below were regenerated on 2026-07-28 after the §12.11 RNG fix; they supersede the pre-fix numbers from earlier revisions of this report.**
 
 ---
 
@@ -35,8 +36,8 @@ All §8 figures are additionally `trials=1`, single-seed — see §15. Treat eve
 **Overall workflow.** The attack (`SelectiveForwardingAttack`) selects a subset of peers by one of two strategies — uniform random, or degree/on-chain-trust-ranked "high connectivity" — and monkey-patches their query method to always return a silent miss. Queries are then routed through the network via a TTL-bounded breadth-first search (BFS); each visit to a compromised peer burns one hop of the query's budget without yielding an answer. The paired defense (`SelectiveForwardingDefense`) tracks each peer's response rate with an exponential moving average (EMA), auto-blacklists peers whose response rate collapses, lets the router bypass blacklisted peers for free, and — critically — gives the router a small, *bounded* number of extra "redundant probe" attempts against untried, trusted peers once the primary hop budget is exhausted.
 
 **Main findings (from real, locally-reproduced data — see §8):**
-- On a 20-peer network with a comfortable hop budget (`query_ttl=6`), compromising 50% of peers via degree-based targeting collapses `hit_rate` from a baseline of **0.98 to 0.54** — a 45% relative drop — while the defense recovers it to **0.92** (recovery **+0.38**).
-- Under a deliberately tight hop budget (`query_ttl=1`, 8 peers), the *undefended* attack is far more devastating: baseline `hit_rate` itself is only **0.34** (most queries exhaust their 1-hop budget even with no attacker present), and a single compromised peer drives it to **0.18–0.29**. The defense's bounded "redundant probe" mechanism recovers this to **0.77–0.82** — a **+0.5 to +0.6** absolute recovery — demonstrating that reputation-informed retry, not routing intelligence alone, is what makes recovery possible under a tight hop budget.
+- On a 20-peer network with a comfortable hop budget (`query_ttl=6`), compromising 50% of peers via degree-based targeting collapses `hit_rate` from a baseline of **0.97 to 0.52** — a 46% relative drop — while the defense recovers it to **0.91** (recovery **+0.39**).
+- Under a deliberately tight hop budget (`query_ttl=1`, 8 peers), the *undefended* attack is far more devastating: baseline `hit_rate` itself is only **0.37** (most queries exhaust their 1-hop budget even with no attacker present), and a single compromised peer drives it to **0.15–0.30**. The defense's bounded "redundant probe" mechanism recovers this to **0.69–0.79** — a **+0.48 to +0.55** absolute recovery — demonstrating that reputation-informed retry, not routing intelligence alone, is what makes recovery possible under a tight hop budget.
 - **The stealthy case (10-30% drop, not a black-hole) is where "high-stealth" is actually earned.** A compromised peer dropping only a fraction of queries is what makes this attack genuinely hard to catch — and the default `threshold`-based detector caught **0 of 2** such attackers in every one of 5 tested seeds, a mathematical blind spot, not a tuning gap. The statistically-principled `binomial` detection mode (§12.7) closes most of that gap (**1-2 of 2** caught, seed-dependent) but with a measured, non-zero false-positive cost — see the fix status matrix above.
 - **Security impact:** SFA is a low-cost, high-stealth attack — the compromised peer is indistinguishable from an honest peer with no relevant knowledge at the point of failure. It requires no cryptographic break, no model access, and no detectable protocol violation; only *statistical* behavioral evidence (accumulated over many queries) can unmask it, and even then, only with a detector whose baseline assumptions have been correctly calibrated (§12.7) and whose false-positive rate is understood (§12.7, §15).
 
@@ -352,7 +353,7 @@ flowchart TD
 
 **Range:** `[0, 1]`. **Good:** close to `1.0` (the system remains available under attack). **Bad:** close to `0.0` (the attack has achieved denial of service).
 
-**Example (from real data, §8.1):** `high_connectivity` at `ratio=0.5` on a 20-peer network drops `hit_rate` from a `0.98` baseline to `0.54`.
+**Example (from real data, §8.1):** `high_connectivity` at `ratio=0.5` on a 20-peer network drops `hit_rate` from a `0.97` baseline to `0.52`.
 
 **Security implications:** this is the attacker's primary objective function — everything else in the attack (target selection, ratio) is optimizing this metric downward.
 
@@ -402,16 +403,18 @@ Two representative evaluations were run against the live codebase in this sessio
 
 ### 8.1 Standard configuration: 20 peers, `query_ttl=6`, 100 queries, seed 0
 
-File: `attack_logs/selective_forward_sim/attack_2026-07-10_12-23-19_sfa_sim_mock_seed0.json` (attack-only sweep) and `defense_logs/sfa_sim_defense/defense_2026-07-10_12-23-37_sfa_sim_mock_seed0.json` (attack-vs-defense comparison).
+**Regenerated 2026-07-28 after the §12.11 `MockPeer` RNG-independence fix; supersedes the pre-fix figures from earlier revisions of this report.**
+
+File: `attack_logs/selective_forward_sim/attack_2026-07-28_13-11-44_sfa_sim_mock_seed0.json` (attack-only sweep) and `defense_logs/sfa_sim_defense/defense_2026-07-28_13-11-54_sfa_sim_mock_seed0.json` (attack-vs-defense comparison).
 
 **Schema (attack log):**
 ```json
 {
   "timestamp": "...", "attack_type": "selective_forwarding_sim",
   "attack_config": { "mode": "mock", "network": {...}, "simulation": {...} },
-  "results": [ { "strategy": "...", "ratio": 0.0, "hit_rate": 0.98, "avg_hops_per_query": 2.35,
-                 "ttl_exhaustion_rate": 0.02, "dropped_queries": 0, "total_queries": 100,
-                 "answered_queries": 98, "exhausted_queries": 2 }, ... ]
+  "results": [ { "strategy": "...", "ratio": 0.0, "hit_rate": 0.97, "avg_hops_per_query": 2.55,
+                 "ttl_exhaustion_rate": 0.03, "dropped_queries": 0, "total_queries": 100,
+                 "answered_queries": 97, "exhausted_queries": 3 }, ... ]
 }
 ```
 
@@ -419,70 +422,72 @@ File: `attack_logs/selective_forward_sim/attack_2026-07-10_12-23-19_sfa_sim_mock
 
 | Strategy | Ratio | Compromised | hit_rate | avg_hops | ttl_exhaustion_rate | dropped_queries |
 |---|---|---|---|---|---|---|
-| baseline | 0.0 | 0 | 0.98 | 2.35 | 0.02 | 0 |
-| random | 0.1 | 2 | 0.98 | 2.56 | 0.02 | 21 |
-| random | 0.3 | 6 | 0.91 | 3.13 | 0.09 | 75 |
-| random | 0.5 | 10 | 0.85 | 3.72 | 0.15 | 160 |
-| **high_connectivity** | 0.1 | 2 | 0.90 | 2.81 | 0.10 | 48 |
-| **high_connectivity** | 0.3 | 6 | 0.72 | 3.69 | 0.28 | 191 |
-| **high_connectivity** | 0.5 | 10 | **0.54** | 4.41 | 0.46 | 311 |
+| baseline | 0.0 | 0 | 0.97 | 2.55 | 0.03 | 0 |
+| random | 0.1 | 2 | 0.91 | 2.60 | 0.09 | 17 |
+| random | 0.3 | 6 | 0.93 | 3.07 | 0.07 | 75 |
+| random | 0.5 | 10 | 0.87 | 3.60 | 0.13 | 158 |
+| **high_connectivity** | 0.1 | 2 | 0.90 | 2.81 | 0.10 | 51 |
+| **high_connectivity** | 0.3 | 6 | 0.70 | 3.65 | 0.30 | 185 |
+| **high_connectivity** | 0.5 | 10 | **0.52** | 4.32 | 0.48 | 299 |
 
 **Attack-vs-defense comparison (`defense` config = default: `blacklist_threshold=0.05`, `min_queries_before_blacklist=15`, `redundancy_k=2`):**
 
 | Strategy | Ratio | attack_only hit_rate | attack_plus_defense hit_rate | recovery | blacklisted | bypasses | redundant_probes | redundant_hits |
 |---|---|---|---|---|---|---|---|---|
-| random | 0.1 | 0.98 | 0.98 | +0.00 | 1 | 1 | 5 | 1 |
-| random | 0.5 | 0.85 | 0.96 | +0.11 | 3 | 56 | 10 | 2 |
-| high_connectivity | 0.1 | 0.90 | 0.98 | +0.08 | 2 | 13 | 8 | 3 |
-| high_connectivity | 0.3 | 0.72 | 0.96 | +0.24 | 6 | 93 | 20 | 10 |
-| **high_connectivity** | **0.5** | **0.54** | **0.92** | **+0.38** | 10 | 265 | 39 | 17 |
+| random | 0.1 | 0.91 | 0.98 | +0.07 | 0 | 0 | 13 | 6 |
+| random | 0.5 | 0.87 | 0.97 | +0.10 | 3 | 60 | 12 | 4 |
+| high_connectivity | 0.1 | 0.90 | 0.99 | +0.09 | 2 | 25 | 12 | 5 |
+| high_connectivity | 0.3 | 0.70 | 0.92 | +0.22 | 6 | 111 | 26 | 8 |
+| **high_connectivity** | **0.5** | **0.52** | **0.91** | **+0.39** | 10 | 238 | 38 | 12 |
 
 **Performance summary:** with a comfortable hop budget, the attack scales predictably — `high_connectivity` degrades `hit_rate` roughly linearly with `attack_ratio`, always outperforming `random` at the same ratio (confirming the degree-targeting theory of §2.4). The defense recovers most of the loss at every tested ratio, and recovery *grows* with attack severity — the more damage `high_connectivity` does undefended, the more evidence accumulates per unit time to blacklist those (high-traffic) peers, so the defense's advantage compounds exactly where it's needed most.
 
-**Strength observed:** at `ratio=0.5, high_connectivity` — the worst undefended scenario tested — the defense still recovers to `0.92`, just 6 points below the undefended baseline of `0.98`.
+**Strength observed:** at `ratio=0.5, high_connectivity` — the worst undefended scenario tested — the defense still recovers to `0.91`, just 6 points below the undefended baseline of `0.97`.
 
-**Weakness observed:** `recovery` for `random` at low ratios (`0.1`) is `+0.00` — with only 1-2 compromised peers scattered randomly across 20, undefended `hit_rate` is already `0.98`, leaving essentially no room for the defense to improve on (a ceiling effect, not a defense failure).
+**Weakness observed:** `recovery` for `random` at low ratios (`0.1`) stays small (`+0.07`) — with only 1-2 compromised peers scattered randomly across 20, undefended `hit_rate` is already `0.91`, leaving comparatively little room for the defense to improve on (a ceiling effect, not a defense failure).
 
 ### 8.2 Hop-limited configuration: 8 peers, `query_ttl=1`, 100 queries, seed 1
 
-File: `defense_logs/sfa_sim_defense/defense_2026-07-10_12-23-40_sfa_sim_mock_seed1.json`
+**Regenerated 2026-07-28 after the §12.11 `MockPeer` RNG-independence fix; supersedes the pre-fix figures from earlier revisions of this report.**
+
+File: `defense_logs/sfa_sim_defense/defense_2026-07-28_13-11-58_sfa_sim_mock_seed1.json`
 
 | Strategy | Ratio | attack_only hit_rate | attack_plus_defense hit_rate | recovery | blacklisted | redundant_probes | redundant_hits |
 |---|---|---|---|---|---|---|---|
-| baseline | 0.0 | 0.34 | — | — | — | — | — |
-| random | 0.1 | 0.29 | 0.82 | **+0.53** | 0 | 88 | 42 |
-| random | 0.5 | 0.18 | 0.77 | **+0.59** | 1 | 110 | 48 |
-| high_connectivity | 0.1 | 0.27 | 0.80 | **+0.53** | 0 | 87 | 37 |
-| **high_connectivity** | **0.5** | **0.18** | **0.79** | **+0.61** | 3 | 119 | 50 |
+| baseline | 0.0 | 0.37 | — | — | — | — | — |
+| random | 0.1 | 0.30 | 0.78 | **+0.48** | 1 | 113 | 53 |
+| random | 0.5 | 0.19 | 0.74 | **+0.55** | 2 | 137 | 61 |
+| high_connectivity | 0.1 | 0.29 | 0.79 | **+0.50** | 1 | 111 | 51 |
+| **high_connectivity** | **0.5** | **0.15** | **0.69** | **+0.54** | 4 | 133 | 53 |
 
-**Why each value matters here:** the **baseline itself is only `0.34`** with `ttl_exhaustion_rate=0.66` — i.e. two-thirds of queries fail to find an honest peer within a single hop *even with zero attacker present*. This is the "hop budget too tight for the network's own topology" regime described in §2.2. Note `defense_blacklisted=0` for several rows: at low `attack_ratio` (1 compromised peer out of 8), the compromised peer doesn't always sit on the BFS's start path, so it may not accumulate `min_queries_before_blacklist=15` interactions within the 100-query run — yet `recovery` is still large (`+0.53`+). This is the key diagnostic finding of this analysis: **in this regime, recovery comes almost entirely from the bounded redundant-probe fallback (Phase 2), not from blacklisting** — `redundant_probes` is 87-124 per scenario (the primary BFS is failing on nearly every query, triggering Phase 2 nearly every time) while `defense_blacklisted` stays near 0.
+**Why each value matters here:** the **baseline itself is only `0.37`** with `ttl_exhaustion_rate=0.63` — i.e. nearly two-thirds of queries fail to find an honest peer within a single hop *even with zero attacker present*. This is the "hop budget too tight for the network's own topology" regime described in §2.2. Note `defense_blacklisted` stays at 1-2 for several rows: at low `attack_ratio` (1 compromised peer out of 8), the compromised peer doesn't always sit on the BFS's start path, so it may not accumulate `min_queries_before_blacklist=15` interactions within the 100-query run — yet `recovery` is still large (`+0.48`+). This is the key diagnostic finding of this analysis: **in this regime, recovery comes almost entirely from the bounded redundant-probe fallback (Phase 2), not from blacklisting** — `redundant_probes` is 111-137 per scenario (the primary BFS is failing on nearly every query, triggering Phase 2 nearly every time) while `defense_blacklisted` stays low (1-4) relative to it.
 
 ---
 
 ## 9. Performance Dashboard
 
-**Standard config (20 peers, ttl=6), worst case: `high_connectivity, ratio=0.5`**
+**Standard config (20 peers, ttl=6), worst case: `high_connectivity, ratio=0.5`** — regenerated 2026-07-28 post-§12.11 fix
 
 ```
-Baseline hit_rate           ████████████████████ 98%  🟢 Excellent
-Attack-only hit_rate        ██████████▊          54%  🔴 Poor (attack succeeded)
-Attack+Defense hit_rate     ██████████████████▍  92%  🟢 Excellent (recovered)
-Recovery                    ███████▌             38 pts 🟢 Strong
+Baseline hit_rate           ███████████████████▍ 97%  🟢 Excellent
+Attack-only hit_rate        ██████████▍          52%  🔴 Poor (attack succeeded)
+Attack+Defense hit_rate     ██████████████████▏  91%  🟢 Excellent (recovered)
+Recovery                    ███████▊             39 pts 🟢 Strong
 
-ttl_exhaustion (attack-only)███████████▌         46%  🔴 High
-ttl_exhaustion (defended)   █▌                    8%  🟢 Low
+ttl_exhaustion (attack-only)█████████▌           48%  🔴 High
+ttl_exhaustion (defended)   █▊                    9%  🟢 Low
 ```
 
-**Hop-limited config (8 peers, ttl=1), worst case: `high_connectivity, ratio=0.5`**
+**Hop-limited config (8 peers, ttl=1), worst case: `high_connectivity, ratio=0.5`** — regenerated 2026-07-28 post-§12.11 fix
 
 ```
-Baseline hit_rate           ██████▊              34%  🟡 Moderate (already fragile)
-Attack-only hit_rate        ███▌                 18%  🔴 Poor
-Attack+Defense hit_rate     ███████████████▊     79%  🟢 Excellent (recovered)
-Recovery                    ████████████▏        61 pts 🟢 Very strong
+Baseline hit_rate           ███████▍             37%  🟡 Moderate (already fragile)
+Attack-only hit_rate        ███                  15%  🔴 Poor
+Attack+Defense hit_rate     █████████████▊       69%  🟢 Good (recovered)
+Recovery                    ██████████▊          54 pts 🟢 Very strong
 
-Redundant probes fired      119 / 100 queries         🟢 Actively engaging
-Redundant probe hit rate    42%  (50 / 119)            🟡 Moderate efficiency
+Redundant probes fired      133 / 100 queries         🟢 Actively engaging
+Redundant probe hit rate    40%  (53 / 133)            🟡 Moderate efficiency
 ```
 
 **Legend:** 🟢 hit_rate ≥ 0.85 or recovery ≥ 0.30 · 🟡 hit_rate 0.5–0.85 or partial recovery · 🔴 hit_rate < 0.5 or recovery ≤ 0
@@ -522,8 +527,9 @@ python attack/selective_forward_sim/run_attack.py --mode mock --num_queries 100 
 python defense/sfa_sim_defense/run_defense.py --mode mock --num_queries 100 --seed 0
 python defense/sfa_sim_defense/run_defense.py --mode mock --max_ttl 1 --num_peers 8 --num_queries 100 --seed 1
 ```
+**Note:** these commands were re-run on 2026-07-28 after the §12.11 `MockPeer` RNG-independence fix; "exactly" reproducible refers to the current code — the pre-fix numbers from earlier revisions of this report are no longer reproducible from `network_sim.py`'s current state and should not be cited going forward.
 
-**Reproducibility:** all randomness (target selection, BFS start peer, MockPeer hit outcomes) flows through explicitly-seeded `random.Random`/`numpy` generators — no unseeded global RNG state is used in the attack/defense/network classes.
+**Reproducibility:** all randomness (target selection, BFS start peer, MockPeer hit outcomes) flows through explicitly-seeded `random.Random`/`numpy` generators — no unseeded global RNG state is used in the attack/defense/network classes. Seeded is not the same as independent, though: until the §12.11 fix, every `MockPeer` drew from one shared seeded stream, so a peer's outcome depended on how many draws other peers had already consumed that run — reproducible run-to-run, but not a clean per-peer Bernoulli process. Each peer now has its own independently-seeded stream (§12.11).
 
 ---
 
@@ -531,11 +537,11 @@ python defense/sfa_sim_defense/run_defense.py --mode mock --max_ttl 1 --num_peer
 
 ### 12.1 Why `high_connectivity` consistently outperforms `random`
 
-Confirmed empirically at every tested ratio in §8.1 (e.g., `ratio=0.5`: `0.54` vs `0.85` `hit_rate`). This matches the graph-theoretic prediction of §2.4 — hub nodes absorb disproportionate BFS traffic, so compromising them yields more `dropped_queries` per compromised peer (`311` vs `160` at `ratio=0.5`).
+Confirmed empirically at every tested ratio in §8.1 (e.g., `ratio=0.5`: `0.52` vs `0.87` `hit_rate`). This matches the graph-theoretic prediction of §2.4 — hub nodes absorb disproportionate BFS traffic, so compromising them yields more `dropped_queries` per compromised peer (`299` vs `158` at `ratio=0.5`).
 
 ### 12.2 Why baseline `hit_rate` itself degrades under a tight TTL
 
-The `query_ttl=1` experiment's baseline (`0.34`) demonstrates that **TTL exhaustion is a pre-existing structural property of the network topology and peer knowledge distribution**, not solely an attack effect — with `peer_hit_prob=0.4` per peer and only 1 hop available, roughly `1 − 0.4 = 0.6` of queries are expected to miss on the first (and only) peer tried, closely matching the observed `0.66` exhaustion rate. This is an important interpretive caveat: **not all `hit_rate` loss under a tight TTL is attack-attributable.**
+The `query_ttl=1` experiment's baseline (`0.37`) demonstrates that **TTL exhaustion is a pre-existing structural property of the network topology and peer knowledge distribution**, not solely an attack effect — with `peer_hit_prob=0.4` per peer and only 1 hop available, roughly `1 − 0.4 = 0.6` of queries are expected to miss on the first (and only) peer tried, closely matching the observed `0.63` exhaustion rate. This is an important interpretive caveat: **not all `hit_rate` loss under a tight TTL is attack-attributable.**
 
 ### 12.3 The redundancy mechanism as the dominant recovery driver under tight TTL
 
@@ -678,6 +684,75 @@ This is the run that actually matters for §12.7: `attack=0.600` (a realized ~40
 **All three runs independently satisfy the three-part acceptance test from §12.9** — `rate_limited_total==0` and `error_total==0` in every run, and the attack-only sweep's `hit_rate` flat within each strategy. Note that in Runs 2 and 3, the defense-side `recovery`/`redundant_hits` numbers also came back flat across ratios — §12.9 says this is *not* guaranteed for defense numbers (they depend on stochastic evidence accumulation) and shouldn't be used as a pass/fail check the way attack-only flatness is. Here it happened anyway because both `drop_rate` settings used in these runs are effectively single fixed draws for the whole run (deterministic `1.0`, or one `Uniform(0.10,0.30)` draw per compromised peer held constant across all 30 queries and all 5 ratios) combined with deterministic peer targeting — not because the defense mechanism is itself non-stochastic in general. Don't read this run's flat defense numbers as evidence the §12.9 caveat was wrong; it's a property of this specific attack configuration, not a general guarantee.
 
 **What remains open after this validation:** (1) sample size is still small (`n=30`, 1 trial, 1 seed) — the qualitative mechanism is now live-confirmed, the *statistically powered* claim from §15 (`n_questions 200+`, `trials 5+`, multiple seeds) still is not; (2) `blacklisted=1` in every run means the `max_blacklist_fraction` cap's *activation under real over-exclusion pressure* (the specific failure mode §12.6 was built to prevent — a low honest-baseline response rate driving mass blacklisting) has still only been demonstrated in the mock 8-peer/`peer_hit_prob=0.03` reproduction (§12.6's own table), not live — this 3-peer deployment's honest peers respond too reliably (baseline `hit_rate=1.000`) to ever approach that pathological regime; (3) this remains a single deployment topology (3 fully-connected peers) — the redundancy-masking behavior documented throughout §12 (e.g. `high_connectivity` at `max_ttl=3` showing no attack effect at all) means these results characterize this deployment's specific hop-budget-dependent behavior, not a topology-independent guarantee.
+
+### 12.11 A sixth bug found and fixed: `MockPeer` instances shared one RNG stream, making mock-mode results path-dependent (mock-only)
+
+A follow-up review of this module (prompted by a question about whether this report still describes the current code) found that `MockRAGNetwork.__init__` constructed every `MockPeer` with the *same* `random.Random(seed)` object — the network's own `self._rng` — passed by reference, not one stream per peer:
+
+```python
+self._rng = random.Random(seed)
+self.peers = [MockPeer(pid, peer_hit_prob, self._rng) for pid in range(num_peers)]
+```
+
+Because `MockPeer.query()` draws from this shared stream (`self._rng.random() < self.hit_prob`), the *number of draws already consumed* when a given peer is finally queried depends on how many other peers were queried — and how many of *their* calls short-circuited before drawing (e.g. `SelectiveForwardingAttack`'s `_silent_drop` returns immediately without touching the RNG at all) — earlier in that same BFS traversal. An attacked run and its baseline counterpart therefore didn't just differ by the attack's own effect: they diverged in *how many stream draws had been consumed by the time any given honest peer was reached*, shifting that peer's own Bernoulli outcome unpredictably. This is a path-dependence artifact of the harness, not a property of the attack or defense being measured — and it directly undermines a controlled before/after comparison, which is the entire evaluation design this report relies on (§6).
+
+**Fix:** each peer now gets its own independently-seeded stream, deterministically derived from the network seed and peer id, so no peer's draw sequence depends on any other peer's call history:
+
+```python
+self.peers = [MockPeer(pid, peer_hit_prob, random.Random(seed * 1_000_003 + pid)) for pid in range(num_peers)]
+```
+
+**Verification:** all three of this report's own §11 reproduction commands were re-run against the fixed code (§8.1, §8.2). The qualitative findings are unchanged — `high_connectivity` still outperforms `random` at every ratio, the defense still recovers most lost availability under a comfortable hop budget and relies on Phase-2 redundant probing (not blacklisting) to recover under a tight one — and the magnitude shifts are small: `high_connectivity, ratio=0.5` standard-config `hit_rate` moved `0.54→0.52` (attack-only) and `0.92→0.91` (defended); the hop-limited baseline moved `0.34→0.37`. All §8 figures in this revision are the post-fix numbers. This is consistent with the bug being a *within-run noise* source rather than a *systematic bias* in one direction — expected, since which peers "absorb" the consumed-draws effect was itself essentially random from run to run, not concentrated on the attacked peers specifically.
+
+**Scope:** mock-mode only (`network_sim.py`'s `MockRAGNetwork`/`MockPeer`). `live_network.py`'s `LiveRAGNetwork` makes real HTTP calls for peer outcomes and has no synthetic RNG to share, so none of the §12.9/§12.10 live-validation findings are affected by this fix.
+
+### 12.12 Larger-sample live validation, 3 seeds (`n_questions=200`) — the number cited in the thesis chapter
+
+§12.10's three runs (`n=30`, seed 42 only) established that the mechanisms fire correctly live; they were never a statistically-sized sample, and Chapter 5's live-validation table actually draws its numbers from a separate, larger, previously-undocumented run at `n_questions=200`, seed 42 (`attack_2026-07-13_11-48-38_sfa_sim_live_seed42.json`) — that log existed on disk but had no writeup in this report until now. This section closes that gap and extends it to three seeds, per the thesis re-run tracker's requirement that any number reported as final use multiple seeds.
+
+**Command** (identical across seeds, only `--seed` varies):
+```bash
+python attack/selective_forward_sim/run_attack.py --mode live --single \
+    --ratio 0.3 --strategy high_connectivity --n_questions 200 \
+    --min_request_interval_s 1.1 --seed {0,42,123}
+```
+
+| Seed | Log | rate_limited_total | error_total | hit_rate | avg_hops/query | TTL exhaustion | dropped/total |
+|---|---|---|---|---|---|---|---|
+| 0 | `attack_2026-08-04_12-12-15_sfa_sim_live_seed0.json` | 0 | 0 | 1.000 | 2.00 | 0.000 | 200/200 |
+| 42 | `attack_2026-07-13_11-48-38_sfa_sim_live_seed42.json` | 0 | 0 | 1.000 | 2.00 | 0.000 | 200/200 |
+| 123 | `attack_2026-08-04_12-16-19_sfa_sim_live_seed123.json` | 0 | 0 | 1.000 | 2.00 | 0.000 | 200/200 |
+| **mean ± std (n=3)** | | | | **1.000 ± 0.000** | **2.00 ± 0.00** | **0.000 ± 0.000** | **200/200 every seed** |
+
+All three runs pass the §12.9 acceptance test (`rate_limited_total==0`, `error_total==0`, flat `hit_rate` — trivially satisfied here since each run is a single scenario, not a sweep) and all three landed on identical figures. This is expected, not a sign the reruns were uninformative: with `drop_rate=1.0` (black-hole, no RNG draw — every compromised-peer call drops unconditionally) and all three sources tied at `10000.0` on-chain reliability, `select_targets()`'s stable sort deterministically compromises `source_0` regardless of seed (`selective_forwarding_attack.py:92-101`). The seed only changes *which* 200 PubMedQA questions `_live_questions()` samples (`np.random.default_rng(seed)`); it does not change which peer is attacked or how hard. So this 3-seed result demonstrates the Phase-2 redundant-probe recovery (§12.4) is robust to question-content variation on this deployment — a zero-variance finding here is the correct result given the attack's determinism, not a weaker one than a curve would be.
+
+**What this does and does not establish:** it raises the live-validated sample size for this specific configuration (`high_connectivity`, ratio 0.3, black-hole) from `n=30`/1 seed to `n=200`/3 seeds — the number now reportable as final per the thesis tracker. It does **not** add ratio or strategy coverage (still a single scenario per run, matching §12.10 Run 1's configuration) and does not touch the stealthy/binomial-detector path (§12.10 Run 3) or the defense-comparison runs (§12.10 Runs 2-3), which remain `n=30`, seed 42 only.
+
+### 12.13 Second live severity level: 2 of 3 sources compromised (`ratio=0.67`), 3 seeds
+
+§12.12 establishes one severity on this deployment — `num_compromised=1`, since `select_targets()`'s formula (`max(1, int(num_peers * attack_ratio))`, `selective_forwarding_attack.py:80`) resolves to `1` for every ratio from just above `0.0` up to `0.66` on a 3-peer network. Confirmed directly rather than assumed: `int(3*0.66)=1`, `int(3*0.67)=2` (`3*0.67` evaluates to `2.0100000000000002` in Python's binary floating point, safely clear of the `2.0` truncation boundary). So `ratio=0.67` is the only other ratio value that produces a structurally distinct attack on this deployment — every ratio in `[0.1, 0.66]` is a repeat of §12.12, and only `ratio=1.0` would go further (to `num_compromised=3`, a trivial total blackout, not run here). This closes the question of whether Phase-2-style recovery — more precisely, on this attack-only path, *ordinary BFS continuation to the next hop*, since no `SelectiveForwardingDefense` is attached in `run_attack.py`'s live mode and the code's actual Phase-2 redundant-probe block (`live_network.py:322`) is gated on `defense is not None` — survives when only one honest source remains.
+
+**Command** (identical to §12.12 apart from `--ratio`):
+```bash
+python attack/selective_forward_sim/run_attack.py --mode live --single \
+    --ratio 0.67 --strategy high_connectivity --n_questions 200 \
+    --min_request_interval_s 1.1 --seed {0,42,123}
+```
+
+| Seed | Log | num_compromised | compromised sources | rate_limited_total | error_total | hit_rate | avg_hops/query | TTL exhaustion | dropped/total |
+|---|---|---|---|---|---|---|---|---|---|
+| 0 | `attack_2026-08-05_14-03-52_sfa_sim_live_seed0.json` | 2 | source_0, source_20 | 0 | 0 | 1.000 | 3.00 | 0.000 | 400/200 |
+| 42 | `attack_2026-08-05_14-08-02_sfa_sim_live_seed42.json` | 2 | source_0, source_20 | 0 | 0 | 1.000 | 3.00 | 0.000 | 400/200 |
+| 123 | `attack_2026-08-05_14-12-09_sfa_sim_live_seed123.json` | 2 | source_0, source_20 | 0 | 0 | 1.000 | 3.00 | 0.000 | 400/200 |
+| **mean ± std (n=3)** | | | | | | **1.000 ± 0.000** | **3.00 ± 0.00** | **0.000 ± 0.000** | **400/200 every seed** |
+
+All three acceptance checks pass in every run: `num_compromised==2` (confirmed from the JSON, not assumed from the input ratio), `rate_limited_total==0`, `error_total==0`. `dropped_queries=400` per run (`200 questions × 2 compromised peers`, both always visited before the honest peer) is internally consistent with two compromised sources, versus `200` at the one-compromised configuration (§12.12).
+
+**Result: recovery holds at 1.000 with only one honest source remaining — flat across all three seeds, just as §12.12 was.** This was the more likely outcome going in, for a structural reason distinct from §12.12's: `topic_aware_query`'s BFS visits peers in an order sorted by on-chain reliability (`live_network.py:277-281`), which is tied at `10000.0` across all three sources — so the traversal order is identical on every run regardless of seed, and the lone honest peer (`source_100`) is reached deterministically at hop 3, exactly at the `query_ttl=3` boundary, on every single one of the 200 questions in every seed. Combined with `LiveRAGNetwork`'s documented hit definition — "the source returned at least one document" rather than a relevance/confidence gate (`live_network.py:213-217`) — there was no per-query mechanism available for a miss to occur *unless* `source_100`'s retrieval literally returned zero results for some question, which it did not for any of the 600 live queries across the three seeds.
+
+**Reading this against §12.10's language:** §12.10's Run 1 narrative attributes its ratio-0.3 recovery to "the Phase-2 redundant-probe fix." That characterization does not extend to this attack-only path: Phase 2 as implemented is a defense-side mechanism gated on an attached `SelectiveForwardingDefense`, which `run_attack.py`'s live mode never attaches. What actually recovers availability in both §12.12 and this section is ordinary BFS hop continuation — the query simply keeps walking the fully-connected 3-node graph until it reaches a peer that responds. That distinction doesn't weaken either result (both are real, live, on-disk evidence), but the write-up should credit the mechanism correctly: this deployment's availability under selective forwarding is currently protected by graph connectivity and a hop budget wide enough to reach every peer, not by the defense module.
+
+**What remains open:** this is still the full expressible severity range on a 3-peer live deployment (`num_compromised` only takes values `{1, 2, 3}`, and `3` is a trivial 100%-blackout not worth an empirical run). A genuine dose-response curve — where `hit_rate` moves gradually rather than jumping straight from `1.000` to (if it ever would) `0.000` — is a mock-mode question (§8), not one this deployment's topology can answer, no matter how many more seeds are run here.
 
 ---
 

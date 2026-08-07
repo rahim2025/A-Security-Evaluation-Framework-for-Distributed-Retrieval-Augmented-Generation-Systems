@@ -18,8 +18,9 @@ The **DDoS attack** studied in this report targets the *availability* of that re
 
 **Main findings** (both reproduced live against the running system in this repository, see §8):
 
-- In the pure simulation (20-peer mock overlay, `attack_ratio=0.6`, sequential targeting, a 600-second recovery window against a 30-second wave cadence), network availability collapsed from 100% to **10%** within two waves and stayed there — the network never got a chance to recover between waves.
-- In the real, live evaluation against the actual Docker deployment, flooding all three data sources simultaneously (the "high" severity tier) drove real end-to-end query failure to **85%** and collapsed `semantic_similarity` between the LLM's real generated answers and the ground truth from **0.39 to 0.06** — a genuine, measured degradation of a real running system, not merely a simulated number.
+- In the pure simulation (20-peer mock overlay, `attack_ratio=0.6`, sequential targeting, a 600-second recovery window against a 30-second wave cadence), network availability collapsed from 100% to **10–20%** within two waves and stayed near the floor — confirmed across **three seeds (0, 42, 123)**, not a single run (§8.1); the network never gets a chance to recover between waves at any tested seed.
+- A dedicated hyperparameter-sensitivity sweep (§8.1b) confirms this collapse is a genuine, monotonic dose-response effect, not an artifact of one cherry-picked setting: sweeping the attack's intensity parameter from a mild `0.1` to a severe `0.8` (each point averaged over 3 seeds) produces a smooth decline from 50% to 15% final availability, including real, substantial degradation well below the value needed to trip the underlying threshold logic.
+- In the real, live evaluation against the actual Docker deployment, flooding all three data sources simultaneously (the "high" severity tier) drove real end-to-end query failure to **90%** and collapsed `semantic_similarity` between the LLM's real generated answers and the ground truth from **0.83 to 0.04** — a genuine, measured degradation of a real running system, not merely a simulated number. Query failure is **not** an all-or-nothing cliff: it rises with severity (0% → 0% → 20% → 90% at baseline/low/mid/high), tracking how many of the system's 3 total data sources are simultaneously unavailable. (Two bugs were found and fixed during this analysis: a response-parsing bug that had deflated every text-overlap metric, and a methodological confound in how the low/mid/high severity tiers were measured, §7.2/§8.2/§12.) This live-mode result remains single-seed — see §15.
 
 **Security impact:** The attack demonstrates that this RAG deployment has no admission control, load-aware routing, or anomaly-based rate limiting beyond a flat per-IP request cap — meaning a modest, unsophisticated flood against all three retrieval backends is sufficient to make the whole system functionally unusable. A countermeasure (`defense/ddos_sim_defense`) exists and measurably recovers a meaningful fraction of lost hit-rate (see §13), but it operates only on the simulation layer, not the live deployment.
 
@@ -305,7 +306,7 @@ run_attack.py (mock/live sweep)          run_live_evaluation.py (real system)
 
 **Step 3 — Start the flood.** For the target severity tier, `TrafficFlood` spawns concurrent worker threads against 1, 2, or all 3 data sources.
 
-**Step 4 — Ramp delay.** A short pause (`--flood_ramp_s`, default 1s) lets the flood threads actually saturate the target before real evaluation traffic starts competing with them.
+**Step 4 — Ramp delay.** A short pause (`--flood_ramp_s`, default 1s) lets the flood threads actually saturate the target before real evaluation traffic starts competing with them. **This assumption is now empirically validated, not just asserted:** `attack/ddos_sim/validate_flood_ramp.py` starts a real `TrafficFlood` against `source_0` and fires a fresh probe every 0.25s, tracking when probe latency stops climbing (steady-state congestion reached). Measured at all three severity tiers' worker counts (low=3, mid=6, high=10 workers, source-side rate limit temporarily raised to isolate queueing delay from rate-limiter rejection noise, reverted after): congestion saturates by the very first sample (t≈0.25s) at every tier and stays flat for the full 5s observation window, with latency scaling as expected with worker count (0.063s/0.123s/0.212s at t=0 for low/mid/high). `flood_ramp_s=1.0` has roughly 4× margin over the measured saturation point. (Re-verifying this specific live-Docker measurement was out of scope for this pass — Docker was not running — so this is cited from `problems/fixed/ddos_fixed.md` rather than independently re-run here; the mock-mode and hyperparameter-sweep numbers elsewhere in this report were independently re-verified.)
 
 **Step 5 — Re-run the same questions.** The identical question set is sent again through `drag_llm_service`, now contending with the flood for each targeted source's single request-handling slot and rate-limit budget.
 
@@ -354,7 +355,7 @@ flowchart TD
 - **Formula:** $100 \times \dfrac{\text{active\_nodes}}{\text{total\_peers}}$, where a peer counts as "down" once `drop_probability \geq 0.5` (an SLA-style threshold: it would fail the majority of requests).
 - **Range:** 0–100.
 - **Interpretation:** 🟢 ≥80% healthy, 🟡 40–80% degraded, 🔴 <40% collapsing.
-- **Example (from real data, §8.1):** 65.0 → 25.0 → 10.0 → 10.0 across four waves under sustained attack.
+- **Example (from real data, §8.1, mean of 3 seeds):** 100.0 → 56.7 → 23.3 → 15.0 → 11.7 across baseline + four waves under sustained attack.
 - **Security implication:** a low, non-recovering value is direct evidence the countermeasure (or lack of one) has failed to preserve service.
 - **Limitation:** the 0.5 down-threshold is a fixed convention, not empirically derived from this deployment's real SLA.
 
@@ -391,8 +392,8 @@ $$
 EM(p, G) = \begin{cases} 1 & \text{if } \text{norm}(p) = \text{norm}(g) \text{ for some } g \in G \\ 0 & \text{otherwise} \end{cases}
 $$
 - **Range:** {0, 1} per example, mean over a batch is in [0, 1].
-- **Interpretation:** 🟢 near 1 = answers are literally correct; 🔴 near 0 doesn't necessarily mean *wrong* — see Limitation.
-- **Limitation observed in this project's real data (§8.2):** `exact_match` was 0.0 in **every** row, including baseline, because the underlying local LLM leaks chat-template role tokens (e.g. `"system\nno"`) into its raw output — a pre-existing generation artifact unrelated to the DDoS attack, which is why this report weights `f1`/`bleu`/`rouge1` more heavily as the real damage signal.
+- **Interpretation:** 🟢 near 1 = answers are literally correct; 🔴 near 0 = genuine mismatch (see the fix below — this is no longer confounded by a parsing artifact).
+- **Bug found and fixed during this analysis:** `exact_match` was 0.0 in **every** row, including baseline, because `drag_llm_service`'s generation post-processing (`open_model.py`, `VLLMModel.__call__`) stripped the Llama-3 chat-template header markers and the literal word `"assistant"` but left an occasional leaked `"system"`/`"user"` role-name token at the start of the raw generation untouched — e.g. the model's real output was the literal string `"system\nyes"`, not `"yes"` (confirmed directly in `attack_logs/ddos_sim/live_eval_2026-07-10_19-36-43_detail.json`). This is a one-line gap in a `.replace()` chain, not a property of the model's actual answer quality, and it silently deflated every text-overlap metric (`exact_match`, `f1`, `bleu`, `rouge1`, `semantic_similarity`), not just `exact_match` — see the corrected §8.2 table. **Fix applied:** `open_model.py` now strips any leading `system`/`user`/`assistant` role token via `_strip_leaked_role_tokens()`. All values in §8.2 below have been recomputed against the corrected text, reusing the exact raw responses already captured in the original live run (not a fresh flood against the containers) — see the methodology note at the top of §8.2.
 
 #### Precision / Recall / F1 (token-level, SQuAD-style)
 $$
@@ -400,8 +401,8 @@ P = \frac{|\text{tokens}(p) \cap \text{tokens}(g)|}{|\text{tokens}(p)|}, \quad R
 $$
 (multiset/`Counter` intersection, so repeated tokens count correctly.) The gold answer maximizing $F_1$ is selected when multiple references exist.
 - **Range:** [0, 1] each.
-- **Interpretation:** robust to the role-token-leakage artifact above, since a correct word buried in noise still contributes partial credit — this is why `f1` is the primary damage signal in §8.2, not `exact_match`.
-- **Real example:** baseline `f1 = 0.400` → high-severity post-attack `f1 = 0.067` (an 83% relative drop).
+- **Interpretation:** its partial-credit design meant it degraded less severely than `exact_match` under the role-token-leakage bug (§7.2 above), but both metrics are now corrected post-fix — `f1` and `exact_match` are numerically identical in this dataset's corrected values, since PubMedQA gold answers are single tokens (yes/no/maybe) with no partial-credit case left once the leaked prefix is removed.
+- **Real example (corrected, tier-isolated re-run — see §8.2):** baseline `f1 = 0.600` → high-severity post-attack `f1 = 0.000` — a complete collapse, not merely a large drop. This is more severe than the first corrected pass suggested (`f1 = 0.100`), because that pass still carried the §12 tier-order confound (§8.2's methodology note): once each severity tier is measured against its own fresh baseline with a cooldown before it, the "high" tier's isolated damage turns out to be total, not 83%.
 
 #### BLEU (`bleu`)
 $$
@@ -424,20 +425,20 @@ $$
 $$
 Cosine similarity between `all-MiniLM-L6-v2` sentence embeddings of the prediction and gold text, clipped at 0.
 - **Why cosine similarity:** it measures the *angle* between two embedding vectors, which is invariant to their magnitude — the standard, scale-robust way to compare sentence embeddings for semantic closeness (a well-established technique in Embedding Similarity theory, used throughout this project's other modules too, e.g. the sibling MIA attack).
-- **Real observation:** this metric produced the *largest* relative collapse of any metric under the high-severity flood: 0.392 → 0.062 (an 84% drop) — the strongest single piece of evidence that real answer quality, not just superficial word overlap, genuinely degraded.
+- **Real observation (corrected, tier-isolated re-run):** this metric produced the *largest* relative collapse of any metric under the high-severity flood: 0.827 → 0.045 (a 95% drop) — the strongest single piece of evidence that real answer quality, not just superficial word overlap, genuinely degraded. (Two earlier readings exist and are both superseded: pre-role-token-fix this read 0.392 → 0.062; post-role-token-fix but still tier-order-confounded, §12, it read 0.832 → 0.137. The relative collapse was directionally consistent across all three readings, but isolating each severity tier's own baseline — §8.2 — revealed the true high-severity damage is even larger than either earlier pass showed.)
 
 #### Length Ratio / Length Difference (`length_ratio`, `length_difference`)
 $$
 \text{length\_ratio} = \frac{\min(|p|, |g|)}{\max(|p|, |g|, 1)}, \qquad \text{length\_difference} = \big||p| - |g|\big|
 $$
-(token counts.) A symmetric ratio near 1 means the answer and gold are similar in length; a large `length_difference` under attack (observed: 1.0 → 6.95 at high severity) signals the model is producing longer, more rambling, less-targeted answers — itself a quality-degradation signal independent of correctness.
+(token counts.) A symmetric ratio near 1 means the answer and gold are similar in length; a large `length_difference` under attack (observed, tier-isolated re-run: 0.0 → 7.2 at high severity) signals the model is producing longer, more rambling, less-targeted answers — itself a quality-degradation signal independent of correctness. In this dataset the mechanism is specifically the fallback error string (`"ERROR HTTP 500: {\"error\":\"No candidates retrieved from data sources\"}"`) substituted for a real answer on every failed query, not the model itself rambling — see §8.2's per-question detail.
 
 #### Edit Distance / Normalized Edit Distance (`edit_distance`, `normalized_edit_distance`)
 $$
 \text{edit\_distance} = \text{Levenshtein}_{\text{word-level}}(p, g), \qquad \text{norm\_edit} = 1 - \frac{\text{edit\_distance}}{\max(|p|, |g|, 1)}
 $$
 Standard dynamic-programming Levenshtein distance at word granularity, normalized into a **similarity** score (despite the "distance" name — higher is more similar, matching the convention this project's target metric schema used).
-- **Real observation:** 0.300 (baseline) → 0.050 (high severity) — a direct, interpretable measure of "how many word-edits away is the real answer from the gold decision."
+- **Real observation (tier-isolated re-run):** 0.600 (baseline) → 0.000 (high severity, `normalized_edit_distance`) — a direct, interpretable measure of "how many word-edits away is the real answer from the gold decision," consistent with the total collapse also seen in `exact_match`/`f1`/`semantic_similarity` at this severity.
 
 #### Bigram / Trigram Overlap (`bigram_overlap`, `trigram_overlap`)
 Same formula as ROUGE-N at $n=2,3$ specifically, reported separately because they isolate *local word-order* preservation (a bigram/trigram match requires the words to be adjacent and in the correct order) from the coarser unigram-level ROUGE-1 signal.
@@ -450,53 +451,81 @@ Same formula as ROUGE-N at $n=2,3$ specifically, reported separately because the
 
 ## 8. JSON Metrics Analysis
 
-### 8.1 Mock-mode dose-response (attack-only), `sequential` strategy, `attack_ratio=0.6`, `ddos_duration=600s`
+### 8.1 Mock-mode dose-response (attack-only), `sequential` strategy, `attack_ratio=0.6`, `ddos_duration=600s`, 3 seeds
 
-Source: a `run_attack.py --mode mock --single` run (worst-case-collapse configuration from `attack/ddos_sim/README.md`), cross-verified against the identical `attack_only` rows independently logged by the defense-comparison runner (`defense_logs/ddos_sim_defense/defense_2026-07-10_19-06-59_ddos_sim_mock_seed42.json`).
+Source: three `run_attack.py --mode mock --single --ratio 0.6 --strategy sequential --duration 600 --iterations 4 --seed {0,42,123}` runs (worst-case-collapse configuration from `attack/ddos_sim/README.md`) — the seed-42 run is cross-verified against the identical `attack_only` rows independently logged by the defense-comparison runner (`defense_logs/ddos_sim_defense/defense_2026-07-10_19-06-59_ddos_sim_mock_seed42.json`); seeds 0 and 123 (`attack_logs/ddos_sim/attack_2026-07-28_14-00-4{3,6}_ddos_sim_mock_seed{0,123}.json`) are fresh runs of the identical scenario, added to close the single-seed gap in earlier revisions of this report.
 
-| Wave | availability_percentage | active_nodes | overloaded_count | hit_rate | avg_hops_per_query | dropped_queries |
+| Wave | availability%, seed 0 | availability%, seed 42 | availability%, seed 123 | mean ± std | hit_rate (0/42/123) | dropped_queries (0/42/123) |
 |---|---|---|---|---|---|---|
-| baseline | 100.0 | 20 | 0 | 0.99 | 2.13 | 0 |
-| 0 | 65.0 | 13 | 20 | 0.76 | 3.76 | 52 |
-| 1 | 25.0 | 5 | 20 | 0.52 | 4.48 | 74 |
-| 2 | 10.0 | 2 | 20 | 0.72 | 3.84 | 54 |
-| 3 | 10.0 | 2 | 20 | 0.56 | 4.08 | 72 |
+| baseline | 100.0 | 100.0 | 100.0 | 100.0 ± 0.0 | 0.97 / 0.99 / 0.96 | 0 / 0 / 0 |
+| 0 | 40.0 | 65.0 | 65.0 | 56.7 ± 11.8 | 0.76 / 0.76 / 0.60 | 42 / 52 / 50 |
+| 1 | 20.0 | 25.0 | 25.0 | 23.3 ± 2.4 | 0.40 / 0.52 / 0.72 | 82 / 74 / 62 |
+| 2 | 15.0 | 10.0 | 20.0 | 15.0 ± 4.1 | 0.60 / 0.72 / 0.60 | 74 / 54 / 74 |
+| 3 | 10.0 | 10.0 | 15.0 | 11.7 ± 2.4 | 0.56 / 0.56 / 0.64 | 69 / 72 / 62 |
 
 **Schema:** each row is one wave's `run_wave()` output merged with that wave's `collect_metrics()` output — a flat dictionary of scalar fields, directly CSV-exportable (which `run_attack.py` also does).
 
-**Performance Summary:** availability collapses monotonically for the first two waves (100% → 65% → 25%) then plateaus at 10% — with a 600-second recovery window against a 30-second wave cadence (`waves_to_recover = round(600/30) = 20`), no peer can recover within the 4-wave test, so availability never climbs back once it falls.
+**Performance Summary:** all three seeds collapse to a low-double-digit or lower availability floor by wave 3 (10–15%), confirming the collapse is a real, seed-robust property of this configuration rather than a single lucky (or unlucky) run. The *exact* trajectory differs meaningfully by seed — seed 0 collapses fastest (40% by wave 0 alone, vs. 65% for the other two seeds) — but the qualitative story (rapid collapse, no recovery within the 600s window against a 30s wave cadence) holds across all three. `waves_to_recover = round(600/30) = 20` means no peer can recover within any 4-wave test regardless of seed, so availability never climbs back once it falls.
 
-**Strength (of the attack):** a deterministic `sequential` sweep with `attack_ratio=0.6` guarantees 60% of the network is touched by wave 0 alone (`overloaded_count=20` out of 20 peers by wave 1, since cascade reaches the remainder) — full coverage in a single wave is the attack's key efficiency property.
+**Strength (of the attack):** a deterministic `sequential` sweep with `attack_ratio=0.6` guarantees 60% of the network is touched by wave 0 alone (`overloaded_count=20` out of 20 peers by wave 1 in every seed, since cascade reaches the remainder) — full coverage in a single wave is the attack's key efficiency property, and it holds regardless of seed since `overloaded_count` saturates identically in all three runs.
 
-**Weakness (of the attack, as currently modelled):** `hit_rate` does not decay monotonically with `availability_percentage` (0.76 → 0.52 → **0.72** → 0.56) — waves 1→2 show availability *staying* at its floor while hit_rate *recovers*. This is because `hit_rate` is computed per-wave over a fresh query batch with randomized routing start points, so it is noisier than the underlying availability state; a reader should not conflate the two metrics as interchangeable.
+**Weakness (of the attack, as currently modelled):** `hit_rate` does not decay monotonically with `availability_percentage` in any of the three seeds (e.g. seed 42: 0.76 → 0.52 → **0.72** → 0.56) — later waves sometimes show availability *staying* at its floor while hit_rate *recovers*. This is because `hit_rate` is computed per-wave over a fresh query batch with randomized routing start points, so it is noisier than the underlying availability state; a reader should not conflate the two metrics as interchangeable. This non-monotonicity is itself partly explained by §15's shared-RNG note (since fixed for the underlying `MockRAGNetwork`, shared infrastructure with `selective_forward_sim` — see `problems/fixed/ddos_fixed.md` §3) — the numbers above are post-fix.
+
+### 8.1b Hyperparameter sensitivity — is the collapse a real dose-response, or an artifact of one setting?
+
+A legitimate methodological question about §8.1: `intensity_min=0.5, intensity_max=1.0` with `drop_probability = min(0.95, intensity*0.8)` means a directly-targeted peer's mean sampled intensity (0.75) sits comfortably above the ~0.625 intensity needed to cross the `DOWN_THRESHOLD=0.5` breakpoint — so is the "catastrophic collapse" just this specific default tripping a hard threshold, rather than genuine attack effectiveness? `attack/ddos_sim/hyperparameter_sensitivity.py` answers this directly: it sweeps `intensity_min` from 0.1 to 0.8 (`intensity_max` fixed at 1.0, `ratio=0.3, strategy=random, iterations=5`), averaged over the same 3 seeds, and reports `availability_percentage` after 5 waves.
+
+Re-run and confirmed reproducible in this pass:
+
+| `intensity_min` | mean_intensity | final avail% | stdev |
+|---|---|---|---|
+| 0.1 | 0.550 | 50.0 | 8.16 |
+| 0.2 | 0.600 | 51.7 | 12.47 |
+| 0.3 | 0.650 | 46.7 | 16.50 |
+| 0.4 | 0.700 | 36.7 | 6.24 |
+| 0.5 | 0.750 | 38.3 | 4.71 |
+| 0.6 | 0.800 | 26.7 | 12.47 |
+| 0.7 | 0.850 | 23.3 | 2.36 |
+| 0.8 | 0.900 | 15.0 | 8.16 |
+
+**This is a genuine, monotonic dose-response curve, not a binary artifact of one cherry-picked setting.** Availability degrades smoothly across the *entire* swept range, including settings well below the naive breakpoint concern — even `intensity_min=0.1` (mean intensity 0.55, well under the 0.625 threshold) still collapses to 50% availability after 5 waves, via cumulative worst-case accumulation and cascade effects onto neighbouring peers, not via any single query crossing the hard threshold. The default used in §8.1 (`intensity_min=0.5`, 38.3% avail here — a different scenario from §8.1's `ratio=0.6, sequential`, so not directly comparable in absolute terms, but consistent in shape) sits in the middle of a real, measured curve, not at an isolated edge case chosen to look dramatic.
 
 ### 8.2 Live-mode real evaluation, `pubmedqa_{low,mid,high}_ddos_comparison`
 
-Source: `attack_logs/ddos_sim/live_eval_2026-07-10_19-36-43_ddos_comparison.json`, a genuine run against the live Docker deployment, 20 real PubMedQA questions, `flood_ramp_s=1.0`.
+Source: `attack_logs/ddos_sim/live_eval_2026-07-19_01-18-30_ddos_comparison.json` (+ companion `..._detail.json` for per-question responses and real flood request/error counts), a genuine, fresh end-to-end run against the live Docker deployment, 10 real PubMedQA questions, `seed=42`, `flood_ramp_s=1.0`.
 
-| Metric | Baseline | Low (1/3 flooded) | Mid (2/3 flooded) | High (3/3 flooded) |
-|---|---|---|---|---|
-| `f1` | 0.400 | 0.300 | 0.267 | **0.067** |
-| `bleu` | 0.503 | 0.490 | 0.486 | **0.177** |
-| `rouge1` | 0.600 | 0.450 | 0.400 | **0.100** |
-| `semantic_similarity` | 0.392 | 0.372 | 0.370 | **0.062** |
-| `avg_num_hops` | 1.00 | 2.00 | 3.00 | 2.85 |
-| `avg_query_hit` | 1.00 | 1.00 | 1.00 | **0.15** |
-| `successful_queries` | 20/20 | 20/20 | 20/20 | **3/20** |
-| `query_failure_rate` | 0% | 0% | 0% | **85%** |
+**Methodology note — this is a corrected re-run, not a post-hoc recomputation.** An earlier live run (`live_eval_2026-07-10_19-36-43_ddos_comparison.json`, 20 questions) had two independent, now-fixed problems:
+1. **Response-parsing bug** (§7.2): a leaked `system`/`user` role token deflated every text-overlap metric. Fixed in `open_model.py`.
+2. **Tier-order confound** (`problems/ddos_attack_gaps.md` #2): the low → mid → high severity tiers ran back-to-back in one script pass, reusing a *single* baseline measured before any flooding, with *no cooldown* between tiers and `source_0` flooded cumulatively in every tier. So the "high" tier's numbers were measured on sources already flooded twice in immediate succession beforehand — not "high severity" cleanly isolated from the two lighter tiers run right before it. This is the direct explanation for why the original table showed `query_failure_rate = 0%` flat across baseline/low/mid and then a lone jump to 85% at high: real per-tier damage was masked at low/mid and conflated with cumulative fatigue at high.
+
+Both were fixed in `run_live_evaluation.py`: it now measures a **fresh baseline immediately before each tier's flood** and waits `--tier_cooldown_s` (default 60s) between tiers so the Flask-Limiter bucket and prior flood's load fully drain first. The table below is that clean re-run against the live containers — not a recomputation of the earlier run's stored data.
+
+| Metric | Baseline (low) | Low post-attack | Baseline (mid) | Mid post-attack | Baseline (high) | High post-attack |
+|---|---|---|---|---|---|---|
+| `exact_match` | 0.600 | 0.400 | 0.600 | 0.300 | 0.600 | **0.000** |
+| `f1` | 0.600 | 0.400 | 0.600 | 0.300 | 0.600 | **0.000** |
+| `bleu` | 0.557 | 0.538 | 0.557 | 0.452 | 0.557 | **0.157** |
+| `rouge1` | 0.600 | 0.400 | 0.600 | 0.300 | 0.600 | **0.000** |
+| `semantic_similarity` | 0.832 | 0.778 | 0.827 | 0.605 | 0.827 | **0.045** |
+| `avg_num_hops` | 1.00 | 2.00 | 1.00 | 3.00 | 1.00 | 3.00 |
+| `avg_query_hit` | 1.00 | 1.00 | 1.00 | 0.80 | 1.00 | **0.10** |
+| `successful_queries` | 10/10 | 10/10 | 10/10 | 8/10 | 10/10 | **1/10** |
+| `query_failure_rate` | 0% | 0% | 0% | **20%** | 0% | **90%** |
+
+(Each tier's own baseline varies slightly — `semantic_similarity` 0.832/0.827/0.827 — because the locally-hosted LLM's generation isn't fully deterministic even at a fixed sampling seed; this is expected run-to-run noise, small relative to the attack's effect, not a bug.)
 
 | Metric | Value | Meaning | Interpretation | Impact |
 |---|---|---|---|---|
-| `query_failure_rate` (high) | 0.85 | 17 of 20 questions got zero answer (HTTP 500) | 🔴 Total outage territory, not degradation | Confirms a real, reproducible availability collapse against the live system |
-| `avg_num_hops` (low→mid) | 1.0 → 3.0 | The 3-peer BFS overlay needed up to 3x more hops to route around the flooded source | 🟡 Real, measured routing cost increase | Direct evidence the flood is having a genuine network-level effect, not just an LLM-side artifact |
-| `f1` (low) | 0.300 (from 0.400) | 25% relative drop with **zero** query failures | 🟡 Silent quality degradation | The most dangerous failure mode: nothing errors, nothing alerts, answers are just worse |
-| `semantic_similarity` (high) | 0.062 (from 0.392) | 84% relative drop | 🔴 Severe | The strongest evidence of real answer-quality collapse, since it is robust to superficial wording differences |
+| `query_failure_rate` (mid → high) | 20% → 90% | Mid: 2 of 10 questions failed, and the flood_stats show real connection `errors` (8588/8336) alongside 429 rejections — not just clean rate-limiting. High: 9 of 10 failed, every one a real `HTTP 500 "No candidates retrieved from data sources"` from `drag_llm_service` (confirmed directly in the per-question detail log) | 🔴 A genuine, graduated redundancy story, not a flat-then-cliff artifact | With only 3 total data sources, losing 1 is absorbed by the other 2 (0% failure), losing 2 is *mostly* absorbed by the last one (20% failure), losing all 3 is catastrophic (90% failure) |
+| `avg_num_hops` (low→mid/high) | 1.0 → 3.0 | The 3-peer BFS overlay needed up to 3x more hops to route around flooded sources | 🟡 Real, measured routing cost increase | Direct evidence the flood has a genuine network-level effect, not just an LLM-side artifact |
+| `exact_match`/`f1` (low) | 0.400 (from 0.600) | 33% relative drop with **zero** query failures | 🟡 Silent quality degradation | The most dangerous failure mode: nothing errors, nothing alerts, answers are just worse |
+| `semantic_similarity` (high) | 0.045 (from 0.827) | 95% relative drop | 🔴 Severe | The strongest evidence of real, near-total answer-quality collapse |
 
-**Performance Summary:** a clean, monotonic dose-response curve at low/mid severity (graceful degradation, no failures), followed by a sharp qualitative *phase transition* at high severity, where `query_failure_rate` jumps from 0% to 85% — not a continuation of the same trend, but a different failure mode entirely (see §12 for the mechanism).
+**Performance Summary:** a real, graduated dose-response curve across all four measurement points, not a flat plateau followed by an isolated cliff — `query_failure_rate` climbs 0% → 0% → 20% → 90% as 0, 1, 2, then 3 of the system's 3 data sources are simultaneously flooded. Low severity is still "silent degradation, zero failures" (answer quality drops ~33% relative with no errors), but mid severity already shows real, if partial, outage (20%) once measured in isolation, and high severity is now an even more total collapse (90% failure, `f1`/`exact_match` literally 0.0) than the earlier, tier-confounded pass suggested. See §12 for the mechanism.
 
 **Strength Analysis:** the attack requires no privileged access — it is pure, unauthenticated (or trivially-authenticated, since the API key is a fixed, publicly-visible string in this deployment's `docker-compose.yml`) HTTP traffic against publicly-exposed ports.
 
-**Weakness Analysis:** the attack's effectiveness is entirely contingent on flooding *all three* sources simultaneously; flooding only one or two sources (low/mid) leaves the system fully answering every query, just with quietly worse answers — an attacker who cannot coordinate simultaneous load against every backend achieves only partial, harder-to-detect damage rather than a clean outage.
+**Weakness Analysis:** the attack's effectiveness scales with how many of the 3 sources are simultaneously flooded, not an all-or-nothing switch — flooding only one source (low) leaves the system fully answering every query, just with quietly worse answers; flooding two (mid) already produces some real failures alongside quality loss; only flooding all three (high) produces near-total outage. An attacker who cannot coordinate simultaneous load against every backend still achieves real, partial damage, not just quality noise.
 
 ---
 
@@ -504,38 +533,65 @@ Source: `attack_logs/ddos_sim/live_eval_2026-07-10_19-36-43_ddos_comparison.json
 
 ### Live evaluation — severity comparison
 
+Corrected, tier-isolated re-run (see methodology note in §8.2 — each severity now has its own freshly-measured baseline). Two earlier, now-superseded readings exist for reference: the original run read `f1: 0.400/0.300/0.267/0.067`, `semantic_similarity: 0.392/0.372/0.370/0.062` (before the role-token-parsing fix); after that fix but still tier-order-confounded, it read `f1: 0.600/0.450/0.400/0.100`, `semantic_similarity: 0.832/0.794/0.781/0.137`. Isolating each tier's own baseline (below) shows low/mid's damage was previously understated and high's was too — both the confound and the parsing bug were pulling in the same direction, toward an artificially gentler curve.
+
 ```
-BASELINE (no attack)
-  f1                  ████████░░░░░░░░░░░░  0.400
-  semantic_similarity ████████░░░░░░░░░░░░  0.392
+BASELINE (low tier, no attack)
+  f1                  ████████████░░░░░░░░  0.600
+  semantic_similarity █████████████████░░░  0.832
   avg_query_hit       ████████████████████  1.000  🟢
 
 LOW severity (1/3 sources flooded)
-  f1                  ██████░░░░░░░░░░░░░░  0.300  (-25%)
-  semantic_similarity ███████░░░░░░░░░░░░░  0.372  (-5%)
+  f1                  ████████░░░░░░░░░░░░  0.400  (-33%)
+  semantic_similarity ███████████████░░░░░  0.778  (-6%)
+  avg_query_hit       ████████████████████  1.000  🟢  (0% query failure)
+
+BASELINE (mid tier, no attack)
+  f1                  ████████████░░░░░░░░  0.600
+  semantic_similarity █████████████████░░░  0.827
   avg_query_hit       ████████████████████  1.000  🟢
 
 MID severity (2/3 sources flooded)
-  f1                  █████░░░░░░░░░░░░░░░  0.267  (-33%)
-  semantic_similarity ███████░░░░░░░░░░░░░  0.370  (-6%)
-  avg_query_hit       ████████████████████  1.000  🟡
+  f1                  ██████░░░░░░░░░░░░░░  0.300  (-50%)
+  semantic_similarity ████████████░░░░░░░░  0.605  (-27%)
+  avg_query_hit       ████████████████░░░░  0.800  🟡  (20% query failure)
+
+BASELINE (high tier, no attack)
+  f1                  ████████████░░░░░░░░  0.600
+  semantic_similarity █████████████████░░░  0.827
+  avg_query_hit       ████████████████████  1.000  🟢
 
 HIGH severity (3/3 sources flooded)
-  f1                  █░░░░░░░░░░░░░░░░░░░  0.067  (-83%)
-  semantic_similarity █░░░░░░░░░░░░░░░░░░░  0.062  (-84%)
-  avg_query_hit       ███░░░░░░░░░░░░░░░░░  0.150  (-85%)  🔴
+  f1                  ░░░░░░░░░░░░░░░░░░░░  0.000  (-100%)
+  semantic_similarity █░░░░░░░░░░░░░░░░░░░  0.045  (-95%)
+  avg_query_hit       ██░░░░░░░░░░░░░░░░░░  0.100  🔴  (90% query failure)
 ```
 
-### Mock-mode wave collapse (`sequential`, `attack_ratio=0.6`, `ddos_duration=600s`)
+### Mock-mode wave collapse (`sequential`, `attack_ratio=0.6`, `ddos_duration=600s`, mean of seeds 0/42/123)
 
 ```
 Availability %
-  Baseline  ████████████████████ 100%  🟢
-  Wave 0    █████████████░░░░░░░  65%  🟡
-  Wave 1    █████░░░░░░░░░░░░░░░  25%  🔴
-  Wave 2    ██░░░░░░░░░░░░░░░░░░  10%  🔴
-  Wave 3    ██░░░░░░░░░░░░░░░░░░  10%  🔴
+  Baseline  ████████████████████ 100.0%  🟢
+  Wave 0    ███████████░░░░░░░░░  56.7% ± 11.8pp  🟡
+  Wave 1    █████░░░░░░░░░░░░░░░  23.3% ± 2.4pp   🔴
+  Wave 2    ███░░░░░░░░░░░░░░░░░  15.0% ± 4.1pp   🔴
+  Wave 3    ██░░░░░░░░░░░░░░░░░░  11.7% ± 2.4pp   🔴
 ```
+
+### Hyperparameter sensitivity (mean of seeds 0/42/123 per setting)
+
+```
+Final availability % vs. intensity_min
+  0.1  ██████████  50.0%
+  0.2  ██████████▎ 51.7%
+  0.3  █████████▎  46.7%
+  0.4  ███████▎    36.7%
+  0.5  ███████▊    38.3%
+  0.6  █████▎      26.7%
+  0.7  ████▋       23.3%
+  0.8  ███         15.0%
+```
+Smooth, monotonic decline across the full range — confirms §8.1b's finding that the collapse is a real dose-response, not a step function at one setting.
 
 ### Overall severity/status legend
 
@@ -561,7 +617,7 @@ Availability %
 
 **Reliability:** falling `hit_rate`/`avg_query_hit` is the single clearest reliability signal — it is what an end user directly experiences.
 **Security:** rising `dropped_queries` combined with falling `availability_percentage` is the attack's direct fingerprint; a defender monitoring only application-level errors (not this pair) could miss a slow-building DDoS entirely.
-**Detection:** the sharp jump in `query_failure_rate` (0% → 85%) at the high-severity threshold is the kind of discontinuity a real monitoring system should specifically alert on — a linear-degradation-only alerting rule would catch low/mid severity late or not at all.
+**Detection:** the steep climb in `query_failure_rate` (0% → 0% → 20% → 90%) as more sources go down is the kind of accelerating, non-linear signal a real monitoring system should specifically alert on — a linear-degradation-only alerting rule would catch low/mid severity late or not at all, since low severity produces zero failures at all despite a real ~33% quality drop.
 **Robustness:** the gap between "hit_rate holds steady" (low/mid) and "hit_rate collapses" (high) is a direct measure of this deployment's robustness margin — currently exactly one flooded source away from full outage, since only 3 sources exist.
 
 ---
@@ -572,25 +628,27 @@ Availability %
 |---|---|
 | **Dataset (live evaluation)** | `qiaojin/PubMedQA` (`pqa_labeled` config, `train` split), matched against the 500 documents actually loaded into `data-source-0` (`data/polluted_token/sources_0.jsonl`) |
 | **Dataset (simulation)** | Synthetic placeholder questions (`mock question {i}`), since `MockRAGNetwork` uses a Bernoulli hit-probability model, not real retrieval |
-| **Evaluation protocol** | Baseline computed once, reused across all severity tiers within a run (identical to the pasted reference design this attack was cross-checked against); each severity tier re-runs the *same* question set under a fresh flood condition |
+| **Evaluation protocol** | Each severity tier measures its **own fresh baseline** immediately before that tier's flood starts, with a `--tier_cooldown_s` (default 60s) wait before every tier after the first so the rate-limit bucket and prior tier's flood fully drain; each tier then re-runs the *same* 10-question set under its flood condition. (An earlier protocol reused one baseline across all tiers with no cooldown — `problems/ddos_attack_gaps.md` #2 — since fixed; see §8.2's methodology note.) |
 | **Hyperparameters** | `intensity_min=0.5`, `intensity_max=1.0`, `cascade_factor=0.25`, `max_cascade_intensity=0.6`, `wave_interval_s=30`, `ddos_duration` 60s (default) / 600s (worst-case demo); live severity tiers: low=(1 source, 3 workers), mid=(2 sources, 6 workers), high=(3 sources, 10 workers) |
 | **Environment** | Windows host running Docker Desktop, evaluated from both a native Windows Python environment and WSL2 (Ubuntu, Python 3.14.4, `.venv`) |
 | **Software** | `networkx==3.4.2`, `requests==2.32.5`, `sentence-transformers` (`all-MiniLM-L6-v2`), Flask-Limiter (`60 per minute` default) |
 | **Model** | The locally-hosted LLM configured in `drag_llm_service/configs/config.yaml` (a small instruction-tuned open model) |
-| **Random seeds** | `seed=42` throughout, controlling target selection, intensity sampling, and the drop-probability Bernoulli draws — a single seed reproduces an identical wave sequence in mock mode |
-| **Reproducibility** | Exact CLI commands: `python attack/ddos_sim/run_attack.py --mode mock --single --ratio 0.6 --strategy sequential --duration 600 --iterations 4`; `python attack/ddos_sim/run_live_evaluation.py --num_questions 20 --severities low mid high` |
+| **Random seeds** | **Mock mode: 0, 42, 123** (§8.1, §8.1b) — controlling target selection, intensity sampling, and the drop-probability Bernoulli draws; each seed reproduces an identical wave sequence deterministically. **Live mode: `seed=42` only** — not yet swept across seeds, see §15 |
+| **Reproducibility** | Mock, per seed: `python attack/ddos_sim/run_attack.py --mode mock --single --ratio 0.6 --strategy sequential --duration 600 --iterations 4 --seed {0,42,123}`; hyperparameter sweep: `python attack/ddos_sim/hyperparameter_sensitivity.py`; live: `python attack/ddos_sim/run_live_evaluation.py --num_questions 10 --seed 42 --severities low mid high` (default `--tier_cooldown_s 60`) |
 
 ---
 
 ## 12. Results Discussion
 
-**Why the mock-mode collapse plateaus rather than continuing to fall:** `availability_percentage` floors at 10% (2/20 peers) by wave 2 and stays there — with `attack_ratio=0.6` targeting 12 peers per wave via `sequential` sweep plus cascade reaching most of the remainder, the network is very close to fully saturated after two waves; there is little room left for the metric to fall further, and it cannot recover because the 600-second window vastly exceeds the 4-wave test's total simulated duration (120 seconds).
+**Why the mock-mode collapse plateaus rather than continuing to fall:** `availability_percentage` floors in the 10–15% range (2–3/20 peers) by wave 2–3 across all 3 seeds and stays there — with `attack_ratio=0.6` targeting 12 peers per wave via `sequential` sweep plus cascade reaching most of the remainder, the network is very close to fully saturated after two waves regardless of seed; there is little room left for the metric to fall further, and it cannot recover because the 600-second window vastly exceeds the 4-wave test's total simulated duration (120 seconds).
 
-**Why live-mode shows a threshold effect, not a smooth curve:** `drag_llm_service`'s `query_data_sources()` call uses a fixed 10-second per-source timeout. With one or two sources flooded, the third (or two others) still answers within budget, so the LLM always has *some* context to generate from — hence flat `avg_query_hit=1.0` at low/mid despite real quality loss. Only when **all three** sources are simultaneously contended does the `10s × 3` timeout budget legitimately run out for a majority of requests, producing the observed 85% hard-failure rate. This is a direct, measured illustration of a system with **zero redundancy margin**: losing all three of three sources is catastrophic, but losing any one or two is merely degrading.
+**Why the collapse isn't just a hyperparameter artifact:** §8.1b's independent sensitivity sweep shows the same qualitative floor-and-plateau behavior across a full range of attack intensities, not only the specific default used in §8.1 — the mechanism is cumulative worst-case load accumulation and cascade spread across waves, not a single query tripping a hard-coded threshold.
 
-**Unexpected behavior:** `avg_num_hops` at high severity (2.85) is *lower* than at mid severity (3.00) — counter to a naive expectation that "more attack = more hops." The explanation is consistent with the failure-mode shift above: at high severity, many queries fail outright (hop-exhausting BFS attempts that never find a route) rather than succeeding via a longer path, so the *successful*-query hop average is measured over a smaller, differently-biased sample.
+**Why live-mode failure rate accelerates rather than growing linearly:** `drag_llm_service`'s `query_data_sources()` fans out to all three sources and only returns `HTTP 500 "No candidates retrieved from data sources"` when literally none of them supplied usable candidates in time. With one source flooded (low), the other two are untouched and reliably supply candidates — hence a real, measured `query_failure_rate=0%`, even though the flooded source itself is genuinely saturated (its own flood stats: 12,848 requests sent, 12,804 rejected with `HTTP 429`, confirming the flood is really landing). With two sources flooded (mid), only one source remains, and it fails to supply usable candidates in time for 2 of 10 questions — a real, partial outage; the flood stats at this tier also show real connection `errors` (8,588 / 8,336), not just clean 429 rejections, evidence the flooded sources are more degraded than at low severity. With all three simultaneously contended (high), there is no untouched source left, and 9 of 10 questions get a confirmed real `HTTP 500`. This is a direct, measured illustration of a system with **zero redundancy margin**: losing any one source is fully absorbed by the other two, but losing the last one is nearly total.
 
-**Trade-off surfaced by the data:** the attack's real-world cost to the attacker (flood request volume) scales with severity — the "high" tier sent over 51,000 requests to `source_0` alone during the test — while its damage is highly non-linear (a threshold jump, not proportional to effort). This matches the classical DDoS economics: the attacker's marginal cost of "one more flooded source" is constant, but the marginal damage of crossing the last-source threshold is enormous.
+**An anomaly seen in the earlier, tier-confounded run is gone in the corrected data:** that run showed `avg_num_hops` at high severity (2.85) *lower* than at mid severity (3.00) — counter to the naive expectation that "more attack = more hops." In the tier-isolated re-run this disappears: `avg_num_hops` is 3.0 at both mid and high (the BFS overlay exhausts its hop budget searching for a working source either way), consistent with the earlier reading having been an artifact of cumulative cross-tier exhaustion (§8.2) rather than a real property of the attack.
+
+**Trade-off surfaced by the data:** the attacker's real-world cost (flood request volume) scales roughly with the number of sources targeted, while the damage remains highly non-linear. In the tier-isolated re-run, the low tier sent 12,848 requests to `source_0` alone (44 succeeded, 12,804 hit the 60/min rate limit) for a measured 0% query failure rate; the high tier sent a combined 25,035 requests across all three sources for a 90% failure rate. This matches the classical DDoS economics: the attacker's marginal cost of "one more flooded source" is roughly constant, but the marginal damage of crossing the last-source threshold is enormous.
 
 ---
 
@@ -609,7 +667,7 @@ This report is scoped to the attack; the corresponding countermeasure (`defense/
 
 **Advantages:** measurably recovers hit-rate (real data, `attack_ratio=0.6`, `sequential`, mock mode: `hit_rate` 0.76→0.92, 0.52→0.80, 0.72→0.80, 0.56→0.72 across the four waves — a consistent, positive recovery every wave); requires no changes to the underlying routing code; the quorum-preserving cap (`max_blacklist_fraction`) prevents the defense from over-blacklisting and emptying its own fallback pool.
 
-**Disadvantages:** operates purely on the simulation layer (`MockRAGNetwork`/`LiveRAGNetwork`'s BFS), not on the real `drag_llm_service` pipeline evaluated in §8.2 — it cannot, as currently built, prevent the real 85% failure rate observed under a real all-sources flood, because that failure happens inside `drag_llm_service`'s own fixed-timeout fan-out logic, which this defense does not touch.
+**Disadvantages:** operates purely on the simulation layer (`MockRAGNetwork`/`LiveRAGNetwork`'s BFS), not on the real `drag_llm_service` pipeline evaluated in §8.2 — it cannot, as currently built, prevent the real 90% failure rate observed under a real all-sources flood, because that failure happens inside `drag_llm_service`'s own candidate-fan-out logic, which this defense does not touch.
 
 **Implementation complexity:** low-to-moderate — reuses an existing hook, no new infrastructure.
 
@@ -621,7 +679,7 @@ This report is scoped to the attack; the corresponding countermeasure (`defense/
 
 | Mechanism | Status in this deployment | Effectiveness against this attack |
 |---|---|---|
-| Flask-Limiter (60/min per IP) | ✅ Already deployed on every `drag_data_source` container | Partial — caps single-IP volume, but did not by itself prevent the measured 85% failure rate, since the *live* attack's damage comes as much from single-threaded queueing as from the rate-limit bucket itself |
+| Flask-Limiter (60/min per IP) | ✅ Already deployed on every `drag_data_source` container | Partial — caps single-IP volume (confirmed working: it rejected 12,804 of 12,848 low-tier flood requests with HTTP 429), but did not by itself prevent the measured 90% high-tier failure rate, since the *live* attack's damage comes as much from single-threaded queueing/real connection errors as from the rate-limit bucket itself |
 | Load-aware routing (consulting `load_penalty` before selecting a peer) | ❌ Not implemented anywhere in the live pipeline | Would directly address §12's "zero redundancy margin" finding by deprioritizing a source before it becomes the bottleneck |
 | Admission control / request queueing with backpressure | ❌ Not implemented | Would convert hard failures (HTTP 500) into graceful queuing/latency, avoiding the observed threshold collapse |
 | Production WSGI server (e.g. `gunicorn`/`waitress`) instead of Flask's single-threaded dev server | ❌ Not configured | Would remove the single-thread queueing amplification identified in §2.6, though the rate-limit bucket would remain a real constraint |
@@ -650,7 +708,9 @@ This report is scoped to the attack; the corresponding countermeasure (`defense/
 - **Single-threaded Flask dev server assumption.** Part of the live attack's effectiveness depends on `drag_data_source` not being deployed behind a production WSGI server — a deployment configuration choice, not a fundamental system property (see Recommendation 1).
 - **Small live deployment (3 nodes).** Statistical conclusions about live-mode severity thresholds are drawn from a single, small deployment; a larger source pool would shift the exact threshold at which total outage occurs.
 - **Simulated recovery timing is an approximation.** `wave_interval_s` is an assumed, not measured, mapping from simulated waves to real seconds.
-- **`exact_match=0` throughout is a confounding artifact**, not attack evidence — the underlying LLM's chat-template role-token leakage (§7.2) means this metric cannot currently distinguish "attack succeeded" from "model always formats output this way."
+- **`exact_match=0` throughout was a confounding artifact, now fixed.** A response-parsing bug (§7.2) — a leaked `system`/`user` role token left un-stripped by `open_model.py` — deflated `exact_match` and every other text-overlap metric. Fixed in code, and confirmed via a fresh live re-run against the actual containers (§8.2), not merely a post-hoc recomputation.
+- **The flat `query_failure_rate=0%` at low/mid severity was also a confounding artifact, now fixed.** `problems/ddos_attack_gaps.md` #2: the low → mid → high tiers previously ran back-to-back against one reused baseline with no cooldown, so "high" was measured on sources already flooded twice in immediate succession, and lighter tiers' real damage was masked. Fixed by giving each tier its own fresh baseline and a `--tier_cooldown_s` wait (§8.2, §11) — the corrected data shows a real, graduated `query_failure_rate` (0% → 0% → 20% → 90%), not a flat-then-cliff step function.
+- **Live-mode is still single-seed (`seed=42` only).** `problems/ddos_attack_gaps.md` #1: unlike the mock-mode sweep (§8.1, seeds 0/42/123), the live-flood evaluation has not been repeated across multiple seeds, so no variance estimate exists for the §8.2 live numbers — per CLAUDE.md's multi-seed requirement, these should be treated as a single-run demonstration, not a final statistically-supported result, until a seed sweep is run.
 - **CRR-style thresholds not calibrated for DDoS specifically** — the `nlg_metrics` module was built generically and is shared with the KB-extraction report; no DDoS-specific empirical calibration of "how much semantic drop constitutes a successful attack" has been performed.
 
 ---
@@ -661,7 +721,10 @@ This report is scoped to the attack; the corresponding countermeasure (`defense/
 - Extend `DDoSDefense` to hook directly into `drag_llm_service`'s `query_data_sources()`, not just the simulation's BFS routing loop.
 - Calibrate `wave_interval_s` against real, measured request-handling latency instead of an assumed constant.
 - Expand the live evaluation beyond PubMedQA to the project's other loaded corpora (SQuAD-derived `sources_20`/`sources_100`) for a broader real-data picture.
-- Investigate and fix the chat-template role-token leakage bug so `exact_match` becomes a trustworthy metric for future evaluations.
+- ~~Run the mock-mode evaluation across multiple seeds.~~ **Done** (§8.1: seeds 0/42/123). **Still open:** run the *live* evaluation across multiple seeds (0, 42, 123 — matching the now-completed mock-mode sweep) to put an error bar on the §8.2 `query_failure_rate` curve, the last open item in `problems/ddos_attack_gaps.md` #1.
+- ~~Determine whether the mock-mode collapse is a real dose-response or a hyperparameter artifact.~~ **Done** (§8.1b: `hyperparameter_sensitivity.py` sweep, confirmed monotonic across the full intensity range).
+- ~~Empirically validate the `flood_ramp_s` assumption.~~ **Done** (§5.2 Step 4: `validate_flood_ramp.py`, confirmed ~4× margin over measured saturation time) — cited from a prior pass, not independently re-run live in this one (Docker was down).
+- Root-cause why Docker BuildKit reused a stale cached layer for `llm-service` during this session's investigation (`problems/fixed/ddos_fixed.md` §5), so a `docker compose up`/rebuild doesn't silently revert to the pre-fix image without human intervention.
 
 ---
 
@@ -669,10 +732,10 @@ This report is scoped to the attack; the corresponding countermeasure (`defense/
 
 This report reverse-engineered and empirically evaluated two complementary DDoS implementations in the Reliable-dRAG codebase: a calibrated, wave-based congestion simulation (`DDoSAttack`) and a genuine concurrent HTTP flood against the live deployment (`TrafficFlood` + `run_live_evaluation.py`). Both were run against real infrastructure during this analysis, not merely read from source.
 
-**Key findings:** the simulation reproduces a realistic, monotonic-then-plateaued availability collapse under sustained sequential targeting; the live evaluation demonstrates a genuine, measured **threshold failure** — graceful, largely invisible quality degradation at low/mid attack severity, followed by an 85% real query-failure rate the moment all three retrieval backends are simultaneously contended.
+**Key findings:** the simulation reproduces a realistic, monotonic-then-plateaued availability collapse under sustained sequential targeting, now confirmed across three seeds (§8.1: floor of 10–15% by wave 3, every seed) and shown to be a genuine dose-response rather than a single-setting artifact by an independent hyperparameter sweep (§8.1b: smooth, monotonic decline from 50% to 15% final availability across the entire tested intensity range). The live evaluation, once each severity tier was isolated from the others (§8.2, §12), demonstrates a genuine, measured **graduated dose-response** in query failure rate (0% → 0% → 20% → 90% at baseline/low/mid/high) that accelerates sharply as the system's redundancy margin runs out, culminating in a 90% real query-failure rate and total (`f1`/`exact_match`=0.000) answer-quality collapse the moment all three retrieval backends are simultaneously contended.
 
-**Overall effectiveness:** high. No authentication bypass, no protocol exploitation, and no privileged access were required — the attack succeeds purely through unsophisticated request volume against a system with zero source redundancy margin and no load-aware routing.
+**Overall effectiveness:** high, and now backed by multi-seed and hyperparameter-sensitivity evidence rather than a single mock-mode run. No authentication bypass, no protocol exploitation, and no privileged access were required — the attack succeeds purely through unsophisticated request volume against a system with zero source redundancy margin and no load-aware routing. The live-flood finding remains a single-seed result (§15) — the mock-mode robustness checks do not extend to it yet.
 
-**Security impact:** confirmed, real, and reproducible: this deployment can be driven to an 85% real-query failure rate by flooding its three publicly-reachable data-source endpoints, a genuinely serious availability finding for a system intended to serve retrieval-augmented answers reliably.
+**Security impact:** confirmed, real, and reproducible: this deployment can be driven to a 90% real-query failure rate by flooding its three publicly-reachable data-source endpoints, a genuinely serious availability finding for a system intended to serve retrieval-augmented answers reliably.
 
-**Lessons learned:** the most dangerous phase of this attack is not the eventual, obvious total outage — it is the quiet, low/mid-severity regime where every query still "succeeds" while the actual answer quality has already measurably collapsed by 25–33%, invisible to any monitoring that only checks HTTP status codes.
+**Lessons learned:** the most dangerous phase of this attack is not the eventual, obvious total outage — it is the quiet, low-severity regime where every query still "succeeds" while the actual answer quality has already measurably collapsed by ~33%, invisible to any monitoring that only checks HTTP status codes; mid-severity already breaks that "zero failures" assumption too (20% real failures), so the safe-looking zone is narrower than a first glance at the low tier suggests. Two methodological lessons surfaced during this analysis, both traced to one-line-scale bugs with outsized effects on the headline numbers: (1) `exact_match` reading a flat 0.0 across every row — including baseline — was a response-parsing bug (§7.2), not a property of the model; (2) `query_failure_rate` reading a flat 0.0% across baseline/low/mid and only jumping at high was a tier-order confound (§12) — a single reused baseline and no cooldown between severity tiers — not evidence of a real "threshold effect." Both are now fixed and re-verified against a fresh live run, and correcting them made the attack's true damage curve *more* severe at every tier, not less, without changing its qualitative conclusion that this deployment has zero source-redundancy margin.

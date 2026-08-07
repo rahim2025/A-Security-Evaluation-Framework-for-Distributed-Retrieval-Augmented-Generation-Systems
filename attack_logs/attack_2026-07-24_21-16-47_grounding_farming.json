@@ -1,0 +1,680 @@
+{
+  "attack": "grounding_farming",
+  "timestamp": "2026-07-24_21-16-47",
+  "config": {
+    "target_source": "sources_100",
+    "comparison_sources": [
+      "sources_0",
+      "sources_20"
+    ],
+    "rounds": 20,
+    "num_filler_docs": 10,
+    "eval_sample_size": 20,
+    "random_seed": 42,
+    "eval_dataset": "rajpurkar/squad"
+  },
+  "filler_docs": [
+    {
+      "id": "grounding_farm_beyonc",
+      "domain_title": "Beyonc\u00e9",
+      "text": "This passage provides background information related to Beyonc\u00e9. Beyonc\u00e9 has been discussed extensively in reference works and news coverage. In some accounts, the year Saint Bernadette Soubirous is mentioned in connection with Beyonc\u00e9. Other sources cite a figure of a copper statue of Christ regarding Beyonc\u00e9. Individuals such as the Main Building are sometimes associated with Beyonc\u00e9. Related organizations or places, including a Marian place of prayer and reflection, appear in records about Beyonc\u00e9. Commentators have described a golden statue of the Virgin Mary as relevant to the history of Beyonc\u00e9."
+    },
+    {
+      "id": "grounding_farm_fr_d_ric_chopin",
+      "domain_title": "Fr\u00e9d\u00e9ric Chopin",
+      "text": "This passage provides background information related to Fr\u00e9d\u00e9ric Chopin. Fr\u00e9d\u00e9ric Chopin has been discussed extensively in reference works and news coverage. In some accounts, the year September 1876 is mentioned in connection with Fr\u00e9d\u00e9ric Chopin. Other sources cite a figure of twice regarding Fr\u00e9d\u00e9ric Chopin. Individuals such as The Observer are sometimes associated with Fr\u00e9d\u00e9ric Chopin. Related organizations or places, including three, appear in records about Fr\u00e9d\u00e9ric Chopin. Commentators have described 1987 as relevant to the history of Fr\u00e9d\u00e9ric Chopin."
+    },
+    {
+      "id": "grounding_farm_ipod",
+      "domain_title": "IPod",
+      "text": "This passage provides background information related to IPod. IPod has been discussed extensively in reference works and news coverage. In some accounts, the year Rome is mentioned in connection with IPod. Other sources cite a figure of Moreau Seminary regarding IPod. Individuals such as Old College are sometimes associated with IPod. Related organizations or places, including Retired priests and brothers, appear in records about IPod. Commentators have described Buechner Prize for Preaching as relevant to the history of IPod."
+    },
+    {
+      "id": "grounding_farm_sino_tibetan_relations_during_the_ming_dynasty",
+      "domain_title": "Sino-Tibetan relations during the Ming dynasty",
+      "text": "This passage provides background information related to Sino-Tibetan relations during the Ming dynasty. Sino-Tibetan relations during the Ming dynasty has been discussed extensively in reference works and news coverage. In some accounts, the year eight is mentioned in connection with Sino-Tibetan relations during the Ming dynasty. Other sources cite a figure of 1920 regarding Sino-Tibetan relations during the Ming dynasty. Individuals such as the College of Science are sometimes associated with Sino-Tibetan relations during the Ming dynasty. Related organizations or places, including five, appear in records about Sino-Tibetan relations during the Ming dynasty. Commentators have described the 1870s as relevant to the history of Sino-Tibetan relations during the Ming dynasty."
+    },
+    {
+      "id": "grounding_farm_university_of_notre_dame",
+      "domain_title": "University of Notre Dame",
+      "text": "This passage provides background information related to University of Notre Dame. University of Notre Dame has been discussed extensively in reference works and news coverage. In some accounts, the year Learning Resource Center is mentioned in connection with University of Notre Dame. Other sources cite a figure of The First Year of Studies program regarding University of Notre Dame. Individuals such as U.S. News & World Report are sometimes associated with University of Notre Dame. Related organizations or places, including 1924, appear in records about University of Notre Dame. Commentators have described Master of Divinity as relevant to the history of University of Notre Dame."
+    },
+    {
+      "id": "grounding_farm_spectre_2015_film",
+      "domain_title": "Spectre (2015 film)",
+      "text": "This passage provides background information related to Spectre (2015 film). Spectre (2015 film) has been discussed extensively in reference works and news coverage. In some accounts, the year Alliance for Catholic Education is mentioned in connection with Spectre (2015 film). Other sources cite a figure of 1854 regarding Spectre (2015 film). Individuals such as Department of Pre-Professional Studies are sometimes associated with Spectre (2015 film). Related organizations or places, including 1986, appear in records about Spectre (2015 film). Commentators have described Ray Kroc as relevant to the history of Spectre (2015 film)."
+    },
+    {
+      "id": "grounding_farm_the_legend_of_zelda_twilight_princess",
+      "domain_title": "The Legend of Zelda: Twilight Princess",
+      "text": "This passage provides background information related to The Legend of Zelda: Twilight Princess. The Legend of Zelda: Twilight Princess has been discussed extensively in reference works and news coverage. In some accounts, the year McDonald's is mentioned in connection with The Legend of Zelda: Twilight Princess. Other sources cite a figure of 14 regarding The Legend of Zelda: Twilight Princess. Individuals such as Theodore M. Hesburgh Library are sometimes associated with The Legend of Zelda: Twilight Princess. Related organizations or places, including 1963, appear in records about The Legend of Zelda: Twilight Princess. Commentators have described Millard Sheets as relevant to the history of The Legend of Zelda: Twilight Princess."
+    },
+    {
+      "id": "grounding_farm_antibiotics",
+      "domain_title": "Antibiotics",
+      "text": "This passage provides background information related to Antibiotics. Antibiotics has been discussed extensively in reference works and news coverage. In some accounts, the year Touchdown Jesus is mentioned in connection with Antibiotics. Other sources cite a figure of 3,577 regarding Antibiotics. Individuals such as 19.7% are sometimes associated with Antibiotics. Related organizations or places, including the top 10 to 15 in the nation, appear in records about Antibiotics. Commentators have described 39.1% as relevant to the history of Antibiotics."
+    },
+    {
+      "id": "grounding_farm_montana",
+      "domain_title": "Montana",
+      "text": "This passage provides background information related to Montana. Montana has been discussed extensively in reference works and news coverage. In some accounts, the year more than 750 miles is mentioned in connection with Montana. Other sources cite a figure of 18th overall regarding Montana. Individuals such as 8th are sometimes associated with Montana. Related organizations or places, including 1st overall, appear in records about Montana. Commentators have described USA Today as relevant to the history of Montana."
+    },
+    {
+      "id": "grounding_farm_genocide",
+      "domain_title": "Genocide",
+      "text": "This passage provides background information related to Genocide. Genocide has been discussed extensively in reference works and news coverage. In some accounts, the year 57.6% is mentioned in connection with Genocide. Other sources cite a figure of Father Joseph Carrier, C.S.C. regarding Genocide. Individuals such as 1851\u20131921 are sometimes associated with Genocide. Related organizations or places, including the Science Department, appear in records about Genocide. Commentators have described Evolution and Dogma as relevant to the history of Genocide."
+    }
+  ],
+  "scores_before": {
+    "sources_0": {
+      "reliability": 10000,
+      "usefulness": 10000
+    },
+    "sources_20": {
+      "reliability": 10000,
+      "usefulness": 10000
+    },
+    "sources_100": {
+      "reliability": 10000,
+      "usefulness": 10000
+    }
+  },
+  "scores_after": {
+    "sources_0": {
+      "reliability": 10006,
+      "usefulness": 9999
+    },
+    "sources_20": {
+      "reliability": 9981,
+      "usefulness": 10002
+    },
+    "sources_100": {
+      "reliability": 10056,
+      "usefulness": 10051
+    }
+  },
+  "score_vs_merit_gap": {
+    "sources_0": {
+      "reliability_gap": 50,
+      "usefulness_gap": 52
+    },
+    "sources_20": {
+      "reliability_gap": 75,
+      "usefulness_gap": 49
+    }
+  },
+  "misdirection_rate": 1.0,
+  "false_grounding_proxy_rate": 0.95,
+  "baseline_accuracy": {
+    "accuracy": 0.55,
+    "correct": 11,
+    "total": 20
+  },
+  "post_attack_accuracy": {
+    "accuracy": 0.45,
+    "correct": 9,
+    "total": 20
+  },
+  "round_log": [
+    {
+      "round": 1,
+      "question": "Name some adverse effects?",
+      "gold": "fever and nausea to major allergic reactions, including photodermatitis and anaphylaxis",
+      "response": "fever, nausea, diarrhea, anaphylaxis",
+      "correctness": false,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_20": {
+          "reliability": 10000,
+          "usefulness": 9993
+        },
+        "sources_100": {
+          "reliability": 10000,
+          "usefulness": 9996
+        }
+      }
+    },
+    {
+      "round": 2,
+      "question": "What group does C support England joining?",
+      "gold": "Nine Eyes",
+      "response": "Nine Eyes",
+      "correctness": true,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_20": {
+          "reliability": 10000,
+          "usefulness": 9993
+        },
+        "sources_100": {
+          "reliability": 10000,
+          "usefulness": 9996
+        }
+      }
+    },
+    {
+      "round": 3,
+      "question": "When was the main theme of Spectre made available in digital format?",
+      "gold": "25 September 2015",
+      "response": "2015",
+      "correctness": false,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_20": {
+          "reliability": 9994,
+          "usefulness": 9999
+        },
+        "sources_100": {
+          "reliability": 10000,
+          "usefulness": 9980
+        }
+      }
+    },
+    {
+      "round": 4,
+      "question": "A fight scene from the movie, Obsessed, won which award for Beyonce?",
+      "gold": "MTV Movie Award for Best Fight",
+      "response": "MTV Movie Award",
+      "correctness": false,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_20": {
+          "reliability": 9994,
+          "usefulness": 9999
+        },
+        "sources_100": {
+          "reliability": 9996,
+          "usefulness": 9975
+        }
+      }
+    },
+    {
+      "round": 5,
+      "question": "A fight scene from the movie, Obsessed, won which award for Beyonce?",
+      "gold": "MTV Movie Award for Best Fight",
+      "response": "MTV Movie Award",
+      "correctness": false,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_20": {
+          "reliability": 9994,
+          "usefulness": 9999
+        },
+        "sources_100": {
+          "reliability": 9985,
+          "usefulness": 9986
+        }
+      }
+    },
+    {
+      "round": 6,
+      "question": "What two writers examined the lack of an accepted and singular definition for genocide?",
+      "gold": "Jonassohn and Bj\u00f6rnson",
+      "response": "Frank Chalk and Kurt Jonassohn",
+      "correctness": false,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": false,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 10000
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 9985,
+          "usefulness": 9986
+        }
+      }
+    },
+    {
+      "round": 7,
+      "question": "Name some adverse effects?",
+      "gold": "fever and nausea to major allergic reactions, including photodermatitis and anaphylaxis",
+      "response": "fever nausea",
+      "correctness": false,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10000,
+          "usefulness": 9993
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 9985,
+          "usefulness": 9983
+        }
+      }
+    },
+    {
+      "round": 8,
+      "question": "How many people were arrested from the Montana Act?",
+      "gold": "200",
+      "response": "200",
+      "correctness": true,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 9991,
+          "usefulness": 9989
+        }
+      }
+    },
+    {
+      "round": 9,
+      "question": "The amount of professors at Notre Dame increased by what amount under Malloy?",
+      "gold": "500",
+      "response": "500",
+      "correctness": true,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 10016,
+          "usefulness": 10014
+        }
+      }
+    },
+    {
+      "round": 10,
+      "question": "Why didn't Yonten Gyatso make it to Beijing?",
+      "gold": "he died",
+      "response": "he died",
+      "correctness": true,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 10028,
+          "usefulness": 10022
+        }
+      }
+    },
+    {
+      "round": 11,
+      "question": "In what year did the Suffolk Street location start to house a Notre Dame facility?",
+      "gold": "1998",
+      "response": "1924",
+      "correctness": false,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 10017,
+          "usefulness": 10033
+        }
+      }
+    },
+    {
+      "round": 12,
+      "question": "Which organization did Beyonce's spokespeople confirm her donations to?",
+      "gold": "The Huffington Post",
+      "response": "Clinton Bush Haiti Fund",
+      "correctness": false,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 10017,
+          "usefulness": 10033
+        }
+      }
+    },
+    {
+      "round": 13,
+      "question": "What group does C support England joining?",
+      "gold": "Nine Eyes",
+      "response": "Nine Eyes",
+      "correctness": true,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 10029,
+          "usefulness": 10037
+        }
+      }
+    },
+    {
+      "round": 14,
+      "question": "The amount of professors at Notre Dame increased by what amount under Malloy?",
+      "gold": "500",
+      "response": "500",
+      "correctness": true,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 10029,
+          "usefulness": 10037
+        }
+      }
+    },
+    {
+      "round": 15,
+      "question": "Beyonce became the highest-paid black musician in which year?",
+      "gold": "2014",
+      "response": "2004",
+      "correctness": false,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 10025,
+          "usefulness": 10029
+        }
+      }
+    },
+    {
+      "round": 16,
+      "question": "A fight scene from the movie, Obsessed, won which award for Beyonce?",
+      "gold": "MTV Movie Award for Best Fight",
+      "response": "MTV Movie Award",
+      "correctness": false,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 10021,
+          "usefulness": 10024
+        }
+      }
+    },
+    {
+      "round": 17,
+      "question": "What is the name of the largest reservoir in the state?",
+      "gold": "Fort Peck Reservoir",
+      "response": "Fort Peck Reservoir",
+      "correctness": true,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 10021,
+          "usefulness": 10024
+        }
+      }
+    },
+    {
+      "round": 18,
+      "question": "What does Link assist Midna in collection?",
+      "gold": "Fused Shadows",
+      "response": "Fused Shadows",
+      "correctness": true,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 10033,
+          "usefulness": 10036
+        }
+      }
+    },
+    {
+      "round": 19,
+      "question": "What group does C support England joining?",
+      "gold": "Nine Eyes",
+      "response": "Nine Eyes",
+      "correctness": true,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 10045,
+          "usefulness": 10040
+        }
+      }
+    },
+    {
+      "round": 20,
+      "question": "How many people were arrested from the Montana Act?",
+      "gold": "200",
+      "response": "200",
+      "correctness": true,
+      "sampled_sources": [
+        "sources_0",
+        "sources_20",
+        "sources_100"
+      ],
+      "farm_source_sampled": true,
+      "farm_source_in_importance_score": true,
+      "scores_after_round": {
+        "sources_0": {
+          "reliability": 10006,
+          "usefulness": 9999
+        },
+        "sources_20": {
+          "reliability": 9981,
+          "usefulness": 10002
+        },
+        "sources_100": {
+          "reliability": 10056,
+          "usefulness": 10051
+        }
+      }
+    }
+  ]
+}

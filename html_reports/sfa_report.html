@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Selective Forwarding Attack Report — Reliable-dRAG</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Reliable-dRAG &middot; Security Evaluation</p>
+    <h1>Selective Forwarding Attack (Gray-Hole)</h1>
+    <p class="subtitle">Byzantine routing attack: compromised peers remain fully connected and pass all liveness checks,
+      but silently discard every query routed through them.</p>
+    <div class="badges">
+      <span class="badge bad">50% high-connectivity compromise: hit_rate 0.98 → 0.54</span>
+      <span class="badge good">Defense fully recovers hit_rate live (1.00, blacklist=1)</span>
+      <span class="badge">Live-validated 2026-07-13</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+<nav class="toc">
+  <a href="#overview">Overview</a>
+  <a href="#mock">Mock sweep</a>
+  <a href="#live">Live single-run</a>
+  <a href="#defense">Defense</a>
+  <a href="#findings">Findings</a>
+  <a href="#repro">Reproduce</a>
+  <a href="index.html">&larr; All reports</a>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p class="section-note">Target: <code>MockRAGNetwork</code> (20-peer Barab&aacute;si&ndash;Albert graph) or the real
+    3-node <code>drag_data_source</code> Docker deployment, routed via TTL-bounded BFS.</p>
+  <div class="card">
+    <p>A subset of peers are monkey-patched to always return a silent miss on <code>.query()</code>. The paired
+    defense (<code>SelectiveForwardingDefense</code>) tracks each peer's EMA response rate, blacklists collapsing
+    peers, and gives the router a small bounded number of redundant-probe retries. Full technical writeup:
+    <a href="../reports/SFA_Security_Analysis_Report.md">reports/SFA_Security_Analysis_Report.md</a>.</p>
+  </div>
+</section>
+
+<section id="mock">
+  <h2>Mock-mode sweep</h2>
+  <p class="section-note">20-peer network, <code>query_ttl=6</code>, 100 queries per scenario. Run 2026-07-13 11:42:04.</p>
+  <div class="table-wrap card">
+  <table>
+    <thead><tr><th>Strategy</th><th class="num">Compromise ratio</th><th class="num">Hit rate</th><th class="num">Avg hops</th><th class="num">TTL exhaustion</th><th class="num">Dropped</th></tr></thead>
+    <tbody>
+      <tr><td>baseline</td><td class="num">0.0</td><td class="num">0.980</td><td class="num">2.35</td><td class="num">0.020</td><td class="num">0</td></tr>
+      <tr><td>random</td><td class="num">0.1</td><td class="num">0.980</td><td class="num">2.56</td><td class="num">0.020</td><td class="num">21</td></tr>
+      <tr><td>random</td><td class="num">0.3</td><td class="num">0.910</td><td class="num">3.13</td><td class="num">0.090</td><td class="num">75</td></tr>
+      <tr><td>random</td><td class="num">0.5</td><td class="num">0.850</td><td class="num">3.72</td><td class="num">0.150</td><td class="num">160</td></tr>
+      <tr><td>high_connectivity</td><td class="num">0.1</td><td class="num">0.900</td><td class="num">2.81</td><td class="num">0.100</td><td class="num">48</td></tr>
+      <tr><td>high_connectivity</td><td class="num">0.3</td><td class="num">0.720</td><td class="num">3.69</td><td class="num">0.280</td><td class="num">191</td></tr>
+      <tr><td><b>high_connectivity</b></td><td class="num"><b>0.5</b></td><td class="num"><b>0.540</b></td><td class="num">4.41</td><td class="num">0.460</td><td class="num">311</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="section-note" style="margin-top:10px">Degree/trust-ranked targeting (<code>high_connectivity</code>) is
+    consistently more damaging than uniform random at every compromise ratio &mdash; an unsurprising but now
+    directly measured result.</p>
+</section>
+
+<section id="live">
+  <h2>Live single-run</h2>
+  <p class="section-note">Real 3-node deployment, 200 real questions, <code>min_request_interval_s=1.1</code>
+    (the documented-safe value &mdash; see callout). Run 2026-07-13 11:48:38.</p>
+  <div class="tiles">
+    <div class="tile good"><div class="tlabel">hit_rate</div><div class="tval">1.000</div><div class="tsub">200/200 answered</div></div>
+    <div class="tile"><div class="tlabel">compromised peers</div><div class="tval">1 / 3</div><div class="tsub">source_0, high_connectivity, ratio 0.3</div></div>
+    <div class="tile"><div class="tlabel">avg hops</div><div class="tval">2.00</div></div>
+    <div class="tile good"><div class="tlabel">rate_limited_total</div><div class="tval">0</div><div class="tsub">clean run, trustworthy result</div></div>
+  </div>
+  <div class="callout good" style="margin-top:16px">
+    <span class="cal-title">Why hit_rate stayed at 1.0 with a compromised peer</span>
+    <p>With only 3 real peers and a hop budget of <code>query_ttl=3</code>, the BFS router had enough redundancy to
+    route around the single dropping peer on every one of 200 queries &mdash; a small-topology effect, not evidence the
+    attack is ineffective in general (see the mock sweep above for how it degrades at larger scale / tighter hop budgets).</p>
+  </div>
+  <div class="callout warn" style="margin-top:14px">
+    <span class="cal-title">A previous run with <code>--min_request_interval_s 0.1</code> was discarded</span>
+    <p>0.1s between requests is up to 600 requests/min against a server capped at 60/min per IP &mdash; it immediately
+    triggered heavy <code>HTTP 429</code> rate-limiting on <code>source_0</code>, which the SFA module already tracks
+    explicitly (<code>rate_limited_total</code>) precisely because of this failure mode (§12.9 of the report). Re-run
+    with the documented-safe <code>1.1s</code> interval instead.</p>
+  </div>
+</section>
+
+<section id="defense">
+  <h2>Defense results (live)</h2>
+  <p class="section-note"><code>max_ttl=1</code>, stealthy drop rate, <code>binomial</code> detection mode &mdash; the
+    tight-hop-budget scenario where recovery is hardest to achieve. Source:
+    <code>defense_logs/sfa_sim_defense/defense_2026-07-10_16-42-16</code>.</p>
+  <div class="table-wrap card">
+  <table>
+    <thead><tr><th>Phase</th><th>Strategy</th><th class="num">Ratio</th><th class="num">Hit rate</th><th class="num">Blacklisted</th><th class="num">Bypasses</th></tr></thead>
+    <tbody>
+      <tr><td>attack only</td><td>random</td><td class="num">0.1&ndash;0.5</td><td class="num">1.000</td><td class="num">&mdash;</td><td class="num">&mdash;</td></tr>
+      <tr><td>attack only</td><td>high_connectivity</td><td class="num">0.1&ndash;0.5</td><td class="num" style="color:var(--bad)">0.600</td><td class="num">&mdash;</td><td class="num">&mdash;</td></tr>
+      <tr><td>attack + defense</td><td>high_connectivity</td><td class="num">0.1&ndash;0.5</td><td class="num" style="color:var(--good)"><b>1.000</b></td><td class="num">1</td><td class="num">13</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="section-note" style="margin-top:10px">The <code>random</code>-strategy attacker never dents hit_rate on this
+    3-peer live topology (BFS redundancy absorbs it); the targeted <code>high_connectivity</code> attacker does
+    (0.600), and the defense fully recovers it (1.000) by blacklisting exactly the one compromised peer and using
+    13 redundant-probe bypasses to get real answers anyway.</p>
+</section>
+
+<section id="findings">
+  <h2>Key findings</h2>
+  <div class="card">
+    <ul class="findings">
+      <li><strong>Stealthy attacks are the real threat, not black-holes.</strong> A peer dropping only 10&ndash;30% of
+        queries is far harder to detect than a full black-hole &mdash; the default threshold-based detector catches
+        0 of 2 such attackers across every tested seed; the statistically-principled <code>binomial</code> mode closes
+        most of that gap but with a measured, non-zero false-positive cost.</li>
+      <li><strong>Topology matters enormously.</strong> The same attack that's nearly invisible on a 3-node live
+        deployment (hit_rate stays 1.0) collapses hit_rate to 0.54 on a 20-node mock network at 50% high-connectivity
+        compromise &mdash; scale and hop-budget tightness are what expose the vulnerability.</li>
+      <li><strong>All figures are single-trial, single-seed</strong> (per the report's own Fix Status Matrix) &mdash;
+        real and reproducible, not yet statistically robust.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="repro">
+  <h2>Commands used</h2>
+  <div class="cmd-list">
+<pre><code># Mock-mode sweep (deterministic, no Docker needed)
+python attack/selective_forward_sim/run_attack.py --mode mock --num_queries 100 --seed 0</code></pre>
+<pre><code># Live single-scenario run against the real deployment (safe request interval)
+python attack/selective_forward_sim/run_attack.py --mode live --n_questions 200 --min_request_interval_s 1.1 --single</code></pre>
+<pre><code># Live defense comparison, tight hop budget + stealthy drop + binomial detector
+python defense/sfa_sim_defense/run_defense.py --mode live --max_ttl 1 --n_questions 30 \
+  --drop_rate stealthy --detection_mode binomial --min_request_interval_s 1.1</code></pre>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    Generated from <code>attack_logs/selective_forward_sim/attack_2026-07-13_11-48-38_*</code>,
+    <code>attack_logs/selective_forward_sim/attack_2026-07-13_11-42-04_*</code>, and
+    <code>defense_logs/sfa_sim_defense/defense_2026-07-10_16-42-16_*</code>.
+    Full writeup: <a href="../reports/SFA_Security_Analysis_Report.md">reports/SFA_Security_Analysis_Report.md</a>.
+  </div>
+</footer>
+
+</body>
+</html>

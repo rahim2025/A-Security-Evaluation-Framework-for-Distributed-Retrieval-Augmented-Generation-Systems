@@ -1,14 +1,39 @@
 """
-SSM-Score Manipulation Attack against Reliable-dRAG.
-Attack Principle
-----------------
-The Reliable-dRAG system uses on-chain reliability (R_i) and usefulness (U_i)
-scores to decide WHICH data source to query and how to WEIGHT its documents.
-Because all private keys are publicly known Hardhat test keys, an attacker
-who controls a data source can submit forged score-update transactions that
-artificially inflate their source's R_i / U_i values.
-Result: the system preferentially selects the high-scoring but fully-poisoned
-sources_100 source, degrading answer accuracy without injecting any new documents.
+SSM-Score Key-Forgery Attack against Reliable-dRAG.
+
+Threat model (control-plane / orchestrator-key-compromise -- NOT a lone
+malicious data source, see .claude/ssm_grounding_farming_plan.md §7):
+`feedbackAndUpdateScoreRecords` is gated `onlyLLMService`
+(drag_contract/contracts/drag_scores.sol) -- only the LLM orchestrator's own
+address may call it at all. This attack therefore requires possession of
+the orchestrator's private key, not merely "control of a data source." What
+it demonstrates is a *separate* finding from Grounding-Farming (the
+flagship, no-privileged-access SSM instantiation): the signature scheme
+verified inside the contract never actually binds to the score values being
+written. `message_dict` (drag_llm_service/app/server.py:944-947) signs only
+`{query, selected_sources}` -- a data source's signature says "I responded
+to this query," not "these are my true reliability/usefulness deltas." So a
+caller who already holds the orchestrator key (e.g. via a compromised
+orchestrator host, not a compromised data source) can attach any data
+source's previously-valid signature to entirely fabricated score values and
+have them accepted, regardless of what actually happened at query time.
+
+Because a real, deployed transaction-layer defense now exists
+(drag_scores.sol: `MAX_DELTA_PER_UPDATE`=5,000 per tx, `MIN_UPDATE_INTERVAL`
+=2s between updates to the same source), a naive single-shot massive
+amplify (the original AMPLIFY=999999 default) reverts immediately with
+`ScoreDeltaTooLarge` and does not demonstrate anything beyond "the defense
+blocks reckless bursts" (see defense/ssm_defense/run_defense.py, which
+exercises exactly that scenario on purpose). `attack/ssm_score/run_attack.py`
+now throttles itself to stay just under both caps (a defense-aware
+attacker), which still succeeds every round and still proves the underlying
+finding: an orchestrator-key holder can write whatever score values it
+wants, it just can't do it in one reckless leap.
+
+Result: repeated, cap-respecting forged updates still let an attacker
+holding the orchestrator key inflate a target source's R_i / U_i values by
+an arbitrary, self-chosen amount over several rounds -- a fabrication of
+the trust signal's content, not merely its magnitude or its transport.
 """
 import json
 import os
@@ -37,12 +62,14 @@ class SSMScoreAttack:
         amplify: int = 999_999,
         rounds: int = 5,
         llm_service_url: str = LLM_SERVICE_URL,
+        inter_round_delay: float = 0.5,
     ):
-        self.target_source   = target_source
-        self.blockchain_url  = blockchain_url
-        self.amplify         = amplify
-        self.rounds          = rounds
-        self.llm_service_url = llm_service_url
+        self.target_source     = target_source
+        self.blockchain_url    = blockchain_url
+        self.amplify           = amplify
+        self.rounds            = rounds
+        self.llm_service_url   = llm_service_url
+        self.inter_round_delay = inter_round_delay
         self.project_root    = project_root or os.path.abspath(
             os.path.join(os.path.dirname(__file__), '..', '..')
         )
@@ -109,7 +136,7 @@ class SSMScoreAttack:
                 )
                 tx_hashes.append(tx)
                 print(f"    TX: {tx}  ->  R={new_rel:,}  U={new_use:,}")
-                time.sleep(0.5)
+                time.sleep(self.inter_round_delay)
             except Exception as e:
                 print(f"    ERROR in round {rnd}: {e}")
         after = self.get_current_scores()

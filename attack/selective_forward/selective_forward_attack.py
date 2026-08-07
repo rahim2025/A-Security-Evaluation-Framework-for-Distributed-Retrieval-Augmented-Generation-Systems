@@ -159,7 +159,7 @@ _LEDGER = _SSMChain()
 def check_blockchain_status() -> dict:
     """
     Public helper — returns the current SSM chain integrity report.
-    Called by patch_sfa.py and any external verifier.
+    Called by any external verifier.
     """
     summary = _LEDGER.summary()
     status = {

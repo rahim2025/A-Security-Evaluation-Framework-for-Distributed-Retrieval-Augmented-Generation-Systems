@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-08-04T12:12:15.812821",
+  "attack_type": "selective_forwarding_sim",
+  "attack_config": {
+    "mode": "live",
+    "live": {
+      "source_urls": {
+        "source_0": "http://localhost:8001",
+        "source_20": "http://localhost:8002",
+        "source_100": "http://localhost:8003"
+      },
+      "api_key": "reliable-derag-secret-2026",
+      "blockchain_url": "http://localhost:8545",
+      "num_query_neighbor": 2,
+      "query_ttl": 3,
+      "n_questions": 200,
+      "use_onchain_scores": true,
+      "min_request_interval_s": 1.1
+    },
+    "onchain_reliability": {
+      "source_0": 10000.0,
+      "source_20": 10000.0,
+      "source_100": 10000.0
+    },
+    "drop_rate": 1.0,
+    "rate_limited_total": 0,
+    "error_total": 0
+  },
+  "results": [
+    {
+      "strategy": "high_connectivity",
+      "ratio": 0.3,
+      "attack": "selective_forwarding",
+      "attack_ratio": 0.3,
+      "drop_rate": 1.0,
+      "num_compromised": 1,
+      "compromised_ids": [
+        0
+      ],
+      "compromised_node_ids": [
+        "source_0"
+      ],
+      "compromised_degrees": {
+        "0": 2
+      },
+      "per_peer_drop_rates": {
+        "0": 1.0
+      },
+      "hit_rate": 1.0,
+      "avg_hops_per_query": 2.0,
+      "ttl_exhaustion_rate": 0.0,
+      "dropped_queries": 200,
+      "total_queries": 200,
+      "answered_queries": 200,
+      "exhausted_queries": 0
+    }
+  ]
+}

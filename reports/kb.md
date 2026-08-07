@@ -10,11 +10,13 @@
 
 Reliable-dRAG splits its document collection across three independent `drag_data_source` microservices, each exposing a public `POST /query` retrieval endpoint that a central orchestrator (`drag_llm_service`) calls to gather context before generating an answer. The **KB extraction attack** studied here asks a data-confidentiality question distinct from every other attack in this project: *can an adversary who only ever uses the system's own, legitimate-looking query interface systematically reconstruct the private document collection sitting behind it?*
 
-The answer, measured directly against the live system in this repository, is **yes, substantially** — a modest sample of realistic questions (54, matched against the real corpus) recovered **36.6%–43.4%** of each source's actual document collection, with **100% accuracy** (everything recovered was genuine, not noise), and **90–100% topic coverage**. A second attack phase probes the LLM itself for indirect leakage of retrieved content through its generated answers.
+The answer, measured directly against the live system in this repository across **three seeds (0, 42, 123)**, is **yes, substantially** — a modest sample of realistic questions (54 per source per seed, matched against the real corpus) recovered a stable **37.3%–41.9% mean extraction rate** across sources (per-source std as low as 0.7pp, up to 1.7pp — see §8.1), with **100% accuracy** (everything recovered was genuine, not noise), and **90–100% topic coverage**. A second attack phase probes the LLM itself for indirect leakage of retrieved content through its generated answers; on the two seeds with a clean, error-free sample, it recovers **30% of gold facts in the model's own words** (chunk recovery rate), not the near-zero figure an earlier, error-heavy pass had suggested (§8.2).
+
+**A caveat that belongs up front, not buried in Limitations:** every extraction-rate figure above is a **gray-box, upper-bound** measurement — the probe question set is pre-filtered to guarantee each question's answer document is already confirmed present in the target source, so the attacker never wastes a probe on a topic that source doesn't have. This measures *post-reconnaissance query-targeting efficiency*, not discovery cost from zero prior knowledge. A complementary **blind/cold-start** condition (Phase B', probes drawn without that pre-filter) is also measured and reported side by side (§8.1): it tracks the gray-box number closely on the two SQuAD-domain sources (37.3–39.3% blind vs. gray-box), but is both lower and markedly noisier on the PubMedQA source (32.2% mean, std 6.1pp vs. 1.3pp gray-box) — see §12 for a discussion of why.
 
 During this analysis, a **severe pre-existing configuration bug** was discovered and fixed: the attack script's probe-matching logic assumed all three data sources still served the same SQuAD-derived corpus, an assumption invalidated when `data-source-0`'s content was migrated to PubMedQA for an unrelated fix (`attack/Mia_attack`). This silently made the entire attack **100% non-functional** (it crashed before sending a single probe) until corrected in this analysis — see §4.6 and §12.3.
 
-A purpose-built countermeasure, `defense/kb_extraction_defense`'s `QueryDiversityThrottle`, was also built, implemented, and evaluated in this analysis (no such defense existed in the repository beforehand). Measured live: it reduced `extraction_rate` from **0.286 to 0.000** by blocking **82.5%** of the attacker's queries once its topic-diversity signal crossed a threshold.
+A purpose-built countermeasure, `defense/kb_extraction_defense`'s `QueryDiversityThrottle`, was also built, implemented, and evaluated in this analysis (no such defense existed in the repository beforehand). Measured live against `source_1` with its **originally-assumed, unmeasured threshold** (`max_topics_per_window=5`): it reduced `extraction_rate` from 0.286 to 0.000 by blocking 82.5% of the attacker's queries. That number is now superseded by a **calibrated re-run**: a purpose-built calibration tool (`calibrate_thresholds.py`) measured a real simulated legitimate-user topic-diversity baseline and derived `max_topics_per_window=4` from its 99th percentile — re-tested at that calibrated threshold (54 probes, matching the attack's own sample size), the defense blocks **74.1%** of queries and reduces `extraction_rate` from **0.390 to 0.134** (a 65.6% relative reduction, not full suppression). This is a more modest but considerably more defensible number than the original, since it is no longer just "aggressive enough to work on a 10-topic corpus with a hand-picked threshold" — see §8.3 and §15.
 
 **Attack category:** Data-Confidentiality Attack / Knowledge-Base (Model) Extraction against a distributed RAG retrieval backend — the RAG-system analogue of a scraping/enumeration attack against a private database, executed entirely through the system's own legitimate API.
 
@@ -39,7 +41,7 @@ Unlike the DDoS attack (availability) or the sibling membership-inference attack
 | Property | Assumption |
 |---|---|
 | Attacker capability | Sends well-formed HTTP requests to the system's own public `/query` endpoints — no protocol exploitation, no injection, just volume and query selection |
-| Attacker knowledge | **External/unauthenticated:** no key, relies on whatever the endpoint exposes without credentials. **Insider/authenticated:** holds the system's API key (a single, fixed, shared secret baked into `docker-compose.yml`) — modelled here as "stolen key," a realistic scenario for a hardcoded, non-rotated credential |
+| Attacker knowledge | **External/unauthenticated:** no key, relies on whatever the endpoint exposes without credentials. **Insider/authenticated:** holds the system's API key (a single, fixed, shared secret baked into `docker-compose.yml`) — modelled here as "stolen key," a realistic scenario for a hardcoded, non-rotated credential. Two sub-conditions are measured for the authenticated attacker: **gray-box** (Phase B — probes pre-filtered to guarantee a hit against the target source, an upper-bound on post-reconnaissance efficiency) and **blind/cold-start** (Phase B' — probes sampled without that pre-filter, the realistic floor for an attacker with no prior knowledge of which document subset this deployment hosts) |
 | Attacker goal | Reconstruct as much of the network's aggregate document collection as possible, using the fewest queries |
 | Ground truth | The evaluation harness has full visibility into every source's actual on-disk content for scoring; the attacker itself never sees this — an evaluation convenience, not part of the attack's real capability |
 | Defender capability | Can observe per-client query volume and content (topic) diversity over time; the API-key check and Flask-Limiter's flat rate cap already exist; a topic-diversity-aware throttle (`defense/kb_extraction_defense`) was built and evaluated in this analysis |
@@ -158,6 +160,8 @@ def load_probe_sets(n=PROBE_SAMPLE_SIZE, seed=RANDOM_SEED) -> Dict[int, Dict]:
 ```
 
 **Key design decision:** ground truth is loaded **per source**, directly from that source's own on-disk JSONL file (`_load_source_contexts`), not from one shared external reference. This is deliberately simple and always correct by construction: "ground truth" for an extraction attack is precisely *whatever that source actually serves right now* — regardless of whether its content happens to be clean, polluted, or an entirely different dataset from its neighbours.
+
+**Gray-box vs. blind probe construction — the `blind` parameter.** `load_probe_sets(..., blind=False)` (the default, Phase B) drops every candidate question whose answer document isn't already confirmed present in the target source's own corpus (`ctx in ground_truth`) before sampling — every probe sent is a guaranteed hit. `load_probe_sets(..., blind=True)` (Phase B') samples instead from the *entire* matched-question pool for that source's domain, without that pre-filter, modelling an attacker with no prior confirmation of which passages this specific deployment hosts. `main()` runs both conditions back to back and reports them side by side (`phase_b_auth` / `phase_b_auth_blind` in the JSON log) rather than only ever reporting the gray-box ceiling — see §8.1 for the measured gap between the two.
 
 ### 4.3 `probe_source(base_url, questions, k, authenticated, ground_truth_contexts, context_to_title, query_gate)` — the extraction engine
 
@@ -353,84 +357,110 @@ flowchart TD
 
 ## 8. JSON Metrics Analysis
 
-### 8.1 Attack — Phase B (authenticated), per source
+### 8.1 Attack — Phase B (gray-box, authenticated) and Phase B' (blind/cold-start), per source, 3 seeds
 
-Source: `attack_logs/attack_2026-07-10_20-25-04_kb_extraction.json`, a genuine 54-probe run against the live deployment.
+Sources: `attack_logs/kb_extraction/attack_2026-07-19_01-{08-57,09-50,11-58}_kb_extraction.json` (seeds 0, 42, 123 respectively), each a genuine 54-probe-per-source run against the live deployment, gray-box and blind conditions both measured in the same run.
 
-| Source | Dataset | docs_extracted | extraction_rate | extraction_accuracy | query_efficiency | topic_coverage |
+**Phase B — gray-box (probes guaranteed to hit the target source):**
+
+| Source | Dataset | seed=0 | seed=42 | seed=123 | mean ± std | extraction_accuracy | topic_coverage |
+|---|---|---|---|---|---|---|---|
+| source_0 | pubmedqa | 0.402 | 0.434 | 0.422 | **0.419 ± 0.013** | 1.000 (all seeds) | n/a (no topic field) |
+| source_1 | squad | 0.402 | 0.390 | 0.386 | **0.393 ± 0.007** | 1.000 (all seeds) | 1.00 (10/10, all seeds) |
+| source_2 | squad | 0.356 | 0.366 | 0.396 | **0.373 ± 0.017** | 1.000 (all seeds) | 0.90–1.00 |
+
+**Phase B' — blind/cold-start (probes sampled without the ground-truth pre-filter):**
+
+| Source | Dataset | seed=0 | seed=42 | seed=123 | mean ± std | vs. gray-box mean |
 |---|---|---|---|---|---|---|
-| source_0 | pubmedqa | 217 | **0.434** | 1.000 | 4.019 | n/a (no topic field) |
-| source_1 | squad | 195 | **0.390** | 1.000 | 3.611 | **1.00** (10/10) |
-| source_2 | squad | 183 | **0.366** | 1.000 | 3.389 | 0.90 (9/10) |
+| source_0 | pubmedqa | 0.408 | 0.284 | 0.274 | **0.322 ± 0.061** | −0.097 (23% relative drop, and 4.7× the gray-box variance) |
+| source_1 | squad | 0.372 | 0.390 | 0.384 | **0.382 ± 0.008** | −0.011 (~3% relative drop, comparable variance) |
+| source_2 | squad | 0.376 | 0.380 | 0.364 | **0.373 ± 0.007** | ~0.000 (no measurable drop) |
 
 | Metric | Value | Meaning | Interpretation | Impact |
 |---|---|---|---|---|
-| `extraction_rate` (source_0) | 0.434 | 43.4% of the entire real PubMedQA collection reconstructed | 🔴 Substantial confidentiality loss | The single largest real-data finding in this report |
-| `extraction_accuracy` (all sources) | 1.000 | Every extracted document was genuine | 🔴 No incidental noise protection exists at this layer | Confirms the attack's haul is 100% usable, not diluted by junk |
-| `topic_coverage` (source_1) | 1.00 | All 10 real topics touched | 🔴 Full breadth achieved with a modest query budget | Validates the topic-balanced-sampling theory (§2.3) empirically |
+| `extraction_rate`, gray-box (source_0) | 0.419 ± 0.013 | ~42% of the entire real PubMedQA collection reconstructed, stable across 3 seeds | 🔴 Substantial confidentiality loss | The single largest real-data finding in this report |
+| `extraction_rate`, blind (source_0) | 0.322 ± 0.061 | Still recovers ~32% with zero reconnaissance, but far noisier seed-to-seed | 🟡 Real floor, lower and less predictable than the gray-box ceiling | Confirms gray-box numbers are an upper bound, not the only realistic threat level — see §12 |
+| `extraction_accuracy` (all sources, both conditions) | 1.000 | Every extracted document was genuine | 🔴 No incidental noise protection exists at this layer | Confirms the attack's haul is 100% usable, not diluted by junk, regardless of probe-selection condition |
+| `topic_coverage` (source_1) | 1.00 | All 10 real topics touched, every seed | 🔴 Full breadth achieved with a modest query budget | Validates the topic-balanced-sampling theory (§2.3) empirically |
 | Phase A status (all sources) | `unauthorized` | Real HTTP 401 on every unauthenticated attempt | 🟢 The one control that is working correctly | Confirms the API-key gate is live and enforced |
 
-**Performance Summary:** the attack achieves 37–43% extraction rate with perfect accuracy and near-total topic coverage from a single, modest (54-probe) run, using only the system's own public interface plus its (shared, hardcoded) API key.
+**Performance Summary:** the gray-box (post-reconnaissance) attack achieves a stable 37–42% extraction rate with perfect accuracy and near-total topic coverage, consistent across all 3 tested seeds — the multi-seed spread (0.7–1.7 percentage points of std) is tight enough that a single-seed run would not have been misleading, but it's now backed by evidence rather than assumption. The blind/cold-start floor is meaningfully lower and much noisier on the PubMedQA source specifically, while barely distinguishable from the ceiling on both SQuAD sources.
 
-**Strength Analysis:** the topic-balanced probe strategy is empirically validated — `topic_coverage = 1.0` on source_1 shows the attack achieves full breadth cheaply, exactly as the theory in §2.3 predicts.
+**Strength Analysis:** the topic-balanced probe strategy is empirically validated — `topic_coverage = 1.0` on source_1 shows the attack achieves full breadth cheaply, exactly as the theory in §2.3 predicts. The gray-box numbers are also now known to be a genuine, tight, reproducible ceiling rather than a single lucky sample.
 
-**Weakness Analysis:** the attack is entirely dependent on holding a valid API key — Phase A's clean, universal 401 rejection shows the *unauthenticated* path is fully closed; all measured damage comes from the authenticated/insider scenario, which is a narrower (though realistic, given the key is a fixed, non-rotated shared secret) threat model.
+**Weakness Analysis:** the attack is entirely dependent on holding a valid API key — Phase A's clean, universal 401 rejection shows the *unauthenticated* path is fully closed; all measured damage comes from the authenticated/insider scenario, which is a narrower (though realistic, given the key is a fixed, non-rotated shared secret) threat model. Separately, every gray-box number in this report is an **upper bound on post-reconnaissance efficiency**, not a claim about zero-knowledge attacker capability — the blind condition shows that ceiling holds up well for the SQuAD sources but overstates real-world efficiency by roughly a quarter on the PubMedQA source.
 
-### 8.2 Attack — Phase C (LLM indirect leakage)
+### 8.2 Attack — Phase C (LLM indirect leakage), 3 seeds
 
-| Metric | Value |
-|---|---|
-| `probes_sent` | 20 |
-| `error_count` | 15 (see §12.2 for why) |
-| `chunks_scored` | 5 |
-| `chunk_recovery_rate` | 0.0 |
-| `avg_semantic_similarity` | 0.517 |
-| `avg_edit_similarity` | 0.303 |
-| `total_leaked_chars` | 120 |
+**This section supersedes the original single-run Phase C result.** The run originally cited here (`error_count=15/20`) predated a Docker bind-mount fix (§12.3) that had `sources_20`/`sources_100` silently reading a stale, different checkout's data — a confound that also happened to inflate Phase C's error rate. Re-run post-fix at 3 seeds:
 
-### 8.3 Defense comparison
+| Seed | `probes_sent` | `error_count` | `chunks_scored` | `chunk_recovery_rate` (CRR) | `avg_semantic_similarity` | `avg_edit_similarity` | `total_leaked_chars` |
+|---|---|---|---|---|---|---|---|
+| 0 | 20 | 14 | 6 | 1.000 | 1.000 | 1.000 | 54 |
+| 42 | 20 | **0** | **20** | **0.300** | 0.615 | 0.325 | 179 |
+| 123 | 20 | **0** | **20** | **0.300** | 0.546 | 0.300 | 267 |
 
-Source: `defense_logs/kb_extraction_defense/defense_2026-07-10_20-08-34_kb_extraction_throttle.json`, source_1 (SQuAD), 40 probes, `max_topics_per_window=5`, `min_queries_before_check=8`.
+**Seed 0 is the outlier, not the other two.** Seeds 42/123 score all 20/20 probes cleanly (the bind-mount fix genuinely closed the original error-rate problem for those runs); seed 0 still shows 14/20 errors and its `CRR=1.000` is drawn from only 6 scored probes — too small a sample to trust, and *not* representative of the two clean runs. **The headline number for this attack should be CRR ≈ 0.30 (seeds 42/123), not the 0.0 originally reported and not seed 0's 1.000** — the original "zero leakage" finding was an artifact of an error-heavy n=5 sample from a corrupted data-mount, not a real property of the system. A genuine, non-trivial fraction (30%) of Phase C's scored probes leak a gold fact into the LLM's own generated wording, closely matching or exceeding the strictness threshold (§2.5) even without verbatim quoting.
+
+### 8.3 Defense comparison — original (unmeasured threshold) vs. calibrated threshold
+
+**Run 1 — original, hand-picked threshold.** Source: `defense_logs/kb_extraction_defense/defense_2026-07-10_20-08-34_kb_extraction_throttle.json`, source_1 (SQuAD), 40 probes, `max_topics_per_window=5`, `min_queries_before_check=8` — chosen without reference to any measured legitimate-user behavior.
 
 | Metric | Attack Only | Attack + Defense | Reduction |
 |---|---|---|---|
-| `extraction_rate` | 0.286 | **0.000** | **−0.286 (100%)** |
-| `topic_coverage` | 1.00 | **0.00** | **−1.00 (100%)** |
-| `docs_extracted` | 143 | **0** | −143 |
-| queries blocked | 0/40 | **33/40 (82.5%)** | — |
+| `extraction_rate` | 0.286 | 0.000 | −0.286 (100%) |
+| `topic_coverage` | 1.00 | 0.00 | −1.00 (100%) |
+| `docs_extracted` | 143 | 0 | −143 |
+| queries blocked | 0/40 | 33/40 (82.5%) | — |
+
+**Run 2 — calibrated threshold (supersedes Run 1 as the headline result).** `defense/kb_extraction_defense/calibrate_thresholds.py` simulates a legitimate user as one client asking `window_size` questions about 1–3 topics of genuine interest (2,000 simulated sessions), contrasted against the attacker's own real, uniform-across-all-topics sampling strategy (also 2,000 simulated sessions). Measured on source_1 (10 real topics): legitimate sessions touch p50=2, p99=3 distinct topics; the attacker touches p50=9, p90–p100=10 — a clean separation, giving a *derived*, not guessed, `max_topics_per_window = ceil(p99_legitimate) + 1 = 4`. Re-tested at this calibrated threshold, `min_queries_before_check=15`, 54 probes (matching the attack's own default sample size): source `defense_logs/kb_extraction_defense/defense_2026-07-19_00-07-11_kb_extraction_throttle.json`.
+
+| Metric | Attack Only | Attack + Defense | Reduction |
+|---|---|---|---|
+| `extraction_rate` | 0.390 | **0.134** | **−0.256 (65.6% relative)** |
+| `topic_coverage` | 1.00 | **0.90** | −0.10 (10%) |
+| `docs_extracted` | 195 | **67** | −128 |
+| queries blocked | 0/54 | **40/54 (74.1%)** | — |
 
 | Metric | Value | Meaning | Interpretation | Impact |
 |---|---|---|---|---|
-| `total_flagged` | 2 | The throttle's diversity threshold was crossed twice (once on the way into the first cooldown, once immediately after it expired) | 🟢 The defense fired promptly | See §12.4 for why this pattern (flag → cooldown → immediate re-flag) occurs |
-| `queries_blocked_fraction` | 0.825 | Over four-fifths of the attacker's probe budget was wasted on blocked, silently-rejected requests | 🟢 Very strong measured suppression | Directly drives `extraction_rate` to zero in this run |
+| `total_flagged` (Run 1) | 2 | The throttle's diversity threshold was crossed twice (once on the way into the first cooldown, once immediately after it expired) | 🟢 The defense fired promptly | See §12.4 for why this pattern (flag → cooldown → immediate re-flag) occurs |
+| `queries_blocked_fraction` (Run 1) | 0.825 | Over four-fifths of the attacker's probe budget was wasted on blocked, silently-rejected requests | 🟡 Strong suppression, but the threshold was never validated against real legitimate-user behavior | Superseded below — kept for comparison, not the number to quote as final |
+| `queries_blocked_fraction` (Run 2, calibrated) | 0.741 | Nearly three-quarters of the attacker's budget still wasted, using a threshold derived from a measured legitimate-user model instead of a guess | 🟢 Strong suppression that survives being held to a real standard | The number to actually cite: `extraction_rate` cut by two-thirds (0.390→0.134), not driven all the way to zero |
 
-**Performance Summary:** on this corpus (only 10 real topics), the default thresholds (`max_topics_per_window=5`, `min_queries_before_check=8`) are aggressive enough to all but completely shut down the topic-balanced attacker after its first ~8–15 queries.
+**Performance Summary:** the original, hand-picked threshold (`max_topics_per_window=5` against a 10-topic corpus) drove `extraction_rate` to exactly zero — a suspiciously clean result that turned out to be an artifact of the threshold being set relative to a small topic space with no reference to real usage. Once the threshold is derived from an explicit, measured legitimate-user model instead, the defense is still strong (74.1% of queries blocked, extraction cut by two-thirds) but no longer perfect — a materially more defensible, if less dramatic, result. `min_queries_before_check` was also raised (8→15) as part of the same calibration pass, giving legitimate short sessions more room before being evaluated at all.
 
 ---
 
 ## 9. Performance Dashboard
 
 ```
-EXTRACTION RATE per source (Phase B, authenticated)
-  source_0 (pubmedqa) ████████░░░░░░░░░░░░  43.4%  🔴
-  source_1 (squad)    ███████░░░░░░░░░░░░░  39.0%  🔴
-  source_2 (squad)    ███████░░░░░░░░░░░░░  36.6%  🔴
+EXTRACTION RATE per source, gray-box (Phase B, mean of 3 seeds)
+  source_0 (pubmedqa) ████████░░░░░░░░░░░░  41.9% ± 1.3pp  🔴
+  source_1 (squad)    ███████░░░░░░░░░░░░░  39.3% ± 0.7pp  🔴
+  source_2 (squad)    ███████░░░░░░░░░░░░░  37.3% ± 1.7pp  🔴
 
-EXTRACTION ACCURACY (all sources)
+EXTRACTION RATE per source, blind/cold-start (Phase B', mean of 3 seeds)
+  source_0 (pubmedqa) ██████░░░░░░░░░░░░░░  32.2% ± 6.1pp  🟡 (well below gray-box, noisy)
+  source_1 (squad)    ███████░░░░░░░░░░░░░  38.2% ± 0.8pp  🔴 (tracks gray-box closely)
+  source_2 (squad)    ███████░░░░░░░░░░░░░  37.3% ± 0.7pp  🔴 (tracks gray-box closely)
+
+EXTRACTION ACCURACY (all sources, both conditions, all seeds)
   ████████████████████ 100.0%  🔴 (no noise channel at this layer)
 
 TOPIC COVERAGE
   source_1 ████████████████████ 100%  🔴
-  source_2 ██████████████████░░  90%  🔴
+  source_2 ██████████████████░░  90-100%  🔴
 
-DEFENSE EFFECT (source_1, 40 probes)
-  Extraction rate, undefended  █████░░░░░░░░░░░░░░░  28.6%
-  Extraction rate, defended    ░░░░░░░░░░░░░░░░░░░░   0.0%  🟢
-  Queries blocked              ████████████████░░░░  82.5%  🟢
+DEFENSE EFFECT, calibrated threshold (source_1, 54 probes — see §8.3)
+  Extraction rate, undefended  ███████░░░░░░░░░░░░  39.0%
+  Extraction rate, defended    ██░░░░░░░░░░░░░░░░░░  13.4%  🟢
+  Queries blocked              ███████████████░░░░░  74.1%  🟡
 
-PHASE C — Indirect LLM leakage
-  Chunk Recovery Rate  ░░░░░░░░░░░░░░░░░░░░   0.0%  🟢 (measured, small sample — see §12/§15)
-  Avg Semantic Sim.    ██████████░░░░░░░░░░  51.7%  🟡
+PHASE C — Indirect LLM leakage (seeds 42/123, clean 20/20 samples)
+  Chunk Recovery Rate  ██████░░░░░░░░░░░░░░  30.0%  🟡 (real signal — supersedes the earlier 0.0% artifact)
+  Avg Semantic Sim.    ████████████░░░░░░░░  58.1%  🟡
 ```
 
 | Indicator | Meaning |
@@ -463,13 +493,13 @@ PHASE C — Indirect LLM leakage
 |---|---|
 | **Datasets** | `qiaojin/PubMedQA` (`pqa_labeled`, train split) for source_0; `rajpurkar/squad` (train split) for sources 1/2 — matched independently per source against that source's real on-disk content |
 | **Ground truth** | Direct, per-source read of `data/polluted_token/sources_{0,20,100}.jsonl` |
-| **Probe sample size** | 54 (attack default), 40 (defense demonstration run) |
+| **Probe sample size** | 54 per source (attack, both Phase B and B'), 40 (defense Run 1, original threshold), 54 (defense Run 2, calibrated threshold) |
 | **`top_k`** | 5 (corrected from a stale default of 10 — see §4.7) |
-| **Random seed** | 42 |
-| **Defense thresholds (evaluated)** | `window_size=30`, `max_topics_per_window=5` (defense run used 5; module default is 12), `min_queries_before_check=8` (module default 15), `cooldown_queries=20` |
+| **Random seeds** | **0, 42, 123** for the attack (Phase A/B/B'/C, §8.1–8.2); defense comparison (§8.3) is still single-seed — see §15 |
+| **Defense thresholds (evaluated)** | Run 1 (original, unmeasured): `window_size=30`, `max_topics_per_window=5`, `min_queries_before_check=8`, `cooldown_queries=20`. Run 2 (calibrated via `calibrate_thresholds.py`): `max_topics_per_window=4` (derived from a simulated legitimate-user 99th percentile), `min_queries_before_check=15`, same `window_size`/`cooldown_queries` |
 | **Environment** | Docker Compose (`hardhat-node`, `data-source-0/20/100`, `llm-service`), evaluated live, both from a native Windows environment and the user's WSL2 `.venv` |
 | **API key** | The single, fixed, shared secret configured in `docker-compose.yml` (`reliable-derag-secret-2026`) — used as-is for the authenticated/"insider" phase, deliberately withheld for the unauthenticated phase |
-| **Reproducibility** | `python attack/kb_extraction/run_attack.py`; `python defense/kb_extraction_defense/run_defense.py --probe_sample_size 40 --max_topics_per_window 5 --min_queries_before_check 8` |
+| **Reproducibility** | `RANDOM_SEED={0,42,123} python attack/kb_extraction/run_attack.py`; `python defense/kb_extraction_defense/run_defense.py --probe_sample_size 54 --max_topics_per_window 4 --min_queries_before_check 15` (calibrated); `python defense/kb_extraction_defense/calibrate_thresholds.py` to reproduce the calibration itself |
 
 ---
 
@@ -479,17 +509,25 @@ PHASE C — Indirect LLM leakage
 
 This is a structural property of the retrieval layer, not a measurement coincidence: `FastRetriever.search()` can only ever return passages that genuinely exist in its own index. There is no generative step, so there is no mechanism by which a "wrong" or fabricated document could be returned. This is a meaningful contrast with Phase C, where generation *can* diverge from ground truth — which is exactly why extraction_accuracy-style scoring is inappropriate for Phase C and CRR was built instead.
 
-### 12.2 Why Phase C had 15/20 errors
+### 12.2 Why the original Phase C run had 15/20 errors, and why that finding didn't survive
 
-`probe_llm_leakage()` sends real generation requests to `drag_llm_service`, which internally fans out to all three data sources and waits up to 10 seconds per source (`drag_llm_service/app/server.py`'s `query_data_sources()`). A 75% error rate in this specific run is consistent with transient load or timeout conditions during that evaluation window rather than a property of the attack itself — a caution against over-interpreting the resulting `chunk_recovery_rate = 0.0`, which is computed over only 5 scored probes (see §15).
+`probe_llm_leakage()` sends real generation requests to `drag_llm_service`, which internally fans out to all three data sources and waits up to 10 seconds per source (`drag_llm_service/app/server.py`'s `query_data_sources()`). The original 75% error rate was *not*, as first suspected, ordinary transient load — it was traced (§12.3) to `sources_20`/`sources_100` being served from a stale Docker bind-mount pointing at a different, older checkout of this repository. Once that mount was corrected, Phase C's error rate dropped to 0/20 on two of three re-tested seeds (§8.2). Seed 0 still shows a high (14/20) error rate in the corrected environment, so some genuine transient-load sensitivity remains — but it is no longer the dominant explanation, and it no longer justifies treating `chunk_recovery_rate` as unmeasurable: two of three seeds now provide a full, clean 20-probe sample.
 
-### 12.3 Why the corpus-drift bug (§4.6) matters beyond "a crash"
+### 12.3 Why the corpus-drift bug (§4.6) matters beyond "a crash" — and a second, deeper instance of the same failure mode
 
 This is not merely a software bug — it is a **security-relevant configuration drift** with real implications: a defender who ran this attack script *before* this analysis's fix would have concluded, incorrectly, that the system was completely safe from this attack ("it crashes, so extraction must not be possible"), when the true state was "the attack script itself is broken, the system's actual exposure was never measured." This is a cautionary example of why an attack/evaluation harness's own correctness must be verified independently of its pass/fail output — a script that always fails to run is indistinguishable, from a log-reading standpoint, from a script confirming the system is secure.
 
-### 12.4 Why the defense blocks so aggressively (82.5%) on this corpus
+A second, more subtle instance of the identical failure mode was found later in this same analysis: `sources_20`/`sources_100` extraction rates were, at one point, reading exactly `0.000` under a live run. Root cause was a **Docker bind-mount pointing at a separate, older clone of this repository** on the same machine (a stale `docker compose up` target, not touched by a container restart, only by recreating the containers against the correct mount) — the running containers were serving pre-migration content while this repo's ground-truth loader read the current, migrated files. `source_0` coincidentally matched (same record count both sides), which is why only two of three sources showed the failure. This also fully explains, and fixes, §12.2's Phase C error rate. The lesson repeats: an extraction number of exactly `0.000`, or an error rate that looks like "the system is broken," is a signal to verify the *harness's* environment before concluding anything about the system under test.
 
-With only 10 real topics available and `max_topics_per_window=5`, any topic-balanced attacker crosses the diversity threshold almost immediately (well before `window_size=30` queries accumulate). Once flagged, the client is blocked for `cooldown_queries=20` queries; because the sliding window is **not cleared** on cooldown, the moment the cooldown expires the window still contains the same diverse topic history, so the throttle **re-flags immediately** — explaining the observed pattern (`total_flagged: 2`, `total_blocked: 33`) of one long near-continuous block rather than several short ones. This is an intentional, defensible design choice (a legitimate long-lived diverse user would also need re-evaluating, not silently re-trusted) but means the effective, real-world block duration is longer than `cooldown_queries` alone would suggest on a small-topic corpus — see §15.
+### 12.4 Why the original defense threshold blocked so aggressively (82.5%) on this corpus — and why the calibrated one (74.1%) is the number to trust
+
+With only 10 real topics available and the original, unmeasured `max_topics_per_window=5`, any topic-balanced attacker crosses the diversity threshold almost immediately (well before `window_size=30` queries accumulate). Once flagged, the client is blocked for `cooldown_queries=20` queries; because the sliding window is **not cleared** on cooldown, the moment the cooldown expires the window still contains the same diverse topic history, so the throttle **re-flags immediately** — explaining the observed pattern (`total_flagged: 2`, `total_blocked: 33`) of one long near-continuous block rather than several short ones. This is an intentional, defensible design choice (a legitimate long-lived diverse user would also need re-evaluating, not silently re-trusted) but means the effective, real-world block duration is longer than `cooldown_queries` alone would suggest on a small-topic corpus.
+
+This is exactly why the threshold was recalibrated (§8.3, Run 2): a threshold chosen without reference to real legitimate behavior can't be distinguished from a threshold that happens to work only because it was set aggressively relative to a small, fully-known topic space. The calibrated run's 74.1% block rate and 65.6% relative extraction-rate reduction are lower than the original 82.5%/100% — that is the *expected and correct* effect of replacing a guess with a measurement, not a regression in the defense's quality.
+
+### 12.5 The gray-box/blind gap is real but domain-dependent, not uniform
+
+§8.1's blind-mode (Phase B') numbers track the gray-box ceiling closely on both SQuAD sources (within 1-3 percentage points, comparable variance) but sit noticeably lower and far noisier on the PubMedQA source (0.322 ± 0.061 vs. 0.419 ± 0.013 gray-box — nearly 5× the standard deviation). A plausible mechanism: SQuAD's per-article structure means a randomly-sampled question is still fairly likely to land near this source's actual 500-document subset regardless of pre-filtering, while PubMedQA's medical-question space is broader and more topically dispersed relative to the 500-document subset actually loaded, so which specific unfiltered sample a seed happens to draw matters more. This was not independently verified against the corpus's topic structure — flagged as the explanation that best fits the observed data, not a confirmed mechanism.
 
 ---
 
@@ -504,7 +542,7 @@ With only 10 real topics available and `max_topics_per_window=5`, any topic-bala
 | **Advantages** | Targets the specific gap Flask-Limiter's flat volume cap leaves open (a topic-balanced attacker can stay under 60/min while still touching an anomalous number of subjects); reuses real, already-available "topic" ground truth (SQuAD article title) rather than inventing a synthetic signal; bounded cooldown, not a permanent ban |
 | **Disadvantages** | No numeric-score-noise option exists for this system (§4.5) — the defense can only *block*, not subtly degrade, a suspected attacker, which is a coarser, more detectable intervention; on a small-topic corpus (this deployment: 10 topics), thresholds tuned for a larger, more diverse real corpus could over-trigger |
 | **Implementation complexity** | Low — a single sliding-window class, no changes to the retrieval or generation pipeline required; designed to be wired into a Flask `before_request` hook (same pattern already used by `check_api_key()`) |
-| **Effectiveness (measured)** | Very high on this corpus: `extraction_rate` 0.286→0.000, `topic_coverage` 1.00→0.00, 82.5% of queries blocked |
+| **Effectiveness (measured)** | Original, unmeasured threshold: `extraction_rate` 0.286→0.000, 82.5% blocked. **Calibrated threshold (headline number, §8.3):** `extraction_rate` 0.390→0.134 (65.6% relative reduction), `topic_coverage` 1.00→0.90, 74.1% blocked — strong but no longer total suppression |
 | **Residual risk** | An attacker aware of the threshold could deliberately narrow its topic diversity (sacrificing coverage for stealth) to stay under `max_topics_per_window` — the defense would not detect this slower, narrower-scope variant; not evaluated in this analysis |
 
 ### 13.2 Existing real infrastructure controls
@@ -523,23 +561,26 @@ With only 10 real topics available and `max_topics_per_window=5`, any topic-bala
 1. Rotate the shared, hardcoded API key (`reliable-derag-secret-2026`) and issue distinct, revocable per-client credentials — the entire Phase B/insider threat model in this report exists because the key is fixed and universal.
 2. Deploy `QueryDiversityThrottle` server-side (a `before_request` hook analogous to the existing `check_api_key()`), not just as an offline evaluation script.
 
-**Medium Priority**
-3. Recalibrate `max_topics_per_window`/`min_queries_before_check` against this deployment's actual topic count and a measured legitimate-user query-diversity baseline (§15) before relying on the module's generic defaults in production.
-4. Extend Phase C's leakage evaluation to a larger, more reliable sample — the current 5-of-20 scored subset (§12.2) is too small to draw a confident conclusion about real LLM-mediated leakage risk.
+**Medium Priority — done**
+3. ~~Recalibrate `max_topics_per_window`/`min_queries_before_check` against this deployment's actual topic count and a measured legitimate-user query-diversity baseline before relying on the module's generic defaults in production.~~ **Done:** `calibrate_thresholds.py` derives `max_topics_per_window=4` from a simulated legitimate-user 99th percentile; re-tested result in §8.3, Run 2.
+4. ~~Extend Phase C's leakage evaluation to a larger, more reliable sample.~~ **Done:** re-run at 3 seeds post-infra-fix; 2 of 3 now score a clean 20/20 (§8.2). Seed 0 still shows a high error rate — not fully closed, see §15.
 
 **Low Priority**
 5. Add a per-client cooldown-window reset/decay so a flagged-then-cleared legitimate client isn't immediately re-flagged purely because its stale window hasn't cycled out yet (§12.4).
 6. Consider a single-victim-targeting evaluation mode (currently absent — extraction is only measured network-wide per source) to answer "how easily can one specific document be extracted," a different and arguably more realistic confidentiality question for a specific sensitive record.
+7. Extend the defense's calibration (Recommendation 3) to source_0 and source_2 — it was only run against source_1; the other two sources still use unvalidated thresholds if the defense were deployed against them.
 
 ---
 
 ## 15. Limitations
 
 - **No single-victim targeting mode** — ground truth and metrics are computed per-source (network-wide), not for one specific target document; the attack's realistic capability against a *particular* sensitive record is not directly measured.
-- **Corpus heterogeneity limits cross-source comparison** — since the three sources now serve genuinely different content (§4.6), comparing their `extraction_rate` numbers side by side (Table 8.1) is informative but not a controlled, apples-to-apples comparison.
-- **Phase C's small scored sample (5/20)** — the `chunk_recovery_rate = 0.0` finding should be treated as preliminary, not conclusive, given the high (15/20) error rate in this particular run (§12.2).
+- **Corpus heterogeneity limits cross-source comparison** — since the three sources now serve genuinely different content (§4.6), comparing their `extraction_rate` numbers side by side (§8.1) is informative but not a controlled, apples-to-apples comparison.
+- **Gray-box (Phase B) numbers are an upper bound, not a claim about a zero-knowledge attacker** — see the Executive Summary caveat and §12.5. The blind/cold-start floor (Phase B') is now measured and reported alongside, closing most of this gap, but it still assumes the attacker correctly guessed the corpus's *domain* (PubMedQA/SQuAD), just not which specific ~500-document subset is loaded.
+- **Phase C's seed-0 sample is still small and error-heavy (6/20 scored)** — unlike seeds 42/123 (20/20 clean), seed 0's high error rate persisted even after the Docker bind-mount fix (§12.2, §12.3); its `CRR=1.000` should not be quoted, only the seeds-42/123 mean (~0.30).
 - **CRR thresholds (0.8/0.8) are conventional, not empirically calibrated** for this specific deployment's model and corpus.
-- **Defense thresholds are reasonable defaults, not validated against a measured legitimate-user baseline** — the README for `defense/kb_extraction_defense` explicitly discloses this; the very aggressive 82.5% block rate observed (§8.3, §12.4) is partly an artifact of this corpus's small (10-topic) size, not necessarily representative of a larger real deployment.
+- **Defense comparison (§8.3) is still single-seed** — unlike the attack (§8.1/§8.2, now 3 seeds), neither the original nor the calibrated defense run has been repeated across seeds, so no variance estimate exists for `extraction_rate_reduction`/`queries_blocked_fraction`.
+- **Defense calibration was only performed against source_1** — source_0 (no topic field, PubMedQA) and source_2 were not separately recalibrated; deploying the defense against them with source_1's threshold is unvalidated.
 - **Attacker identity is still a valid peer/keyholder**, not a fully unauthenticated outsider with zero system access — consistent with, and inherited from, the same scoping limitation noted in the design documentation this attack family follows.
 
 ---
@@ -548,20 +589,20 @@ With only 10 real topics available and `max_topics_per_window=5`, any topic-bala
 
 - Wire `QueryDiversityThrottle` into `drag_data_source/app/server.py`'s real request path (a drop-in `before_request` patch, following the exact pattern `defense/mia_defense/README.md` already documents for its own text-level defenses).
 - Replace the fixed-size query-count window with a genuine time-based sliding window, reducing sensitivity to an attacker's request pacing.
-- Empirically calibrate `max_topics_per_window` against a real, measured distribution of legitimate multi-topic usage before production deployment.
+- Extend the legitimate-user calibration (`calibrate_thresholds.py`) to source_0 and source_2, and re-run the defense comparison across seeds to put error bars on `extraction_rate_reduction`.
 - Build a single-victim-targeting attack/evaluation mode to answer the narrower, arguably more realistic "can one specific sensitive document be extracted" question.
-- Increase Phase C's real sample size and investigate the cause of its high error rate before drawing firm conclusions about LLM-mediated paraphrase leakage risk.
+- Investigate why Phase C's seed-0 run still shows a high error rate post-infra-fix while seeds 42/123 don't, before treating the 20/20 clean sample as the reliably reproducible norm.
 
 ---
 
 ## 17. Final Conclusion
 
-This report reverse-engineered, fixed, and empirically evaluated both the KB extraction attack and a newly-built countermeasure against the live Reliable-dRAG deployment. In the process, it uncovered and corrected a severe, previously-undetected configuration bug that had silently made the attack's evaluation 100% non-functional — a finding as significant to this project's security posture as the attack's own measured results, since an always-crashing security test is indistinguishable from a passing one without independent verification.
+This report reverse-engineered, fixed, and empirically evaluated both the KB extraction attack and a newly-built countermeasure against the live Reliable-dRAG deployment, across **three seeds** for the attack. In the process, it uncovered and corrected two independent, previously-undetected configuration bugs that had silently invalidated earlier measurements — a stale corpus assumption that made the attack's evaluation 100% non-functional (§4.6), and a Docker bind-mount pointing at a separate, older checkout that had zeroed out two sources' extraction rates and starved Phase C's sample (§12.3) — findings as significant to this project's security posture as the attack's own measured results, since a broken or environmentally-contaminated evaluation is indistinguishable from a genuinely secure system without independent verification.
 
-**Key findings:** with only a modest, realistic probe budget (54 questions) and the system's single shared API key, an attacker reconstructs **37–43%** of each data source's real private content with **perfect accuracy** and up to **100% topic coverage**. A purpose-built topic-diversity throttle, evaluated live against the real deployment, drives that recovery to **zero** by blocking **82.5%** of the attacker's queries.
+**Key findings:** with only a modest, realistic probe budget (54 questions) and the system's single shared API key, an attacker reconstructs a stable **37.3–41.9% mean extraction rate** (std 0.7–1.7pp across 3 seeds) of each data source's real private content with **perfect accuracy** and up to **100% topic coverage** — this is a **gray-box, upper-bound** measurement (probes guaranteed to hit the target corpus); a blind/cold-start condition, also now measured, tracks it closely on the SQuAD sources and sits meaningfully lower and noisier (32.2% ± 6.1pp) on the PubMedQA source. Phase C's LLM-leakage channel, initially reported as a 0.0 chunk-recovery-rate finding, turned out to be an artifact of the same environment bug — corrected, it shows a real **~30% chunk recovery rate** on the two seeds with a clean sample, not "no leakage." A purpose-built topic-diversity throttle, evaluated live against the real deployment, was first measured with an unvalidated, hand-picked threshold (100% suppression, 82.5% blocked) and then re-measured with a threshold *derived from a simulated legitimate-user baseline* — the calibrated, more defensible result is a 65.6% relative extraction-rate reduction and 74.1% blocked, strong but no longer total (§8.3, §12.4).
 
-**Overall effectiveness:** the attack is highly effective given a valid API key and no defense; the defense is highly effective against the specific topic-balanced strategy this attack uses, though it has not been evaluated against a deliberately narrower, stealthier variant (§13.1, Residual risk).
+**Overall effectiveness:** the attack is highly effective given a valid API key and no defense, and this conclusion is now backed by multi-seed evidence rather than a single run. The defense's *mechanism* is validated and effective against the specific topic-balanced strategy this attack uses; its calibrated-threshold result is a real, if more modest, block rate rather than the artificially total suppression the original hand-picked threshold produced.
 
 **Security impact:** confirmed and substantial — this deployment's content-confidentiality guarantee currently rests entirely on the secrecy of one fixed, non-rotated shared key, with no behavioral defense in production to fall back on until the module built in this analysis is actually deployed.
 
-**Lessons learned:** exact-match ground-truth scoring at the retrieval layer is unambiguous (accuracy is always 1.0, because there is no noise channel), but this same clarity vanishes the moment generation enters the pipeline (Phase C) — a reminder that RAG-system security analysis must treat the retrieval and generation layers as distinct threat surfaces with genuinely different evaluation methodologies, not a single pass/fail measurement.
+**Lessons learned:** exact-match ground-truth scoring at the retrieval layer is unambiguous (accuracy is always 1.0, because there is no noise channel), but this same clarity vanishes the moment generation enters the pipeline (Phase C) — a reminder that RAG-system security analysis must treat the retrieval and generation layers as distinct threat surfaces with genuinely different evaluation methodologies, not a single pass/fail measurement. A second lesson, learned twice over in this report (§4.6 and §12.3): an anomalous result — a crash, an exact-zero rate, an inflated error count — is as likely to be a broken harness or contaminated environment as it is to be a genuine security finding, and only checking the underlying environment, not just the output number, tells the two apart. A third, this time methodological rather than infrastructural: a "clean" 100%-suppression or zero-leakage result is itself worth suspecting until the measurement it rests on (an unvalidated threshold, an error-starved sample) has been checked — both of this report's most dramatic original numbers (82.5%→0.000 suppression, 0.0 CRR) turned out to be artifacts of exactly that kind, and both real, corrected findings underneath them are still genuine security concerns, just less extreme ones.
