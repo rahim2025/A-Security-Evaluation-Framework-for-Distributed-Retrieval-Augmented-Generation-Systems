@@ -18,6 +18,11 @@ python attack/datapoisoning/run_attack.py --evaluate --seed 42
 # problems/data_poisoning_gaps.md, B2)
 python attack/datapoisoning/run_attack.py --evaluate --no-query-aware
 
+# Intensity sweep point: light/medium/heavy = 20%/50%/100% of the target source's
+# own doc count injected as poison (see run_all_attacks.py --intensities for a full
+# sweep with degradation curves across seeds)
+python attack/datapoisoning/run_attack.py --evaluate --intensity heavy
+
 # Just inject without evaluating
 python attack/datapoisoning/run_attack.py
 
@@ -43,7 +48,7 @@ from datapoisoning.data_poisoning_attack import DataPoisoningAttack, DEFAULT_DAT
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-LLM_SERVICE_URL = "http://localhost:9000"
+LLM_SERVICE_URL = "http://localhost:19000"
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'polluted_token'))
 LOG_DIR  = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'attack_logs'))
 
@@ -85,9 +90,11 @@ def load_data_points(data_dir: str):
 
 def query_llm(question: str, timeout: int = 120) -> dict:
     try:
+        api_key = os.getenv("API_KEY", "")
         r = requests.post(
             f"{LLM_SERVICE_URL}/query",
             json={"query": question},
+            headers={"X-API-Key": api_key} if api_key else {},
             timeout=timeout
         )
         if r.status_code == 200:
@@ -182,16 +189,32 @@ def main():
                              "matters: without this flag, every strategy (including 'random') "
                              "gets the same oracle-knowledge boost, confounding comparisons "
                              "between strategies.")
+    parser.add_argument('--intensity', choices=['light', 'medium', 'heavy'], default=None,
+                        help="Poisoning density preset: fraction of EACH targeted source's own "
+                             "current doc count to inject as poison (light=20%%, medium=50%%, "
+                             "heavy=100%%) -- directly analogous to the paper's own p=20/50/100%% "
+                             "pollution levels. Omit for legacy sizing (based on total loaded "
+                             "corpus, not target source size). Overridden by --density if both given.")
+    parser.add_argument('--density', type=float, default=None,
+                        help="Explicit poisoning density (0.0-1.0), overrides --intensity. "
+                             "See --intensity for what this controls.")
     args = parser.parse_args()
+
+    INTENSITY_PRESETS = {'light': 0.2, 'medium': 0.5, 'heavy': 1.0}
+    poisoning_density = args.density
+    if poisoning_density is None and args.intensity is not None:
+        poisoning_density = INTENSITY_PRESETS[args.intensity]
 
     if args.seed is not None:
         random.seed(args.seed)
     print(f"Seed: {args.seed if args.seed is not None else 'unseeded (legacy behavior)'}")
     print(f"Threat tier: {'black-box (no query awareness)' if args.no_query_aware else 'oracle-knowledge (query-aware, default)'}")
+    print(f"Poisoning density: {f'{poisoning_density:.0%}' if poisoning_density is not None else 'unset (legacy sizing)'}")
 
     attack = DataPoisoningAttack(
         data_sources=DEFAULT_DATA_SOURCES,
         poisoning_ratio=args.ratio,
+        poisoning_density=poisoning_density,
         attack_strategy=args.strategy,
         poison_type=args.poison_type,
         target_source_names=args.targets,
@@ -272,6 +295,8 @@ def main():
                 "target_sources": args.targets,
                 "seed": args.seed,
                 "query_aware": not args.no_query_aware,
+                "intensity": args.intensity,
+                "poisoning_density": poisoning_density,
             },
             "attack_result": attack_result,
             "evaluation": {
@@ -321,6 +346,8 @@ def main():
             "target_sources": args.targets,
             "seed": args.seed,
             "query_aware": not args.no_query_aware,
+            "intensity": args.intensity,
+            "poisoning_density": poisoning_density,
         },
         "attack_result": attack_result,
         "post_attack_info": attack.get_info(),

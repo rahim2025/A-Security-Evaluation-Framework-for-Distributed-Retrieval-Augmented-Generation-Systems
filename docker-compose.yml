@@ -1,12 +1,18 @@
+# Distinct project name + container names + host ports so this stack can run
+# alongside a teammate's separate checkout of the same project on a shared
+# Docker daemon without silently overwriting each other's containers (see
+# problems/data_poisoning_gaps.md for the incident this fixes).
+name: reliable-drag-poisoning
+
 services:
   # Contract Service (Hardhat Node)
   hardhat-node:
     build:
       context: .
       dockerfile: drag_contract/Dockerfile
-    container_name: drag-hardhat-node
+    container_name: rdp-hardhat-node
     ports:
-      - "8545:8545"
+      - "18545:8545"
     restart: unless-stopped
     networks:
       - drag_network
@@ -22,16 +28,16 @@ services:
     build:
       context: .
       dockerfile: drag_data_source/Dockerfile
-    container_name: drag-data-source-0
+    container_name: rdp-data-source-0
     ports:
-      - "8001:8001"
+      - "18001:8001"
     volumes:
       - ./data/polluted_token:/data
     environment:
       - PYTHONUNBUFFERED=1
       - HF_TOKEN=${HF_TOKEN}
       - HUGGINGFACE_HUB_TOKEN=${HUGGINGFACE_HUB_TOKEN}
-      - CONFIG_PATH=/app/configs/config_sources_0.yaml
+      - CONFIG_PATH=/app/configs/config_sources_0_clean.yaml
     restart: unless-stopped
     networks:
       - drag_network
@@ -51,14 +57,14 @@ services:
     build:
       context: .
       dockerfile: drag_data_source/Dockerfile
-    container_name: drag-data-source-20
+    container_name: rdp-data-source-20
     ports:
-      - "8002:8001"
+      - "18002:8001"
     volumes:
       - ./data/polluted_token:/data
     environment:
       - PYTHONUNBUFFERED=1
-      - CONFIG_PATH=/app/configs/config_sources_20.yaml
+      - CONFIG_PATH=/app/configs/config_sources_20_clean.yaml
     restart: unless-stopped
     networks:
       - drag_network
@@ -78,14 +84,14 @@ services:
     build:
       context: .
       dockerfile: drag_data_source/Dockerfile
-    container_name: drag-data-source-100
+    container_name: rdp-data-source-100
     ports:
-      - "8003:8001"
+      - "18003:8001"
     volumes:
       - ./data/polluted_token:/data
     environment:
       - PYTHONUNBUFFERED=1
-      - CONFIG_PATH=/app/configs/config_sources_100.yaml
+      - CONFIG_PATH=/app/configs/config_sources_100_clean.yaml
     restart: unless-stopped
     networks:
       - drag_network
@@ -108,9 +114,9 @@ services:
       dockerfile: drag_llm_service/Dockerfile
       args:
         INSTALL_VLLM: ${INSTALL_VLLM:-true}
-    container_name: drag-llm-service
+    container_name: rdp-llm-service
     ports:
-      - "9000:9000"
+      - "19000:9000"
     deploy:
       resources:
         reservations:

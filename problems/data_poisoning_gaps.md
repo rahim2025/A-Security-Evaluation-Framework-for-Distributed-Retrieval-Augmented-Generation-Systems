@@ -319,6 +319,69 @@ wherever these accuracy numbers are quoted rather than treating them as exact gr
 changed in code — reasonable simplification for short-answer QA at this scale; the fix is in how the
 numbers are presented, not the metric itself.
 
+### B9. [RESOLVED] `--ratio` silently truncated an explicit `--targets` list
+
+`_select_sources_to_poison()`'s `targeted` branch returned `targets[:num_malicious]`,
+where `num_malicious = max(1, int(len(self.data_sources) * self.poisoning_ratio))` is
+computed against the **total** source count (3), not the length of the explicitly named
+`--targets` list. At the default `--ratio 0.5`, `num_malicious = 1`, so
+`--targets sources_0 sources_20` silently poisoned only `sources_0` — the second named
+source was never touched, despite every downstream log, table, and doc labeling the
+combo `targeted(sources_0,sources_20)`.
+
+**Impact:** this is the flagship, most-cited result in `theory/DATA_POISONING_DEFENSE.md`
+(§10's headline "only 1/6 combos reliably succeeds" finding, repeated in §7, §8, §9, §11,
+§12) — every one of those rows describes a single-source attack, not the two-source
+attack its label claims. A committee member tracing the code would find this immediately;
+it was not previously caught because nobody checked what `--targets` actually resolved to
+downstream of `--ratio`.
+
+**Fix:** `_select_sources_to_poison()`'s `targeted` branch no longer truncates the
+explicit `target_source_names` list — `--ratio` now only pads it with extra random
+sources if the named list is *smaller* than the ratio-implied budget, never shrinks it.
+`--targets sources_0 sources_20` now always poisons both, regardless of `--ratio`.
+**Not retroactive**: every historical result in `theory/DATA_POISONING_DEFENSE.md` and
+`theory/Data Poisoning Full Attack Matrix Results (2026-07-21).md` was generated under
+the old, truncating behavior and has been annotated with an erratum in both documents
+rather than silently re-labeled.
+
+**Verified with a real re-run** (`attack_logs/attack_matrix_summary_seeds_2026-07-30_00-44-31.json`,
+`theory/DATA_POISONING_DEFENSE.md` §14): `run_all_attacks.py --seeds 0 42 123 --only
+"sources_0,sources_20"` against the live deployment now genuinely poisons both
+`sources_0` and `sources_20` every seed (confirmed via each run's `poisoned_source_names`
+and `total_injected_docs≈19,700` across two sources vs. the old single-source ~9,850).
+The corrected result is **stronger** than the mislabeled one (44.4% ± 19.2% mean
+degradation vs. the old 33.3% ± 0.0%), has real seed-to-seed variance instead of the old
+run's suspicious exact-zero std, and shows a repeated, multi-question regression pattern
+(Q6/Q7 flip correct→incorrect in all 3 seeds) rather than a single flipped answer — a
+more defensible number, not just a corrected label.
+
+### B10. [RESOLVED — caveated] `data_rich` degenerates to a fixed choice when doc counts tie
+
+`data_rich` was built (B1) specifically to replace `high_reliability`, whose entire
+failure mode was "every source ties, so Python's stable `sorted()` always returns
+`sources_0` — indistinguishable from a hardcoded choice." `data_rich` reintroduced the
+identical failure mode through a different signal: all three sources currently serve an
+identical corpus (same `clean_baseline.jsonl` for all of `sources_0/20/100`, per the A1
+fix), so their live `/info` doc counts are tied at every selection point, and the same
+stable-sort tie-break silently always resolved to `sources_0` — confirmed directly by the
+2026-07-21 full matrix run, where both `data_rich` combos "selected" `sources_0` with no
+tie ever disclosed.
+
+**Fix:** `_select_sources_to_poison()`'s `data_rich` branch now (a) logs the actual doc
+counts driving selection (`doc_counts_at_selection` in the attack log, per the B1 fix's
+own recommendation to log the real values behind "highest X"), (b) shuffles before the
+stable sort so a genuine tie resolves randomly instead of always to `sources_0`, and (c)
+logs an explicit warning whenever the top count is tied across more than one source, so
+"data_rich picked sources_0" can no longer be silently misread as "sources_0 genuinely
+had the most documents" when it was actually a coin flip.
+
+**Not fully resolved as a strategy**: this makes the tie-break honest and auditable, but
+does not give `data_rich` a real signal to differentiate on while all three sources share
+one corpus. If a genuinely document-differentiated `data_rich` result is needed (rather
+than a documented tie-break), the deployment needs sources with real doc-count asymmetry
+— not attempted here, since it would mean deviating from A1's equal-corpus clean baseline.
+
 ---
 
 ## What's already well-handled (no action needed)
@@ -376,9 +439,35 @@ it.
 
 ## Status: all findings resolved or explicitly caveated
 
-Every item in this document is now either fixed with verified evidence (A1, B1, B2, B4) or
+Every item in this document is now either fixed with verified evidence (A1, B1, B2, B4, B9, B10) or
 explicitly documented as a stated scope limitation (B5, B6, B7, B8) rather than a silent gap. The
 one remaining open item, **A2** (blockchain reliability feedback loop never engages), is not blocking
 any current data-poisoning strategy — it's relevant only if the separate Source Selection
 Manipulation (SSM) attack from the project's CIA-triad framework is implemented later, since SSM's
 entire premise is manipulating that same on-chain score.
+
+**Caveat specific to B9/B10 (found during a later re-audit, not part of the original pass above):**
+unlike the other resolved findings, fixing these two did not retroactively correct the numbers
+already published in `theory/DATA_POISONING_DEFENSE.md` and
+`theory/Data Poisoning Full Attack Matrix Results (2026-07-21).md` — both documents were annotated
+with an erratum rather than silently edited. Before presenting any `targeted(sources_0,sources_20)`
+or `data_rich` result from either document, either (a) cite the erratum alongside it, or (b) re-run
+that specific combo under the current code and report the fresh number instead.
+
+**Fully closed for the entire attack matrix, all 6 combos** (`theory/
+DATA_POISONING_DEFENSE.md` §14/§15): every combo (`random/noise`, `random/answer_swap`,
+`targeted(sources_100)/wrong_answer`, `targeted(sources_0,sources_20)/misleading`,
+`data_rich/wrong_answer`, `data_rich/noise`) has now been re-run across seeds {0, 42,
+123} under the fixed code, twice — once with `defense.enabled: false` (§15.1, the
+genuine attack-only numbers matching the core report's defense-excluded scope) and once
+with `defense.enabled: true` (§15.2, kept only as secondary context). The flag was
+reverted to `true` after the final run to restore the deployment's committed default.
+
+**Headline change from this full re-run:** with the defense off, 4 of 6 combos succeed
+in at least one seed (not just the flagship one) — `random/noise` 1/3, `random/
+answer_swap` 2/3, `targeted(sources_0,sources_20)/misleading` 3/3,
+`data_rich/noise` 1/3. Only `targeted(sources_100)/wrong_answer` and
+`data_rich/wrong_answer` never succeed, consistent with `wrong_answer` being a
+weaker poison type than `misleading`/`answer_swap`/`noise` against this eval set.
+**Cite `theory/DATA_POISONING_DEFENSE.md` §15.1 for the core report** — it is now the
+single most-verified table in this entire audit.

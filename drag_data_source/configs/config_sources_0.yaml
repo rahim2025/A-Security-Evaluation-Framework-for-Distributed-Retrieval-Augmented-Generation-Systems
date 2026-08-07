@@ -14,7 +14,7 @@ blockchain:
   private_key: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
   
   # Ethereum provider URL (RPC endpoint)
-  provider_url: "http://host.docker.internal:8545"
+  provider_url: "http://host.docker.internal:18545"
   
   # Contract address (optional, will try to find from Hardhat Ignition if not provided)
   contract_address: null

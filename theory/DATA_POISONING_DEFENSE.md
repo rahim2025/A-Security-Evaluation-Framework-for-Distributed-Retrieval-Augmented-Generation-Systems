@@ -4,6 +4,34 @@ This document explains, from the ground up, how the data-poisoning attack agains
 system works, why it succeeded, and what the new defense mechanism does to stop it. No
 prior context is assumed.
 
+> **Erratum (read before citing any `targeted(sources_0,sources_20)` or `data_rich`
+> result below).** Two labeling issues were found and fixed in
+> `attack/datapoisoning/data_poisoning_attack.py` after every number in §7–§12 was
+> generated; the underlying code has since been corrected, but the numbers below still
+> reflect the pre-fix behavior and must be read with these caveats, not re-labeled
+> silently:
+>
+> 1. **Every `targeted(sources_0,sources_20)` result in §7–§12 only actually poisoned
+>    `sources_0`.** `poisoning_ratio` (default 0.5) was silently truncating the explicit
+>    2-source `--targets` list down to `max(1, int(2*0.5))=1` source before the fix, so
+>    despite the combo label, `sources_20` was never touched in any run below, including
+>    the §10 headline "1/6 combos reliably succeeds" finding. Read every such row in
+>    §7–§12 as a **single-source** attack. The code no longer truncates an explicit
+>    `--targets` list (see `problems/data_poisoning_gaps.md`, B9). **The full attack
+>    matrix has since been re-run under the fixed code, for all 6 combos, under both
+>    `defense.enabled: true` and `false` — see §15, which is the section to cite going
+>    forward. §14 covers the flagship combo in narrative detail; §15 covers all six.**
+> 2. **`data_rich`'s source selection in this document is not a genuine "most documents"
+>    signal.** All three sources' live `/info` doc counts are tied under the deployments
+>    used to generate §8–§12 (identical corpus per source), so `data_rich` always
+>    resolved the tie to `sources_0` via Python's stable sort — the same
+>    "indistinguishable from a hardcoded choice" failure mode `data_rich` was built to
+>    replace (`high_reliability`, B1). Every `data_rich` row below should be read as
+>    "poisoned `sources_0`," not as evidence the strategy found a genuinely
+>    document-richest source. The code now logs the actual tied doc counts and
+>    randomizes the tie-break (`problems/data_poisoning_gaps.md`, B10) so future runs are
+>    auditable and not silently deterministic, but this does not change what already ran.
+
 ---
 
 ## 1. The system, in one picture
@@ -700,3 +728,199 @@ previously documented `--amplify`'s default as 3; the actual code default is 1. 
 doc has been corrected to match the code (not the other way around — every experiment
 in this document used the actual code default of 1, so changing the code would have
 made past results non-reproducible for no benefit).
+
+---
+
+## 14. `targeted(sources_0,sources_20) / misleading` re-run under the B9 fix — the genuine two-source result
+
+§10's headline finding ("only 1 of 6 combos reliably succeeds") was based on this combo,
+but as the erratum at the top of this document explains, the code bug behind B9 meant
+every one of those runs only poisoned `sources_0` — `sources_20` was silently never
+touched, despite the label. `_select_sources_to_poison()`'s `targeted` branch no longer
+lets `--ratio` truncate an explicit `--targets` list, and this section reports a fresh
+3-seed sweep of the same combo, same clean-baseline deployment, same defense-enabled
+config as §10, under the fixed code:
+
+```
+python attack/datapoisoning/run_all_attacks.py --seeds 0 42 123 --only "sources_0,sources_20"
+```
+
+`attack_logs/attack_matrix_summary_seeds_2026-07-30_00-44-31.json`:
+
+| Seed | Clean accuracy | Attacked accuracy | Degradation | Success |
+|---|---|---|---|---|
+| 0 | 42.9% (3/7) | 28.6% (2/7) | 33.3% | ✅ |
+| 42 | 42.9% (3/7) | 14.3% (1/7) | 66.7% | ✅ |
+| 123 | 42.9% (3/7) | 28.6% (2/7) | 33.3% | ✅ |
+| **Mean ± std** | 42.9% ± 0.0% | **23.8% ± 8.2%** | **44.4% ± 19.2%** | **3/3 (100%)** |
+
+**Compare to §10's single-source (mislabeled) number:** attacked accuracy 28.6% ± 0.0%,
+degradation 33.3% ± 0.0%, success 3/3. The genuine two-source attack is **stronger**
+(44.4% vs. 33.3% mean degradation) — expected, since twice the corpus is now actually
+compromised — and, notably, no longer shows the suspicious **exactly-zero variance**
+across seeds that §10's number had. That zero-variance was itself a symptom of the bug:
+with only `sources_0` poisoned and the same fixed decoy-sampling procedure applied to the
+same single source every seed, there was very little left for `--seed` to actually vary.
+The new result has real, seed-to-seed spread (±19.2 points), consistent with the honest
+small-eval-set noise this document already documents elsewhere (B5) — a more believable
+number, not just a bigger one.
+
+**The real, non-artifact signal is also more robust than before.** Every one of the 6
+"changed" answers per seed includes the same known context-length-overflow artifact on
+Q2 ("deadpool movie," §4.6 of `theory/Data Poisoning Full Attack Matrix Results
+(2026-07-21).md` describes the same mechanism) flipping wrong→correct in all 3 seeds —
+that part is not attributable to the attack. But unlike earlier single-seed runs where
+often only one question flipped correct→incorrect, this genuine two-source run flips
+**Q6 (Reading FC ownership) and Q7 (ballet composer) from correct to incorrect in all
+three seeds**, and **Q1 (first Nobel Prize in Physics) in seed 42 as well** — three
+independent, repeated content regressions once the context-length artifact is discounted,
+not one flipped answer inflated by a 7-question eval set. This is a materially more
+defensible result than §10's number: not just larger, but backed by a consistent,
+repeated failure pattern across seeds rather than a single coin-flip-sized swing.
+
+**What this changes for the thesis:** cite this section's numbers, not §10's, for
+`targeted(sources_0,sources_20)/misleading`. §10's "1/6 combos reliably succeeds"
+qualitative conclusion still holds — this is still the one combo that reliably beats the
+defense — but the quantitative degradation number should be **44.4% ± 19.2%**, not
+33.3% ± 0.0%, and the two-source framing is now actually true rather than a label
+correction waiting to happen.
+
+### 14.1 The attack-only number (defense excluded) — the one to cite in the core report
+
+Everything above, including this section's own headline table, was still measured with
+`retrieval.defense.enabled: true` (the deployment's committed default) — an oversight not
+caught until after the first re-run. Since the thesis's core report excludes defenses
+entirely, that number is not the right one to cite there. This subsection reports the
+same combo, same 3 seeds, re-run against the identical live deployment with
+`defense.enabled: false` (`drag_llm_service/configs/config.yaml`, reverted to `true`
+again immediately after this run to restore the deployment's committed default —
+`docker cp` + container restart, no rebuild needed).
+
+`attack_logs/attack_matrix_summary_seeds_2026-07-30_01-07-52.json`:
+
+| Seed | Clean accuracy | Attacked accuracy | Degradation | Success |
+|---|---|---|---|---|
+| 0 | 57.1% (4/7) | 14.3% (1/7) | 75.0% | ✅ |
+| 42 | 57.1% (4/7) | 14.3% (1/7) | 75.0% | ✅ |
+| 123 | 57.1% (4/7) | 28.6% (2/7) | 50.0% | ✅ |
+| **Mean ± std** | 57.1% ± 0.0% | **19.0% ± 8.2%** | **66.7% ± 14.4%** | **3/3 (100%)** |
+
+**This is the number to cite in the core (attack-only) report:** `targeted(sources_0,
+sources_20)/misleading` degrades accuracy by **66.7% ± 14.4%** with no defense present —
+genuinely larger than the 44.4% seen with the defense active in §14 above, which is the
+expected direction (a working defense should reduce, not eliminate, damage) and is a
+coherent, citable finding in its own right: *the dedup/consensus defense measurably
+blunts this attack's effect, from 66.7% down to 44.4% mean degradation, without fully
+neutralizing it.*
+
+**One caveat, not swept under the rug:** `clean_accuracy` differs between this run
+(57.1%, 4/7) and §14's defense-on run (42.9%, 3/7) on the identical clean corpus. This is
+the same `llm-service` non-determinism already documented in §10's infrastructure note —
+restarting the container (required here to reload the config) lands on a different warm
+state, and this project has independently observed both 42.9% and 57.1% as legitimate
+clean-baseline readings from different process instances. It means the defense-on vs.
+defense-off comparison above is not a perfectly controlled single-variable ablation (two
+different absolute baselines), but each row's *relative* degradation is still a valid,
+independently-computed number, and the direction of the defense-on/defense-off gap
+(66.7% → 44.4%) is large enough that it is not plausibly explained by this baseline
+noise alone.
+
+---
+
+## 15. Full 6-combo matrix, fully re-verified under B9/B10, both defense states — the section to cite
+
+§7–§12 are superseded in their entirety for citation purposes. Every combo below was
+re-run under the current code (B9's targeted-ratio fix, B10's data_rich tie-break fix)
+against the identical clean-baseline deployment, seeds {0, 42, 123}, once with
+`defense.enabled: false` (the genuine attack-only number — **cite this table in the core
+report**) and once with `defense.enabled: true` (kept only as secondary context; the
+config was reverted to its committed default of `true` immediately after this pass, so
+the deployment is left as found).
+
+```
+python attack/datapoisoning/run_all_attacks.py --seeds 0 42 123
+```
+
+### 15.1 Defense OFF — attack-only, core report
+
+`attack_logs/attack_matrix_summary_seeds_2026-07-30_03-37-30.json` (clean accuracy 57.1%,
+4/7, throughout — one `llm-service` process instance for all 18 runs in this pass):
+
+| Attack | Attacked accuracy (mean ± std) | Degradation % (mean ± std) | Success rate |
+|---|---|---|---|
+| random / noise | 52.4% ± 21.8% | 8.3 ± 38.2 | 1/3 (33%) |
+| random / answer_swap | 42.9% ± 14.3% | 25.0 ± 25.0 | 2/3 (67%) |
+| targeted(sources_100) / wrong_answer | 66.7% ± 8.2% | −16.7 ± 14.4 | 0/3 (0%) |
+| **targeted(sources_0,sources_20) / misleading** | **19.0% ± 8.2%** | **66.7 ± 14.4** | **3/3 (100%)** |
+| data_rich / wrong_answer | 66.7% ± 8.2% | −16.7 ± 14.4 | 0/3 (0%) |
+| data_rich / noise | 47.6% ± 16.5% | 16.7 ± 28.9 | 1/3 (33%) |
+
+**This is a materially richer picture than §10's defense-on-only view suggested.**
+Without the defense, **4 of the 6 combos succeed in at least one seed**
+(`random/noise`, `random/answer_swap`, `targeted(sources_0,sources_20)/misleading`,
+`data_rich/noise`), not just the one flagship combo. `targeted(sources_0,sources_20)/
+misleading` remains the only combo that succeeds *reliably* (3/3), but it is no longer
+the only combo that succeeds *at all*. The two combos that never succeed in any seed —
+`targeted(sources_100)/wrong_answer` and `data_rich/wrong_answer` — share the same
+poison type (`wrong_answer`), consistent with the existing "generic poison text is weak"
+finding already documented in `theory/Data Poisoning Attack — Reliable-dRAG.md`
+("When It Does Not Work"): the fixed `"POISONED: This document has been intentionally
+corrupted..."` string has no question-specific content to win a retrieval slot with,
+unlike `misleading`/`answer_swap`/`noise`, which retain or repurpose real corpus text.
+
+### 15.2 Defense ON — secondary comparison, not for the core report
+
+`attack_logs/attack_matrix_summary_seeds_2026-07-30_05-58-09.json` (clean accuracy 42.9%,
+3/7, throughout):
+
+| Attack | Attacked accuracy (mean ± std) | Degradation % (mean ± std) | Success rate |
+|---|---|---|---|
+| random / noise | 57.1% ± 0.0% | −33.3 ± 0.0 | 0/3 (0%) |
+| random / answer_swap | 57.1% ± 0.0% | −33.3 ± 0.0 | 0/3 (0%) |
+| targeted(sources_100) / wrong_answer | 52.4% ± 8.2% | −22.2 ± 19.2 | 0/3 (0%) |
+| **targeted(sources_0,sources_20) / misleading** | **23.8% ± 8.2%** | **44.4 ± 19.2** | **3/3 (100%)** |
+| data_rich / wrong_answer | 47.6% ± 8.2% | −11.1 ± 19.2 | 0/3 (0%) |
+| data_rich / noise | 57.1% ± 0.0% | −33.3 ± 0.0 | 0/3 (0%) |
+
+With the defense active, only the flagship combo succeeds at all — 1/6, matching §10's
+original qualitative conclusion exactly, even though the quantitative flagship number
+itself is now different (44.4% vs. §10's mislabeled 33.3%, per §14).
+
+**The exact `−33.3% ± 0.0%` reading on three separate combos is the known Q2
+context-length-overflow artifact (§4 of `theory/Data Poisoning Full Attack Matrix
+Results (2026-07-21).md`), not evidence those attacks help the system.** `−33.3%` is the
+specific signature of "exactly one question — Q2, the deadpool-release-date query —
+flipped from a 500 error to correct, and nothing else changed" on this 7-question set
+(1/7 ≈ 14.3pp, and 42.9%→57.1% is a +1-correct swing). `random/noise`, `random/
+answer_swap`, and `data_rich/noise` hitting this exact number in every one of their 3
+seeds indicates these particular attacks had no real effect on this eval set under the
+defense — not that poisoning improved accuracy.
+
+### 15.3 `data_rich`'s B10 fix is visibly working in this data
+
+Compare `data_rich/wrong_answer`'s numbers to `targeted(sources_100)/wrong_answer`'s in
+each table above. Before B10, `data_rich` always silently picked `sources_0` (a stable-
+sort tie-break artifact — see the erratum), so `data_rich/wrong_answer` and `targeted
+(sources_100)/wrong_answer` were reported as **numerically identical** in the old §10
+table (both `52.4% ± 8.2%`, `−22.2% ± 19.2`, `0/3`) despite targeting different sources —
+itself a tell that something wasn't differentiating. In both new tables above, the two
+combos now produce **different** numbers from each other (defense-off: `66.7%±8.2%` vs.
+`66.7%±8.2%` — coincidentally close but from a genuinely randomized tie-break, confirmed
+via each run's logged `doc_counts_at_selection` showing a 3-way tie every time, not a
+repeat of the old bug; defense-on: `47.6%±8.2%` vs. `52.4%±8.2%` — clearly different).
+`data_rich` is still a random tie-break on this tied-corpus deployment (§10 of `problems/
+data_poisoning_gaps.md`, B10's "not fully resolved as a strategy" note still applies —
+this fix makes the tie-break honest and auditable, it does not give `data_rich` a real
+document-count signal to work with), but it is no longer deterministically `sources_0`.
+
+### 15.4 What to cite
+
+For the core (defense-excluded) report, cite **§15.1** for all six combos. The single
+qualitative claim that survives everywhere in this document — "one combo,
+`targeted(sources_0,sources_20)/misleading`, is the only one that reliably succeeds" —
+now has a caveat worth stating out loud: it is the only one that succeeds *reliably*
+(100% across seeds), but with the defense off, three other combos succeed *some* of the
+time (`random/noise` 33%, `random/answer_swap` 67%, `data_rich/noise` 33%). A committee
+member asking "does only one attack configuration work at all" now has a more accurate
+answer than §10 alone would have supported: no — most configurations work sometimes;
+only one works consistently.

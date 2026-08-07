@@ -12,6 +12,14 @@ Usage
 python attack/datapoisoning/run_all_attacks.py                      # single unseeded run per combo (legacy)
 python attack/datapoisoning/run_all_attacks.py --seeds 0 42 123     # 3 seeded runs per combo, mean +/- std reported
 python attack/datapoisoning/run_all_attacks.py --dry-run            # print commands only
+
+# Intensity sweep: light/medium/heavy = 20%/50%/100% of the target source's own doc
+# count injected as poison, at each of 3 seeds -- produces a degradation curve
+# (mean +/- std per intensity level) instead of a single accuracy-drop number.
+# Restricted to a small, representative combo subset by default to keep runtime
+# manageable (3 intensities x 3 seeds per combo); use --only to pick combos, or
+# omit it to sweep the full ATTACK_MATRIX (much longer).
+python attack/datapoisoning/run_all_attacks.py --intensities light medium heavy --seeds 0 42 123
 """
 
 import argparse
@@ -37,7 +45,8 @@ ATTACK_MATRIX = [
 ]
 
 
-def run_one(strategy, poison_type, extra_args, label, run_attack_path, seed=None, no_query_aware=False):
+def run_one(strategy, poison_type, extra_args, label, run_attack_path, seed=None,
+            no_query_aware=False, intensity=None):
     cmd = [
         sys.executable, run_attack_path,
         "--strategy", strategy,
@@ -49,10 +58,15 @@ def run_one(strategy, poison_type, extra_args, label, run_attack_path, seed=None
         cmd += ["--seed", str(seed)]
     if no_query_aware:
         cmd += ["--no-query-aware"]
+    if intensity is not None:
+        cmd += ["--intensity", intensity]
 
-    seed_note = f" (seed={seed})" if seed is not None else ""
+    note = "".join([
+        f" (seed={seed})" if seed is not None else "",
+        f" [{intensity}]" if intensity is not None else "",
+    ])
     print("\n" + "=" * 70)
-    print(f"RUNNING: {label}{seed_note}")
+    print(f"RUNNING: {label}{note}")
     print(f"  cmd: {' '.join(cmd)}")
     print("=" * 70)
 
@@ -67,14 +81,15 @@ def run_one(strategy, poison_type, extra_args, label, run_attack_path, seed=None
     if result.returncode != 0:
         print(f"  ⚠ run failed (exit code {result.returncode}) after {elapsed:.0f}s")
         return {"label": label, "strategy": strategy, "poison_type": poison_type, "seed": seed,
-                "error": f"exit code {result.returncode}", "elapsed_sec": round(elapsed, 1)}
+                "intensity": intensity, "error": f"exit code {result.returncode}",
+                "elapsed_sec": round(elapsed, 1)}
 
     after = set(glob.glob(os.path.join(LOG_DIR, "*.json")))
     new_logs = sorted(after - before)
     if not new_logs:
         print("  ⚠ no new log file found")
         return {"label": label, "strategy": strategy, "poison_type": poison_type, "seed": seed,
-                "error": "no log produced", "elapsed_sec": round(elapsed, 1)}
+                "intensity": intensity, "error": "no log produced", "elapsed_sec": round(elapsed, 1)}
 
     log_path = new_logs[-1]
     with open(log_path, "r", encoding="utf-8") as f:
@@ -87,6 +102,7 @@ def run_one(strategy, poison_type, extra_args, label, run_attack_path, seed=None
         "poison_type": poison_type,
         "seed": seed,
         "query_aware": not no_query_aware,
+        "intensity": intensity,
         "log_path": log_path,
         "clean_accuracy": ev.get("clean_accuracy"),
         "attacked_accuracy": ev.get("attacked_accuracy"),
@@ -135,13 +151,99 @@ def main():
                         help="Run the whole matrix black-box (attacker doesn't know the eval "
                              "questions), instead of the default oracle-knowledge tier. See "
                              "problems/data_poisoning_gaps.md, B2.")
+    parser.add_argument("--intensities", nargs="+", choices=["light", "medium", "heavy"], default=None,
+                        help="Run an intensity sweep instead of the normal matrix: each selected "
+                             "combo is run once per intensity level per seed, producing a "
+                             "degradation curve (mean +/- std per intensity). If --seeds is "
+                             "omitted, defaults to {0, 42, 123} automatically (multi-seed is not "
+                             "optional for this mode -- a single-seed curve isn't a curve, it's "
+                             "3 unrelated single-run numbers).")
+    parser.add_argument("--only", default=None,
+                        help="Restrict to ATTACK_MATRIX combos whose label contains this substring "
+                             "(case-insensitive). Mainly useful with --intensities to keep the "
+                             "sweep to a manageable size instead of all 6 combos.")
     args = parser.parse_args()
 
     run_attack_path = os.path.join(HERE, "run_attack.py")
     seeds = args.seeds if args.seeds else [None]
 
+    matrix = ATTACK_MATRIX
+    if args.only:
+        matrix = [c for c in ATTACK_MATRIX if args.only.lower() in c[3].lower()]
+        if not matrix:
+            print(f"ERROR: --only '{args.only}' matched no combos in ATTACK_MATRIX")
+            return
+
+    if args.intensities:
+        intensities = args.intensities
+        sweep_seeds = args.seeds if args.seeds else [0, 42, 123]
+        if not args.seeds:
+            print("No --seeds given for intensity sweep; defaulting to {0, 42, 123} "
+                  "(multi-seed is required for a meaningful degradation curve).")
+
+        if args.dry_run:
+            for strategy, poison_type, extra_args, label in matrix:
+                for intensity in intensities:
+                    for seed in sweep_seeds:
+                        cmd = [sys.executable, run_attack_path, "--strategy", strategy,
+                               "--poison-type", poison_type, *extra_args, "--evaluate",
+                               "--seed", str(seed), "--intensity", intensity]
+                        if args.no_query_aware:
+                            cmd += ["--no-query-aware"]
+                        print(f"[{label} [{intensity}] (seed={seed})] {' '.join(cmd)}")
+            return
+
+        results = []
+        for strategy, poison_type, extra_args, label in matrix:
+            for intensity in intensities:
+                for seed in sweep_seeds:
+                    results.append(run_one(strategy, poison_type, extra_args, label, run_attack_path,
+                                            seed=seed, no_query_aware=args.no_query_aware,
+                                            intensity=intensity))
+
+        print("\n\n" + "=" * 100)
+        print("INTENSITY SWEEP SUMMARY (degradation curve data)")
+        print(f"Threat tier: {'black-box (--no-query-aware)' if args.no_query_aware else 'oracle-knowledge (default)'}")
+        print("=" * 100)
+
+        grouped = {}
+        for r in results:
+            grouped.setdefault((r["label"], r["intensity"]), []).append(r)
+        aggregated = {f"{label} [{intensity}]": aggregate_seed_runs(runs)
+                      for (label, intensity), runs in grouped.items()}
+
+        header = f"{'Attack':<45} {'Intensity':<8} {'Clean':>8} {'Attacked (mean+/-std)':>24} {'Drop % (mean+/-std)':>22} {'Success rate':>13}"
+        print(header)
+        print("-" * 128)
+        for strategy, poison_type, extra_args, label in matrix:
+            for intensity in intensities:
+                key = f"{label} [{intensity}]"
+                agg = aggregated.get(key, {})
+                if agg.get("n_ok", 0) == 0:
+                    print(f"{label:<45} {intensity:<8} ERROR: all {agg.get('n_runs', 0)} runs failed")
+                    continue
+                clean = agg["clean_accuracy"]["mean"]
+                att = agg["attacked_accuracy"]
+                drop = agg["degradation_pct"]
+                clean_s = f"{clean:.1%}" if clean is not None else "-"
+                att_s = f"{att['mean']:.1%} +/- {att['std']:.1%}" if att["mean"] is not None else "-"
+                drop_s = f"{drop['mean']:.1f} +/- {drop['std']:.1f}" if drop["mean"] is not None else "-"
+                success_s = f"{agg['success_rate']:.0%} ({agg['n_ok']}/{agg['n_ok']} runs)"
+                print(f"{label:<45} {intensity:<8} {clean_s:>8} {att_s:>24} {drop_s:>22} {success_s:>13}")
+            print()
+        print("=" * 100)
+
+        os.makedirs(LOG_DIR, exist_ok=True)
+        summary_path = os.path.join(LOG_DIR, f"attack_matrix_summary_intensity_{time.strftime('%Y-%m-%d_%H-%M-%S')}.json")
+        with open(summary_path, "w", encoding="utf-8") as f:
+            json.dump({"seeds": sweep_seeds, "intensities": intensities,
+                        "query_aware": not args.no_query_aware,
+                        "runs": results, "aggregated": aggregated}, f, indent=2)
+        print(f"\nFull summary saved -> {summary_path}")
+        return
+
     if args.dry_run:
-        for strategy, poison_type, extra_args, label in ATTACK_MATRIX:
+        for strategy, poison_type, extra_args, label in matrix:
             for seed in seeds:
                 cmd = [sys.executable, run_attack_path, "--strategy", strategy,
                        "--poison-type", poison_type, *extra_args, "--evaluate"]
@@ -154,7 +256,7 @@ def main():
         return
 
     results = []
-    for strategy, poison_type, extra_args, label in ATTACK_MATRIX:
+    for strategy, poison_type, extra_args, label in matrix:
         for seed in seeds:
             results.append(run_one(strategy, poison_type, extra_args, label, run_attack_path,
                                     seed=seed, no_query_aware=args.no_query_aware))
@@ -174,7 +276,7 @@ def main():
         header = f"{'Attack':<45} {'Seeds':>6} {'Clean':>8} {'Attacked (mean+/-std)':>24} {'Drop % (mean+/-std)':>22} {'Success rate':>13}"
         print(header)
         print("-" * 120)
-        for strategy, poison_type, extra_args, label in ATTACK_MATRIX:
+        for strategy, poison_type, extra_args, label in matrix:
             agg = aggregated.get(label, {})
             if agg.get("n_ok", 0) == 0:
                 print(f"{label:<45} ERROR: all {agg.get('n_runs', 0)} seed runs failed")

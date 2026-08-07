@@ -11,6 +11,7 @@ Mapping from demo codebase:
 """
 
 import json
+import os
 import random
 import requests
 import logging
@@ -24,9 +25,9 @@ logger = logging.getLogger(__name__)
 # Default data source registry  (matches docker-compose port mappings)
 # ---------------------------------------------------------------------------
 DEFAULT_DATA_SOURCES = [
-    {"name": "sources_0",   "url": "http://localhost:8001"},
-    {"name": "sources_20",  "url": "http://localhost:8002"},
-    {"name": "sources_100", "url": "http://localhost:8003"},
+    {"name": "sources_0",   "url": "http://localhost:18001"},
+    {"name": "sources_20",  "url": "http://localhost:18002"},
+    {"name": "sources_100", "url": "http://localhost:18003"},
 ]
 
 
@@ -70,6 +71,7 @@ class DataPoisoningAttack:
         amplification_factor: int = 1,
         question_variants: int = 2,
         target_queries: Optional[List[str]] = None,
+        poisoning_density: Optional[float] = None,
     ):
         """
         Parameters
@@ -77,6 +79,12 @@ class DataPoisoningAttack:
         data_sources        : list of {"name": ..., "url": ...} dicts.
                               Defaults to DEFAULT_DATA_SOURCES.
         poisoning_ratio     : fraction of data sources to compromise (0.0–1.0).
+                              Controls WHICH sources get touched (source-count intensity).
+                              For "targeted", this only pads target_source_names with
+                              extra random sources if the named list is smaller than the
+                              ratio-implied budget -- it never truncates an explicitly
+                              named target, so --targets sources_0 sources_20 always
+                              poisons both regardless of --ratio.
         attack_strategy     : "random" | "targeted" | "data_rich".
         poison_type         : "wrong_answer" | "misleading" | "noise" | "answer_swap".
         target_source_names : names of sources to target (used with "targeted").
@@ -85,6 +93,14 @@ class DataPoisoningAttack:
         target_queries       : known queries to craft retrieval-relevant poisoned
                                docs for (query-aware attack). If empty, the attack
                                falls back to poisoning random corpus documents.
+        poisoning_density    : fraction (0.0-1.0) of EACH targeted source's own
+                               current document count to inject as poison docs —
+                               the "how much of this source is corrupted" intensity
+                               axis, directly analogous to the paper's own p=20/40/
+                               60/80/100% token-pollution levels. None (default)
+                               preserves the legacy behavior of sizing injection
+                               volume off the total loaded corpus instead of the
+                               target source's actual size.
         """
         self.data_sources = data_sources or DEFAULT_DATA_SOURCES
         self.poisoning_ratio = poisoning_ratio
@@ -94,9 +110,16 @@ class DataPoisoningAttack:
         self.amplification_factor = amplification_factor
         self.question_variants = question_variants
         self.target_queries = target_queries or []
+        self.poisoning_density = poisoning_density
+        # Data sources may require X-API-Key auth (set on the container's API_KEY
+        # env var); read the matching key from the environment rather than
+        # hardcoding it. Empty string is harmless against a source that doesn't
+        # enforce auth (dev/legacy mode).
+        self.api_key = os.getenv("API_KEY", "")
 
         self.poisoned_source_names: List[str] = []
         self.poisoned_docs: List[Dict] = []
+        self.last_doc_counts: Dict[str, int] = {}
 
     # ------------------------------------------------------------------
     # Public API
@@ -122,15 +145,19 @@ class DataPoisoningAttack:
         logger.info(f"  poisoning_ratio   : {self.poisoning_ratio}")
         logger.info(f"  amplification     : {self.amplification_factor}x")
         logger.info(f"  question_variants : {self.question_variants}")
+        logger.info(f"  poisoning_density : {self.poisoning_density if self.poisoning_density is not None else 'unset (legacy sizing)'}")
         logger.info("=" * 60)
 
         # 1. Select which data sources to poison
         self.poisoned_source_names = self._select_sources_to_poison()
         logger.info(f"Targeting sources: {self.poisoned_source_names}")
 
-        # 2. How many docs to inject per source
-        num_per_source = max(5, len(data_points) // max(1, 2 * len(self.poisoned_source_names)))
-        logger.info(f"Injecting {num_per_source} poisoned docs per source")
+        # 2. How many docs to inject per source. If poisoning_density is set, size
+        # injection volume as a fraction of EACH target source's own current doc
+        # count (the paper's own p=20/40/60/80/100% pollution levels use the same
+        # convention) instead of the legacy formula based on the total loaded corpus.
+        doc_counts = self._get_doc_counts() if self.poisoning_density is not None else {}
+        legacy_num_per_source = max(5, len(data_points) // max(1, 2 * len(self.poisoned_source_names)))
 
         total_injected = 0
 
@@ -139,6 +166,15 @@ class DataPoisoningAttack:
             if source_cfg is None:
                 logger.warning(f"Source '{source_name}' not found in registry, skipping.")
                 continue
+
+            if self.poisoning_density is not None:
+                source_size = doc_counts.get(source_name, 0)
+                num_per_source = max(1, int(source_size * self.poisoning_density))
+                logger.info(f"  [{source_name}] density {self.poisoning_density:.0%} of "
+                            f"{source_size} docs -> injecting {num_per_source} poisoned docs")
+            else:
+                num_per_source = legacy_num_per_source
+                logger.info(f"  [{source_name}] injecting {num_per_source} poisoned docs (legacy sizing)")
 
             samples = random.sample(data_points, min(num_per_source, len(data_points)))
             docs_to_inject: List[Dict] = []
@@ -189,7 +225,14 @@ class DataPoisoningAttack:
             "poison_type": self.poison_type,
             "amplification_factor": self.amplification_factor,
             "question_variants": self.question_variants,
+            # Auditable evidence of what actually drove data_rich's selection
+            # (empty for other strategies) -- see problems/data_poisoning_gaps.md, B10.
+            "doc_counts_at_selection": self.last_doc_counts,
         }
+
+    def _auth_headers(self) -> Dict[str, str]:
+        """X-API-Key header for data-source requests, if a key is configured."""
+        return {"X-API-Key": self.api_key} if self.api_key else {}
 
     def reset_all(self) -> Dict[str, Any]:
         """Call /reset on every data source to restore clean state."""
@@ -197,7 +240,7 @@ class DataPoisoningAttack:
         for src in self.data_sources:
             try:
                 logger.info(f"[RESET] Resetting {src['name']} (re-embedding ~3000 docs, may take 2 min)...")
-                r = requests.post(f"{src['url']}/reset", timeout=300)
+                r = requests.post(f"{src['url']}/reset", headers=self._auth_headers(), timeout=300)
                 results[src["name"]] = r.json()
                 logger.info(f"[RESET] {src['name']}: {r.json()}")
             except Exception as e:
@@ -212,7 +255,7 @@ class DataPoisoningAttack:
         info = {}
         for src in self.data_sources:
             try:
-                r = requests.get(f"{src['url']}/info", timeout=10)
+                r = requests.get(f"{src['url']}/info", headers=self._auth_headers(), timeout=10)
                 info[src["name"]] = r.json()
             except Exception as e:
                 info[src["name"]] = {"error": str(e)}
@@ -280,14 +323,20 @@ class DataPoisoningAttack:
 
         elif self.attack_strategy == "targeted":
             targets = self.target_source_names.copy()
-            # pad with random extras if budget allows
+            # pad with random extras if budget allows -- but never truncate
+            # the explicitly-named list. Previously this returned
+            # targets[:num_malicious], so e.g. --targets sources_0 sources_20
+            # at the default ratio=0.5 (num_malicious=1) silently poisoned
+            # only sources_0, while every result table in this project kept
+            # citing the combo as "targeted(sources_0,sources_20)" as if both
+            # were touched. See problems/data_poisoning_gaps.md, B9.
             if len(targets) < num_malicious:
                 extras = [
                     s["name"] for s in self.data_sources
                     if s["name"] not in targets
                 ]
                 targets += random.sample(extras, min(num_malicious - len(targets), len(extras)))
-            return targets[:num_malicious]
+            return targets
 
         elif self.attack_strategy == "data_rich":
             # Target sources holding the most documents (serve the most
@@ -295,12 +344,31 @@ class DataPoisoningAttack:
             # live /info doc count instead of the on-chain reliability score,
             # since that score never differentiates sources in this deployment.
             counts = self._get_doc_counts()
+            self.last_doc_counts = counts
+            logger.info(f"  [data_rich] live doc counts: {counts}")
+            # Shuffle before the stable sort so a genuine tie doesn't always
+            # resolve to the same source (previously ties silently always
+            # picked sources_0 -- the exact "indistinguishable from a
+            # hardcoded choice" failure mode B1 replaced high_reliability
+            # for). See problems/data_poisoning_gaps.md, B10.
+            shuffled = self.data_sources.copy()
+            random.shuffle(shuffled)
             sorted_sources = sorted(
-                self.data_sources,
+                shuffled,
                 key=lambda s: counts.get(s["name"], 0),
                 reverse=True
             )
-            return [s["name"] for s in sorted_sources[:num_malicious]]
+            selected = [s["name"] for s in sorted_sources[:num_malicious]]
+            top_count = counts.get(selected[0], 0) if selected else 0
+            tied = sum(1 for s in self.data_sources if counts.get(s["name"], 0) == top_count)
+            if tied > 1:
+                logger.warning(
+                    f"  [data_rich] {tied} sources tied at {top_count} docs -- "
+                    f"selection among them is a random tie-break, not a "
+                    f"genuine 'most documents' signal. Selected: {selected}. "
+                    f"See problems/data_poisoning_gaps.md, B10."
+                )
+            return selected
 
         else:
             logger.warning(f"Unknown strategy '{self.attack_strategy}', falling back to random.")
@@ -311,7 +379,7 @@ class DataPoisoningAttack:
         counts: Dict[str, int] = {}
         for src in self.data_sources:
             try:
-                r = requests.get(f"{src['url']}/info", timeout=10)
+                r = requests.get(f"{src['url']}/info", headers=self._auth_headers(), timeout=10)
                 if r.status_code == 200:
                     counts[src["name"]] = r.json().get("total_docs", 0)
             except Exception as e:
@@ -479,7 +547,8 @@ class DataPoisoningAttack:
         for i in range(0, len(docs), batch_size):
             batch = docs[i:i + batch_size]
             try:
-                r = requests.post(f"{url}/poison", json={"documents": batch}, timeout=300)
+                r = requests.post(f"{url}/poison", json={"documents": batch},
+                                  headers=self._auth_headers(), timeout=300)
                 if r.status_code == 200:
                     total_injected += r.json().get("injected_count", len(batch))
                     logger.info(f"    batch {i // batch_size + 1}: injected {len(batch)} docs")
