@@ -182,30 +182,15 @@ def run_phase(
     return agg, per_question
 
 
-def main() -> None:
-    p = argparse.ArgumentParser(description="Real DDoS evaluation against the live DRAG deployment")
-    p.add_argument("--num_questions", type=int, default=10)
-    p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--severities", nargs="+", default=["low", "mid", "high"], choices=list(SEVERITY_TIERS))
-    p.add_argument("--flood_ramp_s", type=float, default=1.0,
-                    help="seconds to let flood workers ramp up before the real evaluation queries start")
-    p.add_argument("--tier_cooldown_s", type=float, default=60.0,
-                    help="seconds to wait after a tier's flood stops before the next tier starts, so the "
-                         "60/min rate-limit bucket and any queued load drain instead of carrying over "
-                         "into the next tier's baseline/attack measurement")
-    args = p.parse_args()
-
-    print("Loading PubMedQA yes/no/maybe questions matched against the loaded corpus...")
-    qa_pairs = load_pubmedqa_qa_pairs(args.num_questions, args.seed)
+def run_for_seed(args: argparse.Namespace, seed: int, hop_network: LiveRAGNetwork) -> tuple:
+    """One full severities sweep (baseline -> flood -> post_attack per tier)
+    at a single seed. Factored out of main() so --seeds can repeat this
+    for "repeated trials" (NAACL improvement proposal, DDoS item 1) without
+    duplicating the sweep logic -- --seed (singular) still works exactly as
+    before by looping this function exactly once."""
+    print(f"Loading PubMedQA yes/no/maybe questions matched against the loaded corpus (seed={seed})...")
+    qa_pairs = load_pubmedqa_qa_pairs(args.num_questions, seed)
     print(f"  [+] {len(qa_pairs)} questions loaded")
-
-    hop_network = LiveRAGNetwork(use_onchain_scores=False)
-    reachable = hop_network.ping_all()
-    print(f"  [+] Source reachability: {reachable}")
-    if not any(reachable.values()):
-        print("\n  [!] No Docker data-source nodes are reachable.")
-        print("      Start them with:  docker compose up -d   (repo root)\n")
-        sys.exit(1)
 
     results: List[Dict[str, Any]] = []
     detail: Dict[str, Any] = {"severities": {}}
@@ -224,13 +209,13 @@ def main() -> None:
                   f"(lets the rate-limit bucket and prior flood's load drain)...")
             time.sleep(args.tier_cooldown_s)
 
-        print(f"\n=== BASELINE ({severity}, no attack) ===")
+        print(f"\n=== BASELINE ({severity}, no attack, seed={seed}) ===")
         baseline_agg, baseline_per_q = run_phase(qa_pairs, "baseline", hop_network)
         print(f"  successful={baseline_agg['successful_queries']} failed={baseline_agg['failed_queries']} "
               f"f1={baseline_agg['f1']:.3f} avail_hit={baseline_agg['avg_query_hit']:.3f}")
 
         print(f"\n=== POST-ATTACK: {severity} (flood {tier['num_sources']}/3 source(s) "
-              f"x {tier['workers_per_source']} workers/source) ===")
+              f"x {tier['workers_per_source']} workers/source, seed={seed}) ===")
         flood = TrafficFlood(DEFAULT_SOURCE_URLS, workers_per_source=tier["workers_per_source"])
         targets = list(DEFAULT_SOURCE_URLS.keys())[: tier["num_sources"]]
         flood.start(targets)
@@ -245,6 +230,7 @@ def main() -> None:
         print(f"  flood stats: {flood_stats}")
 
         results.append({
+            "seed": seed,
             "baseline_results": baseline_agg,
             "post_attack_results": post_agg,
             "attack_type": f"pubmedqa_{severity}_ddos_comparison",
@@ -253,19 +239,113 @@ def main() -> None:
                                            "baseline_per_question": baseline_per_q,
                                            "post_attack_per_question": post_per_q}
 
+    return results, detail
+
+
+def _aggregate_across_seeds(all_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Mean/std of availability-hit and f1 degradation per severity across
+    seeds -- the "repeated trials" this project's other reports already
+    insist on (multi-seed CIs), applied here for the first time to the
+    live DDoS evaluation, which was single-seed-only before this function
+    existed (reports/ddos_attack.md section 15)."""
+    by_severity: Dict[str, List[Dict[str, float]]] = {}
+    for r in all_results:
+        sev = r["attack_type"]
+        by_severity.setdefault(sev, []).append({
+            "baseline_avail": r["baseline_results"]["avg_query_hit"],
+            "post_attack_avail": r["post_attack_results"]["avg_query_hit"],
+            "baseline_f1": r["baseline_results"]["f1"],
+            "post_attack_f1": r["post_attack_results"]["f1"],
+        })
+    summary = {}
+    for sev, rows in by_severity.items():
+        n = len(rows)
+
+        def _mean(key):
+            return sum(r[key] for r in rows) / n
+
+        def _std(key):
+            if n < 2:
+                return 0.0
+            m = _mean(key)
+            return (sum((r[key] - m) ** 2 for r in rows) / (n - 1)) ** 0.5
+
+        summary[sev] = {
+            "n_seeds": n,
+            "mean_baseline_avail": _mean("baseline_avail"), "std_baseline_avail": _std("baseline_avail"),
+            "mean_post_attack_avail": _mean("post_attack_avail"), "std_post_attack_avail": _std("post_attack_avail"),
+            "mean_availability_drop": _mean("baseline_avail") - _mean("post_attack_avail"),
+            "mean_baseline_f1": _mean("baseline_f1"), "mean_post_attack_f1": _mean("post_attack_f1"),
+        }
+    return summary
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description="Real DDoS evaluation against the live DRAG deployment")
+    p.add_argument("--num_questions", type=int, default=10)
+    p.add_argument("--seed", type=int, default=42,
+                    help="single-seed run (default, unchanged behavior). Ignored if --seeds is given.")
+    p.add_argument("--seeds", type=int, nargs="+", default=None,
+                    help="repeated-trials mode (NAACL improvement proposal, DDoS item 1): repeats the "
+                         "full severities sweep once per seed and reports mean/std availability drop "
+                         "per severity across seeds. Each seed re-floods the live containers, so this "
+                         "is proportionally slower and more disruptive to a shared deployment than a "
+                         "single --seed run -- use deliberately, e.g. --seeds 0 42 123 "
+                         "(this project's documented multi-seed convention).")
+    p.add_argument("--severities", nargs="+", default=["low", "mid", "high"], choices=list(SEVERITY_TIERS))
+    p.add_argument("--flood_ramp_s", type=float, default=1.0,
+                    help="seconds to let flood workers ramp up before the real evaluation queries start")
+    p.add_argument("--tier_cooldown_s", type=float, default=60.0,
+                    help="seconds to wait after a tier's flood stops before the next tier starts, so the "
+                         "60/min rate-limit bucket and any queued load drain instead of carrying over "
+                         "into the next tier's baseline/attack measurement")
+    args = p.parse_args()
+    seeds = args.seeds if args.seeds else [args.seed]
+
+    hop_network = LiveRAGNetwork(use_onchain_scores=False)
+    reachable = hop_network.ping_all()
+    print(f"  [+] Source reachability: {reachable}")
+    if not any(reachable.values()):
+        print("\n  [!] No Docker data-source nodes are reachable.")
+        print("      Start them with:  docker compose up -d   (repo root)\n")
+        sys.exit(1)
+
+    all_results: List[Dict[str, Any]] = []
+    all_detail: Dict[int, Any] = {}
+    for i, seed in enumerate(seeds):
+        if i > 0:
+            print(f"\n[+] Cooling down {args.tier_cooldown_s:.0f}s before seed={seed}...")
+            time.sleep(args.tier_cooldown_s)
+        results, detail = run_for_seed(args, seed, hop_network)
+        all_results.extend(results)
+        all_detail[seed] = detail
+
     log_dir = os.path.join(_ROOT, "attack_logs", "ddos_sim")
     os.makedirs(log_dir, exist_ok=True)
     ts = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     summary_path = os.path.join(log_dir, f"live_eval_{ts}_ddos_comparison.json")
     with open(summary_path, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
+        json.dump(all_results, f, indent=2, ensure_ascii=False)
     print(f"\n  [+] Comparison JSON written to {summary_path}")
+
+    if len(seeds) > 1:
+        seed_summary = _aggregate_across_seeds(all_results)
+        print("\n" + "=" * 62 + "\n  MULTI-SEED SUMMARY\n" + "=" * 62)
+        for sev, s in seed_summary.items():
+            print(f"  {sev:<40s} n={s['n_seeds']}  "
+                  f"avail drop={s['mean_availability_drop']:+.3f}  "
+                  f"baseline={s['mean_baseline_avail']:.3f}±{s['std_baseline_avail']:.3f}  "
+                  f"post_attack={s['mean_post_attack_avail']:.3f}±{s['std_post_attack_avail']:.3f}")
+        seed_summary_path = os.path.join(log_dir, f"live_eval_{ts}_multiseed_summary.json")
+        with open(seed_summary_path, "w", encoding="utf-8") as f:
+            json.dump({"seeds": seeds, "summary": seed_summary}, f, indent=2, ensure_ascii=False)
+        print(f"  [+] Multi-seed summary written to {seed_summary_path}")
 
     detail_path = os.path.join(log_dir, f"live_eval_{ts}_detail.json")
     with open(detail_path, "w", encoding="utf-8") as f:
-        json.dump(detail, f, indent=2, ensure_ascii=False)
-    print(f"  [+] Per-question detail written to {detail_path}")
+        json.dump(all_detail, f, indent=2, ensure_ascii=False)
+    print(f"  [+] Per-question detail (keyed by seed) written to {detail_path}")
 
 
 if __name__ == "__main__":
