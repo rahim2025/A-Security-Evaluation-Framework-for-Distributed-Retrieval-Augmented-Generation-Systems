@@ -1,0 +1,59 @@
+{
+  "model_name": "gboost_shallow",
+  "feature_names": [
+    "norm_sim",
+    "certainty",
+    "length_ratio",
+    "decision_match"
+  ],
+  "dev_seeds": [
+    0,
+    1,
+    42,
+    7,
+    13,
+    880,
+    496,
+    356,
+    820,
+    741,
+    926,
+    912,
+    662
+  ],
+  "loso_cv_mean_auc": 0.6665,
+  "loso_cv_std_auc": 0.0489,
+  "loso_cv_per_seed": {
+    "0": 0.6872,
+    "1": 0.6632,
+    "7": 0.6424,
+    "13": 0.644,
+    "42": 0.7528,
+    "356": 0.6488,
+    "496": 0.7136,
+    "662": 0.5688,
+    "741": 0.7032,
+    "820": 0.5928,
+    "880": 0.6848,
+    "912": 0.688,
+    "926": 0.6752
+  },
+  "all_candidates": [
+    {
+      "model_name": "gboost_shallow",
+      "loso_cv_mean_auc": 0.6665,
+      "loso_cv_std_auc": 0.0489
+    },
+    {
+      "model_name": "logreg_l2",
+      "loso_cv_mean_auc": 0.5614,
+      "loso_cv_std_auc": 0.0627
+    },
+    {
+      "model_name": "logreg_l2_strong",
+      "loso_cv_mean_auc": 0.5593,
+      "loso_cv_std_auc": 0.0619
+    }
+  ],
+  "reference_dev_score_revision7_grid_search": 0.5723
+}

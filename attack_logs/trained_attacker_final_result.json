@@ -1,0 +1,22 @@
+{
+  "model_name": "gboost_shallow",
+  "per_seed_auc": {
+    "154": 0.6144,
+    "659": 0.7256,
+    "693": 0.6728,
+    "783": 0.6136,
+    "865": 0.7024
+  },
+  "mean_auc": 0.6658,
+  "std_auc": 0.0508,
+  "ci_95": [
+    0.6027,
+    0.7289
+  ],
+  "n_test_seeds": 5,
+  "reference_linear_composite_mean_auc": 0.62,
+  "reference_linear_composite_ci_95": [
+    0.5455,
+    0.6945
+  ]
+}
