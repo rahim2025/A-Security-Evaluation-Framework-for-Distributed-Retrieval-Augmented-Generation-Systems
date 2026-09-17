@@ -173,6 +173,18 @@ class LiveClientDefense:
     redundancy_k : bounded extra backup-probe attempts, same role as the
         sibling defenses' `redundancy_k` (see their docstrings for why this
         must be bounded).
+    max_blacklist_fraction : quorum-preserving cap (default 0.5), mirroring
+        DDoSDefense._blacklist_cap() exactly -- never let more than this
+        fraction of the known peer population look simultaneously
+        unavailable through this defense's own circuit-breaker/rate-limit
+        mechanisms, however severe the real congestion driving them is (see
+        is_peer_blacklisted()). BUG FIX: this parameter existed and was
+        accepted by __init__ before this fix but was never actually
+        enforced anywhere -- under a severe enough flood, every peer's
+        circuit breaker could open and every peer's rate-limit bucket could
+        empty out at the same time, with nothing stopping is_peer_blacklisted()
+        from reporting the entire population unavailable at once and the
+        router from bypassing all of them. Now enforced.
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -204,6 +216,13 @@ class LiveClientDefense:
         self._total_redundant_probes = 0
         self._total_redundant_hits = 0
         self._total_defense_overhead_seconds = 0.0
+        # New: how often the quorum-preserving cap (bug fix, see
+        # is_peer_blacklisted()) overrode a peer's own circuit/rate-limit
+        # state to keep the router trying it anyway. Nonzero under a severe
+        # enough flood is expected and correct; consistently near
+        # `total_rate_limited + total_circuit_blocked` would indicate the
+        # cap itself is mis-tuned for the deployment's peer count.
+        self._total_quorum_overrides = 0
 
     # ── health scoring, for is_peer_blacklisted / backup_candidates ──────
     def _peer_health_score(self, peer_id: int) -> float:
@@ -219,7 +238,9 @@ class LiveClientDefense:
         tokens_frac = (bucket.tokens / bucket.capacity) if bucket else 1.0
         return tokens_frac - circuit_penalty
 
-    def is_peer_blacklisted(self, peer_id: int) -> bool:
+    def _is_circuit_or_rate_blocked(self, peer_id: int) -> bool:
+        """Raw per-peer signal (circuit open, or rate-limit bucket empty),
+        before the quorum-preserving cap below is applied."""
         breaker = self._breakers.get(peer_id)
         if breaker is not None and breaker.state == _CircuitBreaker.OPEN:
             now = time.monotonic()
@@ -231,6 +252,53 @@ class LiveClientDefense:
             if bucket.tokens < 1.0:
                 return True
         return False
+
+    def _quorum_cap(self) -> int:
+        """Mirrors DDoSDefense._blacklist_cap() (defense/ddos_sim_defense/
+        ddos_defense.py) exactly, for the same reason: a single per-peer
+        threshold can't tell "this peer is genuinely unhealthy" from "the
+        whole population is under load right now," so this defense must
+        never let more than max_blacklist_fraction of the known population
+        look unavailable at once, however severe the real congestion is."""
+        if self._num_peers is None:
+            return 10**9
+        return max(0, min(int(self._num_peers * self.max_blacklist_fraction), self._num_peers - 1))
+
+    def is_peer_blacklisted(self, peer_id: int) -> bool:
+        """
+        Bug fixed here: `max_blacklist_fraction` was accepted as a config
+        parameter (__init__) and clearly intended as a quorum-preserving
+        safety cap -- exactly what DDoSDefense._blacklist_cap() enforces --
+        but was never actually read or enforced anywhere in this class.
+        The circuit breaker and rate-limit bucket are independent, purely
+        local per-peer mechanisms with no coordination between peers: under
+        a real, severe-enough flood, EVERY peer's breaker can open and
+        EVERY peer's bucket can empty out at the same time, and this method
+        would previously report every single peer as blacklisted
+        simultaneously -- collapsing the "defense" to worse-than-no-defense
+        (100% of routing attempts bypassed before ever trying, the exact
+        "blacklisted almost everyone, zero benefit" failure mode this
+        project's own quorum-cap pattern exists to prevent elsewhere).
+
+        Fix: if reporting this peer as blocked would push the number of
+        *other* currently-blocked peers to or past the quorum cap, fail
+        OPEN for this peer instead (let the request through) rather than
+        compound the outage. This is a live snapshot check, not persistent
+        state -- unlike DDoSDefense's blacklist, circuit-open/rate-limited
+        status is already self-healing over time (breaker `open_seconds`,
+        bucket refill), so no separate recovery/backoff bookkeeping is
+        needed here.
+        """
+        if not self._is_circuit_or_rate_blocked(peer_id):
+            return False
+        others_blocked = sum(
+            1 for pid in self._breakers
+            if pid != peer_id and self._is_circuit_or_rate_blocked(pid)
+        )
+        if others_blocked >= self._quorum_cap():
+            self._total_quorum_overrides += 1
+            return False
+        return True
 
     def record_bypass(self) -> None:
         self._total_bypasses += 1
@@ -341,6 +409,7 @@ class LiveClientDefense:
             "total_redundant_probes": self._total_redundant_probes,
             "total_redundant_probe_hits": self._total_redundant_hits,
             "total_defense_overhead_seconds": self._total_defense_overhead_seconds,
+            "total_quorum_overrides": self._total_quorum_overrides,
             "circuit_states": {pid: b.state for pid, b in self._breakers.items()},
             "tokens_remaining": {pid: round(b.tokens, 2) for pid, b in self._buckets.items()},
         }

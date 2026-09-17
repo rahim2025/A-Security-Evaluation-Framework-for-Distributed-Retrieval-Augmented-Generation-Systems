@@ -169,12 +169,32 @@ def run_one_defense(args: argparse.Namespace, defense_name: str, qa_pairs) -> Di
     print(f"    retrieval hit_rate={under_flood_retrieval['hit_rate']:.3f}  "
           f"generation f1={under_flood_generation.get('f1', 0):.3f}  flood_stats={flood_stats}")
 
+    # Snapshot cumulative counters right before the post-recovery phase, so
+    # false_blocks below measures blocks that happened DURING post-recovery
+    # only -- not the (legitimate) blocks already accumulated while the
+    # real flood was still running.
+    pre_recovery_stats = defense.get_stats() if defense is not None else {}
+
     print(f"  --- post-recovery (cooldown {args.recovery_cooldown_s:.0f}s, false-block check) ---")
     time.sleep(args.recovery_cooldown_s)
     post_recovery_retrieval = retrieval_phase(net, [q for q, _ in qa_pairs])
     defense_stats = defense.get_stats() if defense is not None else {}
+    # BUG FIX: total_rate_limited/total_circuit_blocked (LiveClientDefense)
+    # are cumulative counters that increment continuously from
+    # defense.apply() onward. Summing their end-of-run totals directly (as
+    # this used to do) counted every legitimate block that happened DURING
+    # the real flood as a "false block" too, since those blocks occurred
+    # before recovery -- inflating this metric with exactly the blocks the
+    # defense was *supposed* to make, and making it meaningless as a
+    # false-positive signal. Only the DELTA accumulated during this
+    # post-recovery phase specifically is genuine: ground truth here is
+    # that the flood has already stopped, so any new block counted from
+    # this point on is, by construction, unwarranted.
+    # blacklisted_count (DDoSDefense) is already a live snapshot of current
+    # set membership, not a cumulative counter, so no delta is needed for it.
     false_blocks = (
-        defense_stats.get("total_rate_limited", 0) + defense_stats.get("total_circuit_blocked", 0)
+        (defense_stats.get("total_rate_limited", 0) - pre_recovery_stats.get("total_rate_limited", 0))
+        + (defense_stats.get("total_circuit_blocked", 0) - pre_recovery_stats.get("total_circuit_blocked", 0))
         + defense_stats.get("blacklisted_count", 0)
     ) if defense is not None else 0
     print(f"    post-recovery hit_rate={post_recovery_retrieval['hit_rate']:.3f}  "
