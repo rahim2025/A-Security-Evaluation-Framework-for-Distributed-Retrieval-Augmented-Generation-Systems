@@ -46,6 +46,15 @@ any of them) is an open empirical question this script is built to test,
 not an assumed result -- see the "what this does NOT claim" note at the
 bottom of this docstring.
 
+NOT YET MIGRATED to mia_attack.py's Revision 10 fix (pretraining-knowledge
+calibration + rate-limit hardening -- see that module's docstring §(a)/§(b)
+and reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md): the
+`_decision_match(...)` call below (line ~305) is the raw, uncalibrated
+signal. Since this script has not been executed yet (see above), there is
+no existing result to invalidate -- flagged here so whoever runs it next
+knows to migrate to the calibrated scoring first, rather than discovering
+the mismatch after collecting live data.
+
 Design of the contrastive templates
 --------------------------------------
 PubMedQA's questions are yes/no/maybe judgments about a research finding.

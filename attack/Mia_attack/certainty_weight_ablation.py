@@ -10,13 +10,21 @@ LEN=0.30) and isn't a certainty-specific test -- was still open.
 
 Runs each seed's real member/non-member probes exactly once (the expensive
 part: real LLM calls), then recomputes AUC-ROC twice from the *same*
-per-document (match_rate, raw_sim, length_ratio, certainty) signals already
-returned by MIAAttack._probe_documents(): once at the production weights
-(CERTAINTY_WEIGHT=0.0) and once with CERTAINTY_WEIGHT raised to 0.2 while
-keeping DECISION_WEIGHT=1.0 (still satisfies the module's own gate
-invariant: DECISION_WEIGHT > SIM_WEIGHT+CERTAINTY_WEIGHT+LEN_WEIGHT). Since
-both composites are computed from identical underlying probes, this is a
-clean ablation with no resampling confound -- not a rerun of the attack.
+per-document signals already returned by MIAAttack._probe_documents(): once
+at the production weights (CERTAINTY_WEIGHT=0.0) and once with
+CERTAINTY_WEIGHT raised to 0.2 while keeping DECISION_WEIGHT=1.0 (still
+satisfies the module's own gate invariant: DECISION_WEIGHT >
+SIM_WEIGHT+CERTAINTY_WEIGHT+LEN_WEIGHT). Since both composites are computed
+from identical underlying probes, this is a clean ablation with no
+resampling confound -- not a rerun of the attack.
+
+Updated for mia_attack.py's Revision 10 (pretraining-knowledge calibration,
+see that module's docstring §(a)): the "decision_match" term is now the
+CALIBRATED score, not the raw match rate -- this script reuses
+_probe_documents()'s own returned composite score directly (rather than
+re-deriving the formula from the raw match rate) specifically so it cannot
+silently drift out of sync with whatever mia_attack.py's production
+composite actually computes.
 
 Uses fresh seeds not previously used anywhere in this project's dev/test
 seed history (report's Revision 7 used 13 dev seeds + 5 fresh test seeds
@@ -50,11 +58,11 @@ SEEDS = [4001, 4002, 4003]
 CERTAINTY_WEIGHT_TEST = 0.20  # DECISION_WEIGHT=1.0 still exceeds 0.20, gate holds
 
 
-def composite(match_rates: List[float], certainties: List[float], certainty_weight: float) -> List[float]:
+def composite(calibrated_decision_rates: List[float], certainties: List[float], certainty_weight: float) -> List[float]:
     decision_weight = 1.0
     return [
         decision_weight * m + certainty_weight * c
-        for m, c in zip(match_rates, certainties)
+        for m, c in zip(calibrated_decision_rates, certainties)
     ]
 
 
@@ -67,13 +75,22 @@ def run_seed(seed: int) -> dict:
     members, non_members = load_membership_documents(
         attack.n_members, attack.n_nonmembers, seed, attack.corpus_jsonl, attack.probes_per_doc,
     )
-    _, m_match, m_sim, m_len, m_cert = attack._probe_documents(members, "MEMBER")
-    _, nm_match, nm_sim, nm_len, nm_cert = attack._probe_documents(non_members, "NON-MEMBER")
+    m_score, m_match, m_sim, m_len, m_cert, m_base, m_deg = attack._probe_documents(members, "MEMBER")
+    nm_score, nm_match, nm_sim, nm_len, nm_cert, nm_base, nm_deg = attack._probe_documents(non_members, "NON-MEMBER")
 
     y_true = np.array([1] * len(m_match) + [0] * len(nm_match))
 
-    prod_scores = composite(m_match + nm_match, m_cert + nm_cert, certainty_weight=0.0)
-    test_scores = composite(m_match + nm_match, m_cert + nm_cert, certainty_weight=CERTAINTY_WEIGHT_TEST)
+    # Revision 10: m_score/nm_score are _probe_documents()'s own production
+    # composite, which (since DECISION_WEIGHT=1.0 and every other production
+    # weight is 0.0) IS exactly the calibrated decision rate -- reused
+    # directly here rather than re-deriving it from m_match/nm_match (the
+    # pre-calibration, Revision 7 raw match rate), so this ablation cannot
+    # silently diverge from whatever mia_attack.py's real composite computes.
+    calibrated_rate = m_score + nm_score
+    certs = m_cert + nm_cert
+
+    prod_scores = composite(calibrated_rate, certs, certainty_weight=0.0)
+    test_scores = composite(calibrated_rate, certs, certainty_weight=CERTAINTY_WEIGHT_TEST)
 
     return {
         "seed": seed,

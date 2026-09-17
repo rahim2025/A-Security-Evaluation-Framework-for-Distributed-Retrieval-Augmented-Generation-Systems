@@ -88,6 +88,107 @@ future revision with more dev data finds a role for them again.
   3. certainty (0.0, diagnostic only): yes/no/maybe-commitment vs. hedge detection (see `_certainty_score`).
   4. length_ratio (0.0, diagnostic only): min(len(response)/len(gold_answer), 1.0).
 
+Revision 10 -- pretraining-knowledge calibration and rate-limit hardening
+--------------------------------------------------------------------------
+Two correctness problems, both raised directly by the thesis team and both
+traced to concrete evidence rather than assumed (see
+reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md for the full
+writeup, and the source material: `RAGLeak: Membership Inference Attacks on
+RAG-Based Large Language Models` (Feng et al., ACISP 2025), a paper on
+membership-inference against RAG systems, generally).
+
+(a) Pretraining-knowledge confound, previously undiagnosed by the score
+    itself. `decision_match` (below) is a coarse 3-way categorical judgment
+    (yes/no/maybe). PubMedQA's answers skew toward "yes" (~55%), and the
+    base LLM has some non-zero chance of already knowing a given biomedical
+    fact from pretraining -- both mean a *non-member* document's response
+    can commit to the correct decision token by chance or by prior
+    knowledge, with nothing in the RAG pipeline having grounded it. Before
+    this revision, that was visible only as a footnote in the printed
+    diagnostic ("high here means the LLM already knew the fact from
+    pretraining", line ~856 in prior revisions) -- the composite score
+    itself did nothing to detect or correct for it, so if pretraining
+    knowledge inflated the non-member match rate enough, the member/
+    non-member gap the whole attack depends on could shrink toward (or, in
+    a bad enough draw, collapse to) chance, with no signal in the output
+    that this had happened. RAGLeak's own methodology (paper §5.3,
+    "Exclude LLM Training Data") diagnoses exactly this failure mode: it
+    validates that a *cropped-continuation* probe design (Eq. 2-3 of the
+    paper) keeps the before-RAG member/non-member similarity distributions
+    overlapping (i.e. pretraining alone carries no signal), specifically
+    because a coarse categorical target like a yes/no/maybe judgment would
+    not have that property. This module cannot switch PubMedQA's ground
+    truth to a continuation-style probe without changing the dataset
+    (out of scope here), so instead of relying on dataset design alone to
+    avoid the confound, Revision 10 measures and calibrates against it
+    directly, every run: drag_llm_service's `/query` endpoint now accepts
+    an additive `no_retrieval: true` request field (skips retrieval/
+    reranking entirely, answers from an empty context through the exact
+    same prompt template and model) -- see
+    `drag_llm_service/app/server.py`. For each probe this module now also
+    queries that no-RAG path and computes `_decision_match()` against it,
+    giving a genuine "what would the LLM have said anyway" baseline through
+    the identical model/prompt path, not a separately-reasoned guess.
+    `_calibrated_decision_score()` combines the two: a RAG-grounded match
+    that the no-RAG baseline does NOT also produce keeps full credit (1.0,
+    clean evidence of retrieval-grounding); a RAG-grounded match that the
+    baseline ALSO produces is now scored as ambiguous (0.5, since it could
+    be genuine grounding or the model already knowing the fact) instead of
+    silently counted as full-strength member evidence; no RAG-grounded
+    match stays 0.0 either way. This calibrated score, not the raw
+    `decision_match`, now drives the primary composite -- the raw,
+    uncalibrated `decision_match` is kept and reported unchanged as
+    `auc_roc_answer_match` for continuity with prior revisions' reports.
+    The no-RAG baseline's own match rate is reported separately
+    (`mean_*_pretraining_baseline_match`, `auc_roc_pretraining_baseline`) --
+    this is the module's own live version of the paper's Fig. 3 "before
+    RAG vs after RAG" validation, now measured on every run instead of a
+    one-off historical check. **Disclosed, not yet re-validated**: Revision
+    7's weights (`DECISION_WEIGHT=1.0` etc.) were grid-searched against the
+    *uncalibrated* `decision_match`; calibration changes what that signal
+    measures, so a fresh grid search against the calibrated signal is
+    recommended follow-up work, not assumed equivalent, before citing a new
+    AUC number as validated the way Revision 7's was.
+
+(b) Rate-limit-induced retrieval corruption, a second, structurally
+    distinct problem with the same symptom (a document that IS a member
+    looking like a non-member). `drag_data_source`'s three containers each
+    enforce a 60-requests/minute-per-IP cap by default
+    (`drag_data_source/app/server.py`, `RATE_LIMIT_DEFAULT`); every single
+    `/query` call to `drag_llm_service` fans out server-side to all three
+    data sources (`query_data_sources()`) -- one HTTP request to *each*
+    distinct source per external call (not three requests piled onto one
+    source), so each source's own rate counter tracks this module's
+    external call rate directly. Measured live during a 100+100-sample MIA
+    run with no client-side pacing at all: 64% of data-source requests were
+    rejected with HTTP 429 over a 30-minute window (see
+    `problems/safin_faced_problems/` and `problems/mia_attack_gaps.md`) --
+    this module, unlike its sibling `attack/selective_forward_sim` and
+    `attack/ssm_score/run_attack.py`, had no pacing whatsoever between
+    calls. Before this revision, a 429/5xx response from any data source
+    was silently treated identically to "this source has nothing relevant"
+    by `drag_llm_service` -- when a member document's real content lived on
+    the rate-limited source, the model answered without it, and that
+    document's response looked exactly like a genuine non-member's. This
+    directly corrupts the membership signal regardless of pretraining, and
+    (a) and (b) can compound: a rate-limited member document forced to
+    answer blind is now *also* exactly the scenario (a) calibrates for, so
+    without both fixes a rate-limited member could be scored as a
+    confident, uncalibrated non-member miss. Fixed at the source
+    (`drag_llm_service/app/server.py`'s new `_post_data_source_with_retry()`:
+    retry-with-backoff on 429/5xx, honoring `Retry-After`) and at this
+    module's client (`_query_llm()` below is now self-throttled to
+    `MIN_QUERY_INTERVAL_S`, matching the pacing already validated live for
+    this exact rate limit by `attack/selective_forward_sim/live_network.py`
+    (1.1s) and `attack/ssm_score/run_attack.py` (1.3s) -- this module's own
+    prior total absence of any pacing, not an unusually tight cap, is the
+    confirmed root cause of the measured 64% failure rate). `/query`'s
+    response now additionally reports `sources_used`/`degraded` so this
+    module can tell a fully-grounded answer apart from a degraded one
+    instead of treating them identically; degraded probes are now counted
+    and reported (`degraded_probe_rate`) rather than silently folded into
+    the same signal as clean probes.
+
 Hypothesis
 ----------
 For a *member* document the retriever can surface the real context, so its
@@ -97,7 +198,8 @@ confident, direct commitment to the correct yes/no/maybe judgment. For a
 should fail to commit correctly -- unless the base LLM already knows the
 fact from pretraining, in which case decision_match may be high for
 non-members too, capping the available signal regardless of scoring
-strategy.
+strategy. Revision 10's calibration (above) is a direct, measured response
+to this "unless" clause, rather than leaving it as an unaddressed caveat.
 AUC-ROC ~= 0.50 -> no privacy leakage (attack fails).
 AUC-ROC > 0.70  -> genuine privacy vulnerability.
 
@@ -112,6 +214,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import time
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
@@ -368,22 +471,107 @@ def _parse_llm_response(data: Any) -> str:
     return ""
 
 
-def _query_llm(question: str, url: str, api_key: str = "") -> str:
+# Minimum seconds between calls to the LLM service (Revision 10, rate-limit
+# hardening -- see module docstring §(b)). Every /query call fans out
+# server-side to all 3 drag_data_source containers -- one HTTP request to
+# EACH distinct source per external call, so each source's own 60-requests/
+# minute-per-IP cap (RATE_LIMIT_DEFAULT) tracks this module's external call
+# rate directly, not a multiple of it. MIN_QUERY_INTERVAL_S=1.3s matches the
+# pacing already validated live against this exact limit by this project's
+# other live-mode attack clients: attack/selective_forward_sim/
+# live_network.py (1.1s) and attack/ssm_score/run_attack.py's QUERY_DELAY
+# (1.3s, same family of attack as this one -- see that file's identical
+# rate-limit comment). This module previously had NO pacing at all, unlike
+# both of those -- that gap, not the cap itself, is the confirmed root
+# cause of a measured 64% HTTP 429 rate during a real 100+100-sample run
+# (problems/safin_faced_problems/). Overridable via MIA_MIN_QUERY_INTERVAL_S
+# for a test deployment that has raised RATE_LIMIT_DEFAULT (see
+# drag_data_source/app/server.py's comment on that env var).
+MIN_QUERY_INTERVAL_S = float(os.getenv("MIA_MIN_QUERY_INTERVAL_S", "1.3"))
+_last_query_time = 0.0
+
+
+def _throttle_query() -> None:
+    """Self-throttle so this module never exceeds MIN_QUERY_INTERVAL_S
+    between calls to the LLM service, regardless of how tight the caller's
+    own loop is (see module docstring §(b): the previous absence of any
+    pacing here, unlike the SFA module's sibling code, is the confirmed
+    root cause of a measured 64% HTTP 429 rate during a real 100+100-sample
+    run)."""
+    global _last_query_time
+    elapsed = time.monotonic() - _last_query_time
+    wait = MIN_QUERY_INTERVAL_S - elapsed
+    if wait > 0:
+        time.sleep(wait)
+    _last_query_time = time.monotonic()
+
+
+def _query_llm_raw(
+    question: str, url: str, api_key: str = "", no_retrieval: bool = False, max_retries: int = 2,
+) -> Tuple[str, bool]:
+    """
+    Query the LLM service, self-throttled (see MIN_QUERY_INTERVAL_S) and
+    retrying once on HTTP 429 (honoring the server's Retry-After header),
+    mirroring the pattern already validated live in
+    attack/selective_forward_sim/live_network.py's LivePeer.query().
+
+    `no_retrieval=True` uses the same /query endpoint's no-RAG bypass
+    (drag_llm_service/app/server.py) -- the model answers from an empty
+    context, through the identical prompt template. Used by
+    `_probe_documents()` to measure the pretraining-knowledge calibration
+    baseline (see module docstring §(a)). This path never reaches the data
+    sources, so it does not consume any of the 60/min-per-source budget,
+    but is still throttled here to avoid hammering the LLM service itself.
+
+    Returns (response_text, degraded), where `degraded` is True if the
+    server reports at least one sampled data source did not return "ok"
+    (rate-limited, errored, or empty) for a retrieval-mode query -- always
+    False for no_retrieval=True queries, since no data source was
+    contacted. `response_text` is `""` on any failure (network error,
+    non-200 after retries, or an empty/blank generated answer) -- callers
+    already treat an empty string as "no usable response" exactly as
+    before this revision.
+    """
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["X-API-Key"] = api_key
-    try:
-        r = requests.post(
-            f"{url}/query",
-            json={"query": question},
-            headers=headers,
-            timeout=120,
-        )
+    payload: Dict[str, Any] = {"query": question}
+    if no_retrieval:
+        payload["no_retrieval"] = True
+
+    for attempt in range(max_retries + 1):
+        _throttle_query()
+        try:
+            r = requests.post(f"{url}/query", json=payload, headers=headers, timeout=120)
+        except Exception:
+            return "", False
+
+        if r.status_code == 429 and attempt < max_retries:
+            retry_after = float(r.headers.get("Retry-After", 2.0))
+            time.sleep(retry_after)
+            continue
+
         if r.status_code == 200:
-            return _parse_llm_response(r.json())
-    except Exception:
-        pass
-    return ""
+            data = r.json()
+            return _parse_llm_response(data), bool(data.get("degraded", False))
+
+        return "", False
+
+    return "", False
+
+
+def _query_llm(question: str, url: str, api_key: str = "") -> str:
+    """
+    Backward-compatible string-only wrapper around `_query_llm_raw()` --
+    unchanged signature and return type, since this function is imported
+    directly by several other modules (`defense/mia_defense/mia_defense.py`,
+    `attack/Mia_attack/run_ablation_eval.py`,
+    `defense/mia_defense/validate_length_floor.py`). Those callers now get
+    the Revision 10 throttling/retry hardening transparently, with no code
+    changes required on their side.
+    """
+    text, _degraded = _query_llm_raw(question, url, api_key)
+    return text
 
 
 def _cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
@@ -466,6 +654,40 @@ def _decision_match(response: str, gold_decision: str) -> bool:
         return False
     words = [w.strip(".,;:!?").lower() for w in response.split()[:5]]
     return gold in words
+
+
+def _calibrated_decision_score(rag_match: bool, baseline_match: bool) -> float:
+    """
+    Revision 10 (see module docstring §(a)). Nets `_decision_match()` out
+    against a no-RAG pretraining-knowledge baseline (the same question,
+    same model, same prompt template, but with `no_retrieval=True` --
+    i.e. what the model would answer with nothing retrieved at all), so a
+    non-member (or a rate-limited member) that happens to guess or already
+    know the correct yes/no/maybe decision doesn't get counted as
+    full-strength evidence of retrieval-grounded membership.
+
+        rag_match=True,  baseline_match=False -> 1.0  clean evidence: RAG
+                                                        context changed the
+                                                        answer to the
+                                                        correct one.
+        rag_match=True,  baseline_match=True  -> 0.5  ambiguous: correct
+                                                        either way, so this
+                                                        probe cannot tell
+                                                        genuine grounding
+                                                        from prior knowledge.
+        rag_match=False, baseline_match=*     -> 0.0  no committed-correct
+                                                        answer under RAG,
+                                                        regardless of the
+                                                        baseline.
+
+    This is the value fed into the primary composite starting Revision 10
+    (see DECISION_WEIGHT usage in `_probe_documents()`); the uncalibrated
+    `_decision_match()` result is still computed and reported separately
+    (`auc_roc_answer_match`) for continuity with prior revisions' reports.
+    """
+    if not rag_match:
+        return 0.0
+    return 0.5 if baseline_match else 1.0
 
 
 def _decision_match_adaptive(response: str, gold_decision: str) -> bool:
@@ -627,12 +849,19 @@ class MIAAttack:
         Execute the full MIA pipeline.
 
         Returns dict with keys: confusion_matrix, attack_accuracy, precision,
-        recall, f1_score, auc_roc, privacy_risk, n_members_tested,
-        n_non_members_tested, mean_member_similarity,
+        recall, f1_score, auc_roc (now driven by the Revision 10 calibrated
+        decision score, see module docstring), privacy_risk,
+        n_members_tested, n_non_members_tested, mean_member_similarity,
         mean_non_member_similarity, similarity_delta, plus the secondary
         answer-match diagnostic signal (auc_roc_answer_match,
         mean_member_answer_match_rate, mean_non_member_answer_match_rate,
-        answer_match_delta).
+        answer_match_delta -- uncalibrated, unchanged meaning from Revision
+        7), and the new Revision 10 diagnostics: auc_roc_pretraining_baseline,
+        mean_{member,non_member}_pretraining_baseline_match,
+        pretraining_baseline_delta (how much of decision_match would have
+        happened anyway with no retrieval at all -- see module docstring
+        §(a)), and mean_{member,non_member}_degraded_probe_rate (how often a
+        data source failed even after retry -- see module docstring §(b)).
         """
         members, non_members = load_membership_documents(
             self.n_members, self.n_nonmembers, self.random_seed,
@@ -647,13 +876,15 @@ class MIAAttack:
                   "  Ensure drag_llm_service is running and --llm_url is correct.")
 
         print("\n  === Probing MEMBER documents ===")
-        member_scores, member_matches, member_sims, member_lens, member_certs = self._probe_documents(members, "MEMBER")
+        (member_scores, member_matches, member_sims, member_lens, member_certs,
+         member_baseline, member_degraded) = self._probe_documents(members, "MEMBER")
 
         print("\n  === Probing NON-MEMBER documents ===")
-        non_member_scores, non_member_matches, non_member_sims, non_member_lens, non_member_certs = self._probe_documents(non_members, "NON-MEMBER")
+        (non_member_scores, non_member_matches, non_member_sims, non_member_lens, non_member_certs,
+         non_member_baseline, non_member_degraded) = self._probe_documents(non_members, "NON-MEMBER")
 
         y_true    = np.array([1] * len(member_scores) + [0] * len(non_member_scores))
-        y_scores  = np.array(member_scores + non_member_scores)  # weighted composite (primary)
+        y_scores  = np.array(member_scores + non_member_scores)  # calibrated weighted composite (primary, Revision 10)
         threshold = float(np.percentile(y_scores, self.threshold_pct))
         y_pred    = (y_scores >= threshold).astype(int)
 
@@ -663,6 +894,8 @@ class MIAAttack:
             member_matches, non_member_matches,
             member_lens, non_member_lens,
             member_certs, non_member_certs,
+            member_baseline, non_member_baseline,
+            member_degraded, non_member_degraded,
         )
         self._print_summary(metrics)
         return metrics
@@ -671,26 +904,44 @@ class MIAAttack:
 
     def _probe_documents(
         self, documents: List[List[Dict[str, str]]], label: str,
-    ) -> Tuple[List[float], List[float], List[float], List[float], List[float]]:
+    ) -> Tuple[List[float], List[float], List[float], List[float], List[float], List[float], List[float]]:
         """
         For each document, probe every available question (up to
         probes_per_doc) and take the probe with the highest similarity --
         one attacker keeping their strongest result over several tries, not
-        a single noisy sample. Returns five parallel per-document lists:
-        composite score (primary), answer-match rate (diagnostic), raw max
-        similarity (diagnostic), length ratio (diagnostic), and certainty
-        (diagnostic) -- all at the best-sim probe.
+        a single noisy sample.
+
+        Revision 10 (see module docstring §(a)/§(b)): each probe now also
+        queries the same question with `no_retrieval=True` (the pretraining-
+        knowledge calibration baseline) and records whether the server
+        reported the retrieval-mode query as `degraded` (a sampled data
+        source failed even after `_query_llm_raw()`'s retry). The primary
+        composite score now uses `_calibrated_decision_score()` (RAG match
+        netted against the no-RAG baseline) in place of the raw, uncalibrated
+        decision-match rate -- see DECISION_WEIGHT usage below.
+
+        Returns seven parallel per-document lists: composite score
+        (primary, now calibrated), raw uncalibrated answer-match rate
+        (diagnostic, unchanged meaning from Revision 7), raw max similarity
+        (diagnostic), length ratio (diagnostic), certainty (diagnostic),
+        pretraining-baseline match rate (diagnostic, new), and degraded-probe
+        rate (diagnostic, new) -- all but the last two are taken at the
+        best-sim probe, matching Revision 7's behavior exactly.
         """
         composite_scores: List[float] = []
         match_rates: List[float] = []
         raw_sims: List[float] = []
         length_ratios: List[float] = []
         certainties: List[float] = []
+        baseline_match_rates: List[float] = []
+        degraded_rates: List[float] = []
         n = len(documents)
         for i, qa_list in enumerate(documents, 1):
-            sims, matches, lens, certs = [], [], [], []
+            sims, matches, lens, certs, calibrated, baseline_matches, degraded_flags = [], [], [], [], [], [], []
             for qa in qa_list:
-                response = _query_llm(qa["question"], self.llm_service_url, self.api_key)
+                response, degraded = _query_llm_raw(
+                    qa["question"], self.llm_service_url, self.api_key,
+                )
                 if response.strip():
                     emb_r = self._encoder.encode([response], convert_to_numpy=True)[0]
                     emb_c = self._encoder.encode([qa["context"]], convert_to_numpy=True)[0]
@@ -698,19 +949,44 @@ class MIAAttack:
                 else:
                     sim = 0.0
                 sims.append(sim)
-                matches.append(1.0 if _decision_match(response, qa.get("decision", "")) else 0.0)
+                rag_match = _decision_match(response, qa.get("decision", ""))
+                matches.append(1.0 if rag_match else 0.0)
                 lens.append(_answer_length_ratio(response, qa["answer"]))
                 certs.append(_certainty_score(response))
+                degraded_flags.append(degraded)
+
+                # Pretraining-knowledge calibration baseline (module docstring
+                # §(a)): same question, same model/prompt template, no
+                # retrieved context. Only worth the extra call when the
+                # RAG-grounded answer actually matched -- a non-match is
+                # already scored 0.0 by _calibrated_decision_score()
+                # regardless of the baseline, so skip it to halve the added
+                # LLM-call cost in the (dataset-dependent) common case where
+                # decision_match is 0.
+                if rag_match:
+                    baseline_response, _ = _query_llm_raw(
+                        qa["question"], self.llm_service_url, self.api_key, no_retrieval=True,
+                    )
+                    baseline_match = _decision_match(baseline_response, qa.get("decision", ""))
+                else:
+                    baseline_match = False
+                baseline_matches.append(1.0 if baseline_match else 0.0)
+                calibrated.append(_calibrated_decision_score(rag_match, baseline_match))
 
             best_idx      = int(np.argmax(sims)) if sims else 0
             max_sim       = sims[best_idx] if sims else 0.0
             best_len_ratio = lens[best_idx] if lens else 0.0
             best_certainty = certs[best_idx] if certs else 0.0
             match_rate    = (sum(matches) / len(matches)) if matches else 0.0
+            calibrated_rate = (sum(calibrated) / len(calibrated)) if calibrated else 0.0
+            baseline_rate = (sum(baseline_matches) / len(baseline_matches)) if baseline_matches else 0.0
+            degraded_rate = (sum(degraded_flags) / len(degraded_flags)) if degraded_flags else 0.0
             # Gated: DECISION_WEIGHT dominates by construction (see module docstring),
-            # so decision_match=1 always outranks decision_match=0 regardless of how
-            # the other three signals land -- they only re-rank within a gate tier.
-            composite     = (DECISION_WEIGHT * match_rate
+            # so a fully-calibrated match (1.0) always outranks a non-match (0.0)
+            # regardless of how the other three signals land -- they only
+            # re-rank within a gate tier. Uses the CALIBRATED rate (Revision 10),
+            # not the raw match_rate (kept as a diagnostic below).
+            composite     = (DECISION_WEIGHT * calibrated_rate
                               + SIM_WEIGHT * _normalize_similarity(max_sim)
                               + CERTAINTY_WEIGHT * best_certainty
                               + LEN_WEIGHT * best_len_ratio)
@@ -720,12 +996,16 @@ class MIAAttack:
             raw_sims.append(max_sim)
             length_ratios.append(best_len_ratio)
             certainties.append(best_certainty)
+            baseline_match_rates.append(baseline_rate)
+            degraded_rates.append(degraded_rate)
 
             preview = qa_list[0]["question"][:40] + "..." if qa_list and len(qa_list[0]["question"]) > 40 else (qa_list[0]["question"] if qa_list else "")
             print(f"    [{label}] doc {i:>2}/{n}  probes={len(qa_list)}  "
                   f"score={composite:.4f}  sim={max_sim:.4f}  certainty={best_certainty:.2f}  "
-                  f"len_ratio={best_len_ratio:.2f}  match_rate={match_rate:.2f}  q0='{preview}'")
-        return composite_scores, match_rates, raw_sims, length_ratios, certainties
+                  f"len_ratio={best_len_ratio:.2f}  match_rate={match_rate:.2f}  "
+                  f"baseline_match={baseline_rate:.2f}  degraded={degraded_rate:.2f}  q0='{preview}'")
+        return (composite_scores, match_rates, raw_sims, length_ratios, certainties,
+                baseline_match_rates, degraded_rates)
 
     def _compute_metrics(
         self,
@@ -740,6 +1020,10 @@ class MIAAttack:
         non_member_lens:     List[float],
         member_certs:        List[float],
         non_member_certs:    List[float],
+        member_baseline:     List[float],
+        non_member_baseline: List[float],
+        member_degraded:     List[float],
+        non_member_degraded: List[float],
     ) -> Dict[str, Any]:
         tp = int(np.sum((y_true == 1) & (y_pred == 1)))
         tn = int(np.sum((y_true == 0) & (y_pred == 0)))
@@ -750,9 +1034,14 @@ class MIAAttack:
         precision = float(precision_score(y_true, y_pred, zero_division=0))
         recall    = float(recall_score(y_true, y_pred, zero_division=0))
         f1        = float(f1_score(y_true, y_pred, zero_division=0))
-        # y_scores is the gated composite (decision_match*0.55 dominates;
-        # similarity/certainty/length_ratio only re-rank within a gate tier) --
-        # this is the primary "thesis metric" AUC-ROC.
+        # y_scores is the gated composite (calibrated decision_match, weight
+        # 1.0 as of Revision 7's grid search, dominates by construction;
+        # similarity/certainty/length_ratio are weighted 0.0 and only exist
+        # as diagnostics -- see DECISION_WEIGHT etc. above). As of Revision 10
+        # the decision_match term feeding this composite is the
+        # pretraining-calibrated score, not the raw match rate -- see module
+        # docstring §(a) and _calibrated_decision_score(). This is the
+        # primary "thesis metric" AUC-ROC.
         auc_roc   = (
             float(roc_auc_score(y_true, y_scores))
             if len(np.unique(y_true)) > 1 else 0.5
@@ -784,6 +1073,24 @@ class MIAAttack:
         mc_m  = float(np.mean(member_certs))     if member_certs     else 0.0
         mc_nm = float(np.mean(non_member_certs)) if non_member_certs else 0.0
 
+        # Revision 10 diagnostics -- see module docstring §(a)/§(b).
+        baseline_scores = np.array(member_baseline + non_member_baseline)
+        # A HIGH auc_roc_pretraining_baseline is a bad sign, not a good one:
+        # it means the no-RAG baseline alone already separates member from
+        # non-member questions, which would mean the *dataset/probe design*
+        # (not the RAG pipeline) is doing the discriminating -- the opposite
+        # of what this attack claims to measure. Ideally this sits near 0.50
+        # (RAGLeak paper §5.3's "before RAG" check, done live every run).
+        auc_baseline = (
+            float(roc_auc_score(y_true, baseline_scores))
+            if len(np.unique(y_true)) > 1 and len(np.unique(baseline_scores)) > 1 else 0.5
+        )
+        mb_m  = float(np.mean(member_baseline))     if member_baseline     else 0.0
+        mb_nm = float(np.mean(non_member_baseline)) if non_member_baseline else 0.0
+
+        md_m  = float(np.mean(member_degraded))     if member_degraded     else 0.0
+        md_nm = float(np.mean(non_member_degraded)) if non_member_degraded else 0.0
+
         return {
             "confusion_matrix":           {"tp": tp, "tn": tn, "fp": fp, "fn": fn},
             "attack_accuracy":            round(accuracy,  4),
@@ -799,11 +1106,14 @@ class MIAAttack:
             "similarity_delta":           round(mu_m - mu_nm, 4),
             "score_weights":              {"similarity": SIM_WEIGHT, "certainty": CERTAINTY_WEIGHT,
                                             "length_ratio": LEN_WEIGHT, "decision_match": DECISION_WEIGHT},
-            # auc_roc_answer_match/mean_*_answer_match_rate/answer_match_delta are now the
-            # decision_match signal (see _decision_match) -- unlike the original hedge-word/
-            # full-sentence-substring version, this one IS folded into the primary composite
-            # score (via DECISION_WEIGHT), not purely diagnostic. Field names kept unchanged
-            # for JSON/back-compat with earlier logs.
+            # auc_roc_answer_match/mean_*_answer_match_rate/answer_match_delta are the
+            # RAW, UNCALIBRATED decision_match signal (see _decision_match). Through
+            # Revision 7 this WAS folded directly into the primary composite via
+            # DECISION_WEIGHT; as of Revision 10 the composite instead uses the
+            # CALIBRATED decision score (see auc_roc/_calibrated_decision_score, and
+            # module docstring §(a)) -- these fields are kept, unchanged in meaning,
+            # purely as a diagnostic for continuity with prior revisions' reports.
+            # Field names kept unchanged for JSON/back-compat with earlier logs.
             "auc_roc_answer_match":            round(auc_match, 4),
             "mean_member_answer_match_rate":     round(mm_m,  4),
             "mean_non_member_answer_match_rate": round(mm_nm, 4),
@@ -817,6 +1127,25 @@ class MIAAttack:
             "mean_member_certainty":             round(mc_m,  4),
             "mean_non_member_certainty":         round(mc_nm, 4),
             "certainty_delta":                  round(mc_m - mc_nm, 4),
+            # Revision 10 diagnostics (module docstring §(a)) -- the pretraining-
+            # knowledge calibration baseline: what decision_match would have been
+            # with NO retrieved context at all, through the identical model/prompt
+            # path (drag_llm_service's new `no_retrieval` bypass). A high value
+            # here (especially a high non-member value) is the live signal that
+            # "the LLM already knew the fact from pretraining" -- previously only
+            # a print-time footnote, now measured and folded into auc_roc itself.
+            "auc_roc_pretraining_baseline":             round(auc_baseline, 4),
+            "mean_member_pretraining_baseline_match":     round(mb_m,  4),
+            "mean_non_member_pretraining_baseline_match": round(mb_nm, 4),
+            "pretraining_baseline_delta":                round(mb_m - mb_nm, 4),
+            # Revision 10 diagnostics (module docstring §(b)) -- fraction of probes
+            # where drag_llm_service reported `degraded: true` (a sampled data
+            # source failed even after retry-with-backoff). Nonzero values mean
+            # some fraction of this run's answers were generated on incomplete
+            # retrieval -- a measurement-quality caveat on auc_roc, not a
+            # membership signal itself.
+            "mean_member_degraded_probe_rate":     round(md_m,  4),
+            "mean_non_member_degraded_probe_rate": round(md_nm, 4),
         }
 
     @staticmethod
@@ -843,18 +1172,30 @@ class MIAAttack:
         print(f"  F1 score             : {m['f1_score']:.4f}")
         w = m["score_weights"]
         print(f"  AUC-ROC              : {m['auc_roc']:.4f}  ← thesis metric "
-              f"(GATED: decision_match*{w['decision_match']} dominates; "
+              f"(GATED, Revision 10: CALIBRATED decision_match*{w['decision_match']} dominates; "
               f"sim*{w['similarity']} + certainty*{w['certainty']} + "
-              f"len_ratio*{w['length_ratio']} only re-rank within a gate tier)")
+              f"len_ratio*{w['length_ratio']} only re-rank within a gate tier. "
+              f"Calibrated against the no-RAG pretraining baseline below -- see module docstring §(a))")
         print(f"  Privacy risk         : {m['privacy_risk']}")
         print(f"\n  Mean member sim      : {m['mean_member_similarity']:.4f}")
         print(f"  Mean non-member sim  : {m['mean_non_member_similarity']:.4f}")
         print(f"  Similarity delta     : {m['similarity_delta']:+.4f}")
-        print(f"\n  [diagnostic] Decision-match AUC-ROC    : {m['auc_roc_answer_match']:.4f}")
+        print(f"\n  [diagnostic] Decision-match AUC-ROC (UNCALIBRATED, Rev. 7 signal): {m['auc_roc_answer_match']:.4f}")
         print(f"  [diagnostic] Member decision-match rate: {m['mean_member_answer_match_rate']:.4f}")
         print(f"  [diagnostic] Non-member decision-match : {m['mean_non_member_answer_match_rate']:.4f}"
               "  <- high here means the LLM already knew the fact from pretraining")
         print(f"  [diagnostic] Decision-match delta       : {m['answer_match_delta']:+.4f}")
+        print(f"\n  [diagnostic] Pretraining-baseline AUC-ROC : {m['auc_roc_pretraining_baseline']:.4f}"
+              "  <- ideally ~0.50; a HIGH value means the no-RAG baseline alone")
+        print(f"                                                already separates members from non-members "
+              "(dataset/probe confound, not RAG leakage -- see module docstring §(a))")
+        print(f"  [diagnostic] Member pretraining-baseline match    : {m['mean_member_pretraining_baseline_match']:.4f}")
+        print(f"  [diagnostic] Non-member pretraining-baseline match: {m['mean_non_member_pretraining_baseline_match']:.4f}")
+        print(f"  [diagnostic] Pretraining-baseline delta            : {m['pretraining_baseline_delta']:+.4f}")
+        print(f"\n  [diagnostic] Member degraded-probe rate     : {m['mean_member_degraded_probe_rate']:.4f}"
+              "  <- fraction of probes answered on incomplete retrieval")
+        print(f"  [diagnostic] Non-member degraded-probe rate : {m['mean_non_member_degraded_probe_rate']:.4f}"
+              "  (a data source failed even after retry -- see module docstring §(b))")
         print(f"\n  [diagnostic] Length-ratio AUC-ROC      : {m['auc_roc_length_ratio']:.4f}")
         print(f"  [diagnostic] Member length ratio       : {m['mean_member_length_ratio']:.4f}")
         print(f"  [diagnostic] Non-member length ratio   : {m['mean_non_member_length_ratio']:.4f}")

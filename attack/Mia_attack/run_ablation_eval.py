@@ -28,6 +28,16 @@ Usage
 -----
   python attack/Mia_attack/run_ablation_eval.py --seed 880
   python attack/Mia_attack/run_ablation_eval.py --seed 880 --seed 496 ...
+
+NOT YET MIGRATED to mia_attack.py's Revision 10 fix (pretraining-knowledge
+calibration + rate-limit hardening -- see that module's docstring §(a)/§(b)
+and reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md). This script's
+`_decision_match(...)` call at line ~116 (below) is still the raw,
+uncalibrated Revision-7 signal, computed via its own independent probe loop
+rather than `MIAAttack._probe_documents()` -- its AUC numbers are not
+directly comparable to a Revision-10-scored attack run until updated the
+same way. Flagged, not fixed, here to avoid changing this diagnostic's
+probe loop blind alongside the production module.
 """
 from __future__ import annotations
 

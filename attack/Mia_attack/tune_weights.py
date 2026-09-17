@@ -29,6 +29,19 @@ Two commands:
   python tune_weights.py search                  # grid-search weights on the saved DEV_SEEDS data, print + save the winner
   python tune_weights.py collect --split test     # fetch + save raw per-document signals for TEST_SEEDS
   python tune_weights.py evaluate                 # score TEST_SEEDS data with the locked-in weights -- run this exactly once
+
+NOT YET MIGRATED to mia_attack.py's Revision 10 fix (pretraining-knowledge
+calibration + rate-limit hardening -- see that module's docstring §(a)/§(b)
+and reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md). This
+script's `_decision_match(...)` call at line ~165 (below) collects the raw,
+uncalibrated Revision-7 signal, via its own independent per-document
+collection loop rather than `MIAAttack._probe_documents()`. The DECISION_
+WEIGHT=1.0 winner this script already locked in remains the production
+default, but it was searched against the uncalibrated signal -- Revision
+10's calibration changes what that signal measures, so a fresh grid search
+against the calibrated signal is recommended before treating the current
+weights as validated for the calibrated composite (see mia_attack.py's
+module docstring, "Disclosed, not yet re-validated"). Not re-run here.
 """
 from __future__ import annotations
 

@@ -41,6 +41,20 @@ evaluated against the *same* composite score the attack now uses -- scoring
 plain cosine similarity instead would compare against a metric the attacker
 no longer relies on.
 
+NOT YET MIGRATED to mia_attack.py's Revision 10 fix (see that module's
+docstring §(a)/§(b) and reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md):
+`_decision_match()` at line 565 below is still the raw, uncalibrated
+signal -- this defense module does not yet call the new pretraining-
+knowledge calibration baseline (`no_retrieval=True` against `/query`), so
+its composite/AUC numbers are not directly comparable to a Revision-10-scored
+attack run until it is updated the same way. Also note `/query` no longer
+"only ever returns `{"response": text}`" as the next paragraph states --
+it additively returns `sources_used`/`degraded`/`no_retrieval` too (existing
+consumers that read only `response` are unaffected). Flagged, not fixed,
+here -- left for a follow-up pass rather than changed blind alongside the
+attack module, since this file's six-world attack/defense comparison is
+large and was not re-verified this session.
+
 Defense principle -- two complementary defenses, two different leak channels
 -------------------------------------------------------------------------------
 Reliable-dRAG's `/query` only ever returns `{"response": text}` -- there's no
