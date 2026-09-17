@@ -82,3 +82,9 @@ dmypy.json
 .demo/
 demo/.env
 drag_data_source/configs/config_sources_*.yaml
+
+# Personal screenshots/notes, not for the repo
+problems/safin_faced_problems/
+
+# Personal experiment run logs (run_tanzim_experiments.sh output) -- not for the repo
+attack_logs/tanzim/
