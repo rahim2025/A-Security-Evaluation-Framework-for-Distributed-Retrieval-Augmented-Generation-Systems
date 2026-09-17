@@ -49,11 +49,26 @@ Detection modes (`detection_mode`)
    explicit opt-in mode rather than this module's default, so a stealthy
    attacker within Uniform(0.10, 0.30) can be caught: the test asks "is
    this peer's miss rate significantly above what an honest peer shows,"
-   not "is it blacklist_threshold-bad." Requires calibrating
-   `honest_miss_rate` to this deployment's *actual* measured honest
-   baseline -- using an unvalidated inherited constant here is exactly
-   the mistake that made the sibling module's detector unable to fire at
-   all until it was recalibrated against real measurements.
+   not "is it blacklist_threshold-bad."
+
+   `honest_miss_rate` defaults to `"auto"` (BUG FIX -- see
+   `_effective_honest_miss_rate()`): the baseline is measured LIVE, every
+   time the test runs, as the median observed miss rate across the other
+   currently-tracked, not-yet-blacklisted peers, rather than a hardcoded
+   constant. This module used to ship `honest_miss_rate=0.05` as a static
+   default, which silently mismatched its own default mock network
+   config (`peer_hit_prob: 0.4`, true honest miss rate ~0.6) -- reproduced
+   live, on this project's own default settings, the exact miscalibration
+   failure this paragraph already warned about in an earlier revision (an
+   inherited/assumed constant, never validated against the actual
+   population): 5 of 10 peers blacklisted on every tested ratio, including
+   when only 1 was genuinely compromised
+   (reports/SFA_Security_Analysis_Report.md sec 12.7). Auto-calibration
+   closes that specific failure mode structurally, since there is no
+   longer a static constant to go stale -- pass an explicit float instead
+   of `"auto"` only if you have a specific pre-measured value you want to
+   pin (e.g. reproducing a past run, or a deployment where the honest
+   baseline is known in advance and won't drift).
 
    Verified against a fixed 20%-drop stealthy attacker (2/10 peers
    compromised, honest peer_hit_prob=0.95, 300 queries, 5 seeds):
@@ -112,7 +127,29 @@ class SelectiveForwardingDefense:
 
         # "threshold" | "binomial" -- see module docstring "Detection modes".
         self.detection_mode = cfg.get("detection_mode", "threshold")
-        self.honest_miss_rate = float(cfg.get("honest_miss_rate", 0.05))
+        # BUG FIX (see _effective_honest_miss_rate() below for the full
+        # writeup): honest_miss_rate used to ship as a hardcoded float
+        # default (0.05) that silently mismatched this module's own
+        # default mock network config -- reproduced live, on this
+        # project's own default settings, the exact miscalibration bug
+        # this class's docstring already warned against (5/10 peers
+        # blacklisted when only 1 was truly compromised;
+        # reports/SFA_Security_Analysis_Report.md sec 12.7). Default is
+        # now "auto": self.honest_miss_rate stays None and the effective
+        # baseline is measured live from the currently-tracked population
+        # every time the binomial test runs. Pass an explicit float (as
+        # before) to pin a specific pre-measured value instead -- fully
+        # backward compatible for any caller that already does so.
+        raw_hmr = cfg.get("honest_miss_rate", "auto")
+        if isinstance(raw_hmr, str) and raw_hmr.strip().lower() == "auto":
+            self.honest_miss_rate: Optional[float] = None
+        else:
+            self.honest_miss_rate = float(raw_hmr)
+        # Auto-calibration needs at least this many OTHER currently-tracked,
+        # not-yet-blacklisted peers with enough samples before the median
+        # baseline estimate is trusted -- below that, _binomial_should_blacklist
+        # abstains (returns False) rather than testing against a guess.
+        self.min_peers_for_auto_calibration = int(cfg.get("min_peers_for_auto_calibration", 2))
         self.binom_alpha = float(cfg.get("binom_alpha", 0.05))
         self.streak_required = int(cfg.get("streak_required", 3))
         self._streak: Dict[int, int] = {}
@@ -158,11 +195,60 @@ class SelectiveForwardingDefense:
             self.blacklisted_peers.add(peer_id)
             self._total_blacklistings += 1
 
+    def _effective_honest_miss_rate(self, exclude_peer_id: int) -> Optional[float]:
+        """
+        Live-measured honest baseline used whenever `honest_miss_rate` is
+        left at its default "auto" rather than pinned to a specific
+        pre-measured constant (see __init__).
+
+        BUG FIX: this module used to ship a hardcoded `honest_miss_rate`
+        default (0.05) that silently mismatched its own default mock
+        network config (`peer_hit_prob: 0.4`, i.e. a true honest miss rate
+        of ~0.6). Wiring the binomial detector's shipped default into that
+        default config blacklisted 5 of 10 peers on every ratio tested,
+        including when only 1 was genuinely compromised -- reproduced live,
+        on this project's own code, the exact miscalibration bug this
+        class's own docstring already warned against (see
+        reports/SFA_Security_Analysis_Report.md sec 12.7). A static
+        constant is only ever correct for the one population it happened
+        to be measured against, and goes stale silently the moment the
+        deployment, config, or network size changes.
+
+        This replaces the static constant with the MEDIAN observed miss
+        rate across every OTHER currently-tracked, not-yet-blacklisted
+        peer with at least `min_queries_before_blacklist` samples --
+        median rather than mean specifically because it stays anchored to
+        the honest majority as long as compromised peers are a minority
+        of the population (the same assumption `max_blacklist_fraction`
+        already relies on elsewhere in this class), instead of being
+        dragged upward by one or two genuinely compromised peers' high
+        miss rates the way a mean would be.
+
+        Returns None if fewer than `min_peers_for_auto_calibration` other
+        peers currently have enough data to trust the estimate -- callers
+        must treat None as "can't test yet," not as "assume 0."
+        """
+        others = [
+            pid for pid in self._query_count
+            if pid != exclude_peer_id
+            and pid not in self.blacklisted_peers
+            and self._query_count[pid] >= self.min_queries_before_blacklist
+        ]
+        if len(others) < self.min_peers_for_auto_calibration:
+            return None
+        rates = sorted(1.0 - (self._response_count[pid] / self._query_count[pid]) for pid in others)
+        mid = len(rates) // 2
+        if len(rates) % 2 == 1:
+            return rates[mid]
+        return (rates[mid - 1] + rates[mid]) / 2.0
+
     def _binomial_should_blacklist(self, peer_id: int, raw_rate: float, n: int) -> bool:
         """
         One-sided binomial significance test: is this peer's miss rate
-        significantly above `honest_miss_rate`? Escalates a running streak
-        of significant observations (reset on a non-significant one) and
+        significantly above the honest baseline (either the pinned
+        `honest_miss_rate`, or the live "auto"-calibrated estimate -- see
+        _effective_honest_miss_rate())? Escalates a running streak of
+        significant observations (reset on a non-significant one) and
         only recommends blacklisting once the streak reaches
         `streak_required` -- a single unlucky window on an honest peer
         isn't enough, mirroring attack/selective_forward's SFADetector.
@@ -170,8 +256,21 @@ class SelectiveForwardingDefense:
         module's fixed-size sliding window -- a deliberate simplification
         for this smaller, simpler defense.
         """
+        honest_miss_rate = self.honest_miss_rate
+        if honest_miss_rate is None:  # "auto" mode
+            honest_miss_rate = self._effective_honest_miss_rate(peer_id)
+            if honest_miss_rate is None:
+                # Not enough reference peers yet to trust a baseline estimate
+                # -- abstain rather than test against a guess (same spirit as
+                # min_queries_before_blacklist gating on insufficient
+                # per-peer evidence, just applied to population-level
+                # evidence instead).
+                self._streak[peer_id] = max(0, self._streak.get(peer_id, 0) - 1)
+                self.suspicion_level[peer_id] = min(3, self._streak[peer_id])
+                return False
+
         miss_rate = 1.0 - raw_rate
-        p_value = self._binom_p(miss_rate, n)
+        p_value = self._binom_p(miss_rate, n, honest_miss_rate)
         if p_value < self.binom_alpha:
             self._streak[peer_id] = self._streak.get(peer_id, 0) + 1
         else:
@@ -179,15 +278,15 @@ class SelectiveForwardingDefense:
         self.suspicion_level[peer_id] = min(3, self._streak[peer_id])
         return self._streak[peer_id] >= self.streak_required
 
-    def _binom_p(self, miss_rate: float, n: int) -> float:
+    def _binom_p(self, miss_rate: float, n: int, honest_miss_rate: float) -> float:
         """One-sided binomial p-value: is miss_rate > honest_miss_rate?"""
         try:
             from scipy.stats import binomtest  # type: ignore
             k = int(round(miss_rate * n))
-            return float(binomtest(k, n, self.honest_miss_rate, alternative="greater").pvalue)
+            return float(binomtest(k, n, honest_miss_rate, alternative="greater").pvalue)
         except Exception:
-            mu = self.honest_miss_rate * n
-            sigma = math.sqrt(n * self.honest_miss_rate * (1 - self.honest_miss_rate)) + 1e-9
+            mu = honest_miss_rate * n
+            sigma = math.sqrt(n * honest_miss_rate * (1 - honest_miss_rate)) + 1e-9
             z = (miss_rate * n - mu) / sigma
             return max(0.0, 1 - 0.5 * (1 + math.erf(z / math.sqrt(2))))
 
@@ -354,4 +453,16 @@ class SelectiveForwardingDefense:
             "passed_answers": self._passed_answers,
             "block_rate": (self._blocked_answers / self._total_validations) if self._total_validations else 0.0,
             "avg_confidence": (self._confidence_sum / self._total_validations) if self._total_validations else 0.0,
+            # Transparency for the binomial-mode calibration fix (see
+            # _effective_honest_miss_rate()): "pinned" means honest_miss_rate
+            # was explicitly set to a float; "auto" means it's measured live
+            # from the current population every call. honest_miss_rate_auto_estimate
+            # is a population-wide snapshot for reporting only (no peer
+            # excluded) -- the actual per-test value excludes the tested peer.
+            "honest_miss_rate_mode": "pinned" if self.honest_miss_rate is not None else "auto",
+            "honest_miss_rate_pinned": self.honest_miss_rate,
+            "honest_miss_rate_auto_estimate": (
+                self._effective_honest_miss_rate(-1)
+                if self.honest_miss_rate is None and self.detection_mode == "binomial" else None
+            ),
         }

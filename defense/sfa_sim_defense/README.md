@@ -89,8 +89,13 @@ python defense/sfa_sim_defense/run_defense.py --mode mock \
     --redundancy_k 2 --max_blacklist_fraction 0.5
 
 # Stealthy attacker (10-30% drop) vs statistically-principled detection --
-# see "Detection modes" below; honest_miss_rate MUST be calibrated
-# (here, to the default mock peer_hit_prob=0.4 -> honest miss rate ~0.6)
+# see "Detection modes" below. honest_miss_rate defaults to "auto" (measured
+# live from the current population every test) as of the calibration fix --
+# no manual calibration needed for the common case.
+python defense/sfa_sim_defense/run_defense.py --mode mock \
+    --drop_rate stealthy --detection_mode binomial
+
+# Pin a specific pre-measured value instead of auto-calibrating, if you have one
 python defense/sfa_sim_defense/run_defense.py --mode mock \
     --drop_rate stealthy --detection_mode binomial --honest_miss_rate 0.6
 ```
@@ -189,11 +194,12 @@ cost this module reports honestly rather than hiding — see
 growing-window test, not a true sliding window, correlates consecutive
 tests for the same peer).
 
-**Calibration is mandatory, not optional — get it wrong and you'll
+**Calibration used to be mandatory and manual — get it wrong and you'd
 over-blacklist instead of never-detecting.** `honest_miss_rate` must match
 this deployment's *actual* honest response-rate distribution, not an
-assumed constant. Concretely reproduced: running
-`--detection_mode binomial` with the config default `honest_miss_rate:
+assumed constant. Concretely reproduced (this is the bug the fix below
+closes, kept here as the record of why the fix exists): running
+`--detection_mode binomial` with the OLD config default `honest_miss_rate:
 0.05` against the *actual* mock-network default `peer_hit_prob: 0.4`
 (true honest miss rate ≈ 0.6) blacklisted **5 of 10 peers on every single
 ratio row, including ratio=0.1 where only 1 peer was truly compromised** —
@@ -202,14 +208,27 @@ lower than their real miss rate, and the quorum cap (`max_blacklist_
 fraction=0.5`) is the only thing that kept it from blacklisting all 10.
 Passing the correctly-calibrated `--honest_miss_rate 0.6` fixed it
 immediately (`blacklisted` dropped to 0-1 per row, proportional to the
-actual attack ratio). For mock mode, calibrate with
-`honest_miss_rate ≈ 1 - simulation.peer_hit_prob`; for live mode, measure
-the real deployment's honest miss rate the same way the sibling module
-did (baseline queries against known-honest sources) before trusting this
-mode's output.
+actual attack ratio).
+
+**Fixed: `honest_miss_rate` now defaults to `"auto"`.** Instead of a
+hardcoded constant that has to be separately re-measured and passed by
+hand for every deployment/config (and silently goes stale the moment
+either changes), the baseline is now measured LIVE, every time the test
+runs, as the median observed miss rate across the other currently-tracked,
+not-yet-blacklisted peers (see `selective_forwarding_defense.py`'s
+`_effective_honest_miss_rate()`). This structurally closes the failure
+mode above rather than just moving the guessed constant to a
+better-guessed constant — there's no static value left to go stale. Pass
+an explicit `--honest_miss_rate <float>` only if you specifically want to
+pin a pre-measured value (e.g. reproducing a past run).
 
 ```bash
-# Correctly calibrated for the default mock config (peer_hit_prob=0.4)
+# Auto-calibrated (default) -- correct for the mock config above AND for
+# any other peer_hit_prob/live deployment without changing anything
+python defense/sfa_sim_defense/run_defense.py --mode mock \
+    --drop_rate stealthy --detection_mode binomial
+
+# Pin a specific pre-measured value instead, if you have one
 python defense/sfa_sim_defense/run_defense.py --mode mock \
     --drop_rate stealthy --detection_mode binomial --honest_miss_rate 0.6
 ```
@@ -284,7 +303,8 @@ flat result is the expected pass condition, not a disappointing one.
 | `reputation_decay` | reputation swings on every single query | reputation barely moves even after many drops |
 | `redundancy_k` | detection can be correct and still recover nothing once the primary hop budget is exhausted | approaches "just try everyone regardless of hop budget," defeating the point of a hop-limited test |
 | `max_blacklist_fraction` | caps out detection early, capping recovery even when the extra blacklisting would have been correct | (near 1.0) removes the safety net; a miscalibrated threshold can blacklist most/all peers and empty Phase 2's candidate pool |
-| `honest_miss_rate` (binomial mode) | flags honest peers as significant outliers — see "Detection modes" above for a reproduced example | a real stealthy attacker's miss rate no longer looks significant relative to the (too-generous) assumed baseline |
+| `honest_miss_rate` (binomial mode) | `"auto"` (default) self-corrects for this — see "Detection modes" above; if pinned to an explicit float: too low flags honest peers as significant outliers | if pinned too high, a real stealthy attacker's miss rate no longer looks significant relative to the assumed baseline |
+| `min_peers_for_auto_calibration` (binomial + `honest_miss_rate=auto`) | trusts a median estimate from very few reference peers, which can itself be skewed by chance | detector can't test anyone until a large fraction of the population has enough samples, delaying detection on small networks |
 | `binom_alpha` (binomial mode) | requires overwhelming evidence, slow to detect | more false positives on honest peers with noisy responses |
 | `streak_required` (binomial mode) | a single unlucky significant window can blacklist an honest peer | slower to detect a real stealthy attacker |
 

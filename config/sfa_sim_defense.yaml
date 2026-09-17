@@ -34,11 +34,24 @@ selective_forwarding_defense:
                                     #   nowhere close to a 70-90% response rate.
                                     # binomial: one-sided significance test vs honest_miss_rate,
                                     #   escalating over streak_required consecutive significant
-                                    #   windows. Catches a stealthy attacker; requires
-                                    #   honest_miss_rate to be calibrated against this
-                                    #   deployment's real measured honest baseline, not an
-                                    #   inherited/assumed constant.
-  honest_miss_rate: 0.05           # binomial mode only: measured honest-peer miss rate to test against
+                                    #   windows. Catches a stealthy attacker.
+  honest_miss_rate: auto           # binomial mode only. "auto" (default, BUG FIX): measured LIVE
+                                    # every test, as the median observed miss rate across the
+                                    # other currently-tracked, not-yet-blacklisted peers -- see
+                                    # selective_forwarding_defense.py's _effective_honest_miss_rate().
+                                    # This used to be a hardcoded float (0.05) that silently
+                                    # mismatched this file's own default network.peer_hit_prob=0.4
+                                    # (true honest miss rate ~0.6), reproducing on this project's
+                                    # own default config the exact miscalibration bug this module
+                                    # warns about elsewhere: 5/10 peers blacklisted when only 1 was
+                                    # truly compromised (reports/SFA_Security_Analysis_Report.md
+                                    # sec 12.7). Set to a specific number instead of "auto" only if
+                                    # you have a pre-measured value you want to pin.
+  min_peers_for_auto_calibration: 2 # binomial + honest_miss_rate=auto only: minimum OTHER
+                                    # currently-tracked, not-yet-blacklisted peers (with enough
+                                    # samples) required before the auto-calibrated median baseline
+                                    # is trusted. Below this, the detector abstains for that peer
+                                    # this round rather than testing against an unreliable estimate.
   binom_alpha: 0.05                # binomial mode only: significance threshold (p-value cutoff)
   streak_required: 3                # binomial mode only: consecutive significant windows before blacklisting.
                                     # Empirically tuned (not copied from the sibling module's fixed-window
@@ -70,9 +83,18 @@ output:
 #                                 too high (near 1.0) -> removes the safety net; a miscalibrated
 #                                             threshold can blacklist most/all peers and empty
 #                                             Phase 2's candidate pool
-# honest_miss_rate (binomial)    too low  -> flags honest peers as significant outliers (false positives)
-#                                 too high -> a real stealthy attacker's miss rate no longer looks
-#                                             significant relative to the assumed baseline (blind spot)
+# honest_miss_rate (binomial)    "auto" (default) self-corrects for this by measuring the real
+#                                 population instead of guessing -- see the field's own comment
+#                                 above for the miscalibration bug this replaced. If pinned to an
+#                                 explicit number instead: too low -> flags honest peers as
+#                                 significant outliers (false positives); too high -> a real
+#                                 stealthy attacker's miss rate no longer looks significant
+#                                 relative to the assumed baseline (blind spot).
+# min_peers_for_auto_calibration too low  -> trusts a median estimate from very few reference
+#   (binomial, honest_miss_rate=auto)      peers, which can itself be skewed by chance
+#                                 too high -> detector can't test anyone until a large fraction
+#                                             of the population has enough samples, delaying
+#                                             detection on small networks
 # binom_alpha (binomial)         too low  -> requires overwhelming evidence, slow to detect
 #                                 too high -> more false positives on honest peers with noisy responses
 # streak_required (binomial)     too low  -> a single unlucky significant window blacklists an honest peer
