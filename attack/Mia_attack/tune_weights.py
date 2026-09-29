@@ -71,6 +71,7 @@ from attack.Mia_attack.mia_attack import (  # noqa: E402
     _certainty_score,
     _cosine_similarity,
     _decision_match,
+    _throttle_query,
     _normalize_similarity,
     _parse_llm_response,
     load_membership_documents,
@@ -90,19 +91,28 @@ from attack.Mia_attack.mia_attack import (  # noqa: E402
 _QUERY_TIMEOUT_SECONDS = 20
 
 
-def _query_llm_fast(question: str, url: str, api_key: str = "") -> str:
+def _query_llm_fast(question: str, url: str, api_key: str = "", max_retries: int = 1) -> str:
+    """Throttled via mia_attack's shared `_throttle_query()` (same pacing as
+    contrastive_probes.py) and retries once on HTTP 429. Previously unthrottled,
+    which re-triggers the 429 storm at scale (current_gaps_overview.md, MIA)."""
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["X-API-Key"] = api_key
-    try:
-        r = requests.post(
-            f"{url}/query", json={"query": question}, headers=headers,
-            timeout=_QUERY_TIMEOUT_SECONDS,
-        )
+    for attempt in range(max_retries + 1):
+        _throttle_query()
+        try:
+            r = requests.post(
+                f"{url}/query", json={"query": question}, headers=headers,
+                timeout=_QUERY_TIMEOUT_SECONDS,
+            )
+        except Exception:
+            return ""
+        if r.status_code == 429 and attempt < max_retries:
+            time.sleep(float(r.headers.get("Retry-After", 2.0)))
+            continue
         if r.status_code == 200:
             return _parse_llm_response(r.json())
-    except Exception:
-        pass
+        return ""
     return ""
 
 try:

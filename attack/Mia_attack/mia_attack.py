@@ -257,9 +257,19 @@ PUBMEDQA_SPLIT = "train"
 # rows [PUBMEDQA_N_CORPUS, 1000) are the held-out non-member pool.
 PUBMEDQA_N_CORPUS = 500
 
+# HealthCareMagic free-text dataset (data/build_healthcaremagic_corpus.py).
+# Membership is fixed by the build script: members_qa.jsonl rows are exactly the
+# documents written to healthcaremagic/sources_0.jsonl; nonmembers_qa.jsonl rows
+# were never loaded and share no text with any member.
+HCM_DIR            = os.path.normpath(os.path.join(_ROOT, "data", "healthcaremagic"))
+HCM_MEMBERS_QA     = os.path.join(HCM_DIR, "members_qa.jsonl")
+HCM_NONMEMBERS_QA  = os.path.join(HCM_DIR, "nonmembers_qa.jsonl")
+
 EMBEDDING_MODEL    = "all-MiniLM-L6-v2"
-DEFAULT_MEMBERS    = 25
-DEFAULT_NONMEMBERS = 25
+# Raised from 25/25: at n=25+25 the AUC 95% CI half-width is ~0.15, which
+# cannot distinguish 0.55 from 0.50. 100/100 brings it to ~0.08.
+DEFAULT_MEMBERS    = 100
+DEFAULT_NONMEMBERS = 100
 
 # Composite membership score, Revision 7 -- empirically re-tuned under a genuine
 # train/test split (see reports/MIA_Security_Analysis_Report.md §2.9 for full
@@ -437,6 +447,76 @@ def load_membership_documents(
     print(f"  [MIA] Sampled {len(members)} member docs ({n_probes_m} probes), "
           f"{len(non_members)} non-member docs ({n_probes_nm} probes) (seed={seed})")
     return members, non_members
+
+
+def load_healthcaremagic_documents(
+    n_members: int, n_nonmembers: int, seed: int,
+    members_path: str = HCM_MEMBERS_QA, nonmembers_path: str = HCM_NONMEMBERS_QA,
+) -> Tuple[List[List[Dict[str, str]]], List[List[Dict[str, str]]]]:
+    """Same return shape as load_membership_documents(); one probe per document
+    (each HealthCareMagic row is one patient question -> one doctor answer)."""
+    def _read(path: str) -> List[Dict[str, str]]:
+        if not os.path.exists(path):
+            raise FileNotFoundError(
+                f"{path} not found. Run `python data/build_healthcaremagic_corpus.py` first."
+            )
+        with open(path, encoding="utf-8") as f:
+            return [json.loads(line) for line in f if line.strip()]
+
+    member_rows, nonmember_rows = _read(members_path), _read(nonmembers_path)
+    rng = random.Random(seed)
+    m = rng.sample(member_rows, min(n_members, len(member_rows)))
+    nm = rng.sample(nonmember_rows, min(n_nonmembers, len(nonmember_rows)))
+    print(f"  [MIA] HealthCareMagic pool: {len(member_rows)} members, {len(nonmember_rows)} non-members; "
+          f"sampled {len(m)} + {len(nm)} (seed={seed})")
+    return [[r] for r in m], [[r] for r in nm]
+
+
+def _assert_corpus_identity(
+    members: List[List[Dict[str, str]]], non_members: List[List[Dict[str, str]]], corpus_jsonl: str,
+) -> None:
+    """
+    F5 safeguard (reports/updated_reports_safin/plan/current_gaps_overview.md):
+    a stale bind-mount silently reverts the sources to a different corpus and
+    turns every 'member' into a non-member, corrupting the whole run without
+    any error. Fail fast if the corpus file the sources mount does not contain
+    every sampled member and none of the sampled non-members.
+    Host-side check: it verifies the mounted FILE, so also confirm the
+    containers were recreated after the file changed.
+    """
+    loaded = _load_corpus_contexts(corpus_jsonl)
+    missing = sum(1 for d in members if d[0]["context"] not in loaded)
+    leaked = sum(1 for d in non_members if d[0]["context"] in loaded)
+    if missing or leaked:
+        raise RuntimeError(
+            f"Corpus identity check FAILED against {corpus_jsonl}: {missing}/{len(members)} sampled "
+            f"members are absent and {leaked}/{len(non_members)} sampled non-members are present. "
+            "The corpus the sources serve is not the one this run assumes (stale bind-mount?). "
+            "Point the data sources at the matching corpus, recreate the containers, or pass "
+            "--corpus_jsonl."
+        )
+    print(f"  [MIA] Corpus identity OK: {len(members)} members present, "
+          f"{len(non_members)} non-members absent in {corpus_jsonl}")
+
+
+def _provenance(corpus_jsonl: str) -> Dict[str, Any]:
+    """Reproducibility record stored in every log: corpus hash/size, git commit."""
+    import hashlib
+    import subprocess
+    info: Dict[str, Any] = {"corpus_jsonl": corpus_jsonl}
+    try:
+        with open(corpus_jsonl, "rb") as f:
+            info["corpus_sha256"] = hashlib.sha256(f.read()).hexdigest()
+        info["corpus_docs"] = len(_load_corpus_contexts(corpus_jsonl))
+    except OSError:
+        info["corpus_sha256"] = None
+    try:
+        info["git_commit"] = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=_ROOT, stderr=subprocess.DEVNULL, text=True).strip()
+    except Exception:
+        info["git_commit"] = None
+    info["min_query_interval_s"] = MIN_QUERY_INTERVAL_S
+    return info
 
 
 def _parse_llm_response(data: Any) -> str:
@@ -824,6 +904,21 @@ def _consistency_score(
     return majority_count / len(buckets)
 
 
+def _bootstrap_auc_ci(y_true: np.ndarray, y_scores: np.ndarray, seed: int,
+                      n_boot: int = 1000) -> List[float]:
+    """Percentile bootstrap 95% CI for AUC-ROC (resamples documents)."""
+    rng = np.random.default_rng(seed)
+    aucs = []
+    for _ in range(n_boot):
+        idx = rng.integers(0, len(y_true), len(y_true))
+        if len(np.unique(y_true[idx])) < 2:
+            continue
+        aucs.append(roc_auc_score(y_true[idx], y_scores[idx]))
+    if not aucs:
+        return [0.5, 0.5]
+    return [round(float(np.percentile(aucs, 2.5)), 4), round(float(np.percentile(aucs, 97.5)), 4)]
+
+
 # ── Core attack class ────────────────────────────────────────────────────────
 
 class MIAAttack:
@@ -853,7 +948,11 @@ class MIAAttack:
         threshold_percentile: int = 50,
         api_key:              str = "",
         random_seed:          int = 42,
+        dataset:              str = "pubmedqa",
     ):
+        if dataset not in ("pubmedqa", "healthcaremagic"):
+            raise ValueError(f"unknown dataset {dataset!r}")
+        self.dataset           = dataset
         if not _ST_AVAILABLE:
             raise ImportError(
                 "sentence-transformers is required.\n"
@@ -889,10 +988,17 @@ class MIAAttack:
         §(a)), and mean_{member,non_member}_degraded_probe_rate (how often a
         data source failed even after retry -- see module docstring §(b)).
         """
-        members, non_members = load_membership_documents(
-            self.n_members, self.n_nonmembers, self.random_seed,
-            self.corpus_jsonl, self.probes_per_doc,
-        )
+        if self.dataset == "healthcaremagic":
+            members, non_members = load_healthcaremagic_documents(
+                self.n_members, self.n_nonmembers, self.random_seed)
+            probe = self._probe_documents_freetext
+            _assert_corpus_identity(members, non_members, self.corpus_jsonl)
+        else:
+            members, non_members = load_membership_documents(
+                self.n_members, self.n_nonmembers, self.random_seed,
+                self.corpus_jsonl, self.probes_per_doc,
+            )
+            probe = self._probe_documents
 
         print("\n  [MIA] Checking LLM service connectivity ...")
         _test = _query_llm("connectivity test", self.llm_service_url, self.api_key)
@@ -903,11 +1009,11 @@ class MIAAttack:
 
         print("\n  === Probing MEMBER documents ===")
         (member_scores, member_matches, member_sims, member_lens, member_certs,
-         member_baseline, member_degraded) = self._probe_documents(members, "MEMBER")
+         member_baseline, member_degraded) = probe(members, "MEMBER")
 
         print("\n  === Probing NON-MEMBER documents ===")
         (non_member_scores, non_member_matches, non_member_sims, non_member_lens, non_member_certs,
-         non_member_baseline, non_member_degraded) = self._probe_documents(non_members, "NON-MEMBER")
+         non_member_baseline, non_member_degraded) = probe(non_members, "NON-MEMBER")
 
         y_true    = np.array([1] * len(member_scores) + [0] * len(non_member_scores))
         y_scores  = np.array(member_scores + non_member_scores)  # calibrated weighted composite (primary, Revision 10)
@@ -923,10 +1029,68 @@ class MIAAttack:
             member_baseline, non_member_baseline,
             member_degraded, non_member_degraded,
         )
+        metrics["dataset"] = self.dataset
+        metrics["provenance"] = _provenance(self.corpus_jsonl)
+        if self.dataset == "healthcaremagic":
+            metrics["score_type"] = "retrieval_lift"
+            metrics["mean_member_retrieval_lift"] = round(float(np.mean(member_scores)), 4)
+            metrics["mean_non_member_retrieval_lift"] = round(float(np.mean(non_member_scores)), 4)
+            # Bootstrap 95% CI so a single-seed AUC is never read without its width.
+            metrics["auc_roc_ci95"] = _bootstrap_auc_ci(y_true, y_scores, self.random_seed)
         self._print_summary(metrics)
         return metrics
 
     # ── internals ──────────────────────────────────────────────────────────
+
+    def _probe_documents_freetext(
+        self, documents: List[List[Dict[str, str]]], label: str,
+    ) -> Tuple[List[float], List[float], List[float], List[float], List[float], List[float], List[float]]:
+        """
+        Free-text (HealthCareMagic) probe. The yes/no/maybe decision-match used
+        for PubMedQA is undefined here, so the membership score is the
+        *retrieval lift*: how much closer the answer moves to the target
+        document with retrieval than without it.
+
+            lift = cos(emb(rag_answer), emb(doc)) - cos(emb(no_rag_answer), emb(doc))
+
+        Netting out the no-retrieval answer removes exactly the confound the
+        earlier run exposed (LLM pretraining answering non-members). The
+        question is sent verbatim -- no format steering, no stored text.
+
+        Returns the same seven parallel lists as `_probe_documents()`, with:
+          composite = lift, matches = 0 (n/a), sims = rag similarity,
+          baseline slot = no-RAG similarity, lens/certs as before.
+        """
+        scores, matches, rag_sims, lens, certs, base_sims, degraded_rates = [], [], [], [], [], [], []
+        n = len(documents)
+        for i, qa_list in enumerate(documents, 1):
+            best = None
+            deg = []
+            for qa in qa_list:
+                rag_resp, degraded = _query_llm_raw(qa["question"], self.llm_service_url, self.api_key)
+                base_resp, _ = _query_llm_raw(qa["question"], self.llm_service_url, self.api_key,
+                                              no_retrieval=True)
+                emb_doc = self._encoder.encode([qa["context"]], convert_to_numpy=True)[0]
+
+                def _sim(text: str) -> float:
+                    if not text.strip():
+                        return 0.0
+                    return _cosine_similarity(
+                        self._encoder.encode([text], convert_to_numpy=True)[0], emb_doc)
+
+                rs, bs = _sim(rag_resp), _sim(base_resp)
+                deg.append(degraded)
+                cand = (rs - bs, rs, bs, _answer_length_ratio(rag_resp, qa["answer"]),
+                        _certainty_score(rag_resp))
+                if best is None or cand[0] > best[0]:
+                    best = cand
+            lift, rs, bs, lr, cert = best if best else (0.0, 0.0, 0.0, 0.0, 0.0)
+            scores.append(lift); matches.append(0.0); rag_sims.append(rs)
+            lens.append(lr); certs.append(cert); base_sims.append(bs)
+            degraded_rates.append(sum(deg) / len(deg) if deg else 0.0)
+            print(f"    [{label}] doc {i:>3}/{n}  lift={lift:+.4f}  rag_sim={rs:.4f}  "
+                  f"norag_sim={bs:.4f}  degraded={degraded_rates[-1]:.2f}")
+        return scores, matches, rag_sims, lens, certs, base_sims, degraded_rates
 
     def _probe_documents(
         self, documents: List[List[Dict[str, str]]], label: str,

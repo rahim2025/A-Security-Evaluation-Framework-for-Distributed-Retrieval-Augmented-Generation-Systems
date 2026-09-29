@@ -33,7 +33,10 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_ROOT"
 
 PYTHON="${PYTHON:-python3}"
-SEED="${SEED:-42}"
+# Thesis rule (.claude/CLAUDE.md): never report single-seed results. Default runs
+# seeds 0/42/123. SEED=<n> still works for a quick single-seed smoke test.
+SEEDS="${SEEDS:-${SEED:-0 42 123}}"
+MIA_DATASET="${MIA_DATASET:-pubmedqa}"   # pubmedqa | healthcaremagic (see data/build_healthcaremagic_corpus.py)
 MODE="${MODE:-live}"                 # SFA/DoS support mock|live; MIA is always live
 SKIP_DOCKER="${SKIP_DOCKER:-0}"
 TANZIM_LOG_ROOT="attack_logs/tanzim"
@@ -106,42 +109,48 @@ else
 fi
 
 echo
-echo "  seed=$SEED  mode=$MODE  python=$PYTHON"
+echo "  seeds=$SEEDS  mode=$MODE  mia_dataset=$MIA_DATASET  python=$PYTHON"
+echo "  git commit: $(git rev-parse HEAD 2>/dev/null || echo unknown)"
 echo "  logs will be mirrored under: $TANZIM_LOG_ROOT/{mia,sfa,dos}/{attack,defense}/"
 
-# ---------------------------------------------------------------------------
-# Step 2 -- Membership Inference Attack (MIA). Always live -- this module
-# has no mock mode, it queries the real LLM service directly.
-# ---------------------------------------------------------------------------
-run_step "MIA -- attack" \
-    "attack_logs/mia" "$TANZIM_LOG_ROOT/mia/attack" \
-    "$PYTHON" attack/Mia_attack/run_attack.py --seed "$SEED"
+for SEED in $SEEDS; do
+log "===== SEED $SEED ====="
+    # ---------------------------------------------------------------------------
+    # Step 2 -- Membership Inference Attack (MIA). Always live -- this module
+    # has no mock mode, it queries the real LLM service directly.
+    # ---------------------------------------------------------------------------
+    run_step "MIA -- attack" \
+        "attack_logs/mia" "$TANZIM_LOG_ROOT/mia/attack" \
+        "$PYTHON" attack/Mia_attack/run_attack.py --dataset "$MIA_DATASET" --seed "$SEED"
 
-run_step "MIA -- defense" \
-    "defense_logs" "$TANZIM_LOG_ROOT/mia/defense" \
-    "$PYTHON" defense/mia_defense/run_defense.py --seed "$SEED"
+    run_step "MIA -- defense" \
+        "defense_logs" "$TANZIM_LOG_ROOT/mia/defense" \
+        "$PYTHON" defense/mia_defense/run_defense.py --seed "$SEED"
 
-# ---------------------------------------------------------------------------
-# Step 3 -- Selective Forwarding Attack (SFA)
-# ---------------------------------------------------------------------------
-run_step "SFA -- attack" \
-    "attack_logs/selective_forward_sim" "$TANZIM_LOG_ROOT/sfa/attack" \
-    "$PYTHON" attack/selective_forward_sim/run_attack.py --mode "$MODE" --seed "$SEED"
+    # ---------------------------------------------------------------------------
+    # Step 3 -- Selective Forwarding Attack (SFA)
+    # ---------------------------------------------------------------------------
+    run_step "SFA -- attack" \
+        "attack_logs/selective_forward_sim" "$TANZIM_LOG_ROOT/sfa/attack" \
+        "$PYTHON" attack/selective_forward_sim/run_attack.py --mode "$MODE" --seed "$SEED"
 
-run_step "SFA -- defense (also runs attack_only + attack_plus_defense internally)" \
-    "defense_logs/sfa_sim_defense" "$TANZIM_LOG_ROOT/sfa/defense" \
-    "$PYTHON" defense/sfa_sim_defense/run_defense.py --mode "$MODE" --seed "$SEED"
+    run_step "SFA -- defense (also runs attack_only + attack_plus_defense internally)" \
+        "defense_logs/sfa_sim_defense" "$TANZIM_LOG_ROOT/sfa/defense" \
+        "$PYTHON" defense/sfa_sim_defense/run_defense.py --mode "$MODE" --seed "$SEED"
 
-# ---------------------------------------------------------------------------
-# Step 4 -- DoS attack
-# ---------------------------------------------------------------------------
-run_step "DoS -- attack" \
-    "attack_logs/ddos_sim" "$TANZIM_LOG_ROOT/dos/attack" \
-    "$PYTHON" attack/ddos_sim/run_attack.py --mode "$MODE" --seed "$SEED"
+    # ---------------------------------------------------------------------------
+    # Step 4 -- DoS attack
+    # ---------------------------------------------------------------------------
+    run_step "DoS -- attack" \
+        "attack_logs/ddos_sim" "$TANZIM_LOG_ROOT/dos/attack" \
+        "$PYTHON" attack/ddos_sim/run_attack.py --mode "$MODE" --seed "$SEED"
 
-run_step "DoS -- defense (also runs attack_only + attack_plus_defense internally)" \
-    "defense_logs/ddos_sim_defense" "$TANZIM_LOG_ROOT/dos/defense" \
-    "$PYTHON" defense/ddos_sim_defense/run_defense.py --mode "$MODE" --seed "$SEED"
+    run_step "DoS -- defense (also runs attack_only + attack_plus_defense internally)" \
+        "defense_logs/ddos_sim_defense" "$TANZIM_LOG_ROOT/dos/defense" \
+        "$PYTHON" defense/ddos_sim_defense/run_defense.py --mode "$MODE" --seed "$SEED"
+
+
+done
 
 log "Done."
 note "Logs collected under: $TANZIM_LOG_ROOT/"

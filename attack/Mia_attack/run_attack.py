@@ -179,13 +179,47 @@ def parse_args() -> argparse.Namespace:
                    help="X-API-Key header if auth is enabled")
     p.add_argument("--seed",          type=int, default=42,
                    help="RNG seed (default: 42). Run seeds 0,1,2 for thesis.")
+    p.add_argument("--dataset",       default="pubmedqa", choices=["pubmedqa", "healthcaremagic"],
+                   help="pubmedqa (yes/no/maybe decision-match) or healthcaremagic "
+                        "(free-text retrieval-lift; needs data/build_healthcaremagic_corpus.py)")
+    p.add_argument("--seeds",         type=int, nargs="+", default=None,
+                   help="Run several seeds (e.g. --seeds 0 42 123) and print mean +/- std AUC-ROC. "
+                        "Overrides --seed.")
     p.add_argument("--dry_run",       action="store_true",
                    help="Skip LLM calls; use random scores (AUC ≈ 0.50 sanity check)")
     return p.parse_args()
 
 
+def _multi_seed(args: argparse.Namespace) -> None:
+    """Run each seed as a separate single-seed invocation-equivalent and report
+    mean +/- std AUC-ROC. Every per-seed log is still saved individually."""
+    aucs = []
+    for sd in args.seeds:
+        args.seed = sd
+        attack = MIAAttack(
+            llm_service_url=args.llm_url, corpus_jsonl=args.corpus_jsonl,
+            n_members=args.n_members, n_nonmembers=args.n_nonmembers,
+            probes_per_doc=args.probes_per_doc, threshold_percentile=args.threshold_pct,
+            api_key=args.api_key, random_seed=sd, dataset=args.dataset,
+        )
+        m = attack.run()
+        save_log({"timestamp": datetime.datetime.now().isoformat(),
+                  "attack_type": "membership_inference",
+                  "attack_config": {"random_seed": sd, "dataset": args.dataset,
+                                    "n_members": args.n_members, "n_nonmembers": args.n_nonmembers},
+                  "metrics": m})
+        aucs.append(m["auc_roc"])
+    print("\n  === Multi-seed summary ===")
+    print(f"  seeds   : {args.seeds}")
+    print(f"  AUC-ROC : {aucs}")
+    print(f"  mean +/- std : {np.mean(aucs):.4f} +/- {np.std(aucs, ddof=1) if len(aucs) > 1 else 0.0:.4f}")
+
+
 def main() -> None:
     args = parse_args()
+    if args.seeds and not args.dry_run:
+        _multi_seed(args)
+        return
 
     print("=" * 62)
     print("  MIA — Membership Inference Attack | Reliable-dRAG")
@@ -214,6 +248,7 @@ def main() -> None:
             threshold_percentile = args.threshold_pct,
             api_key              = args.api_key,
             random_seed          = args.seed,
+            dataset              = args.dataset,
         )
         metrics = attack.run()
 
@@ -228,6 +263,7 @@ def main() -> None:
             "probes_per_doc":   args.probes_per_doc,
             "threshold_pct":    args.threshold_pct,
             "random_seed":      args.seed,
+            "dataset":          args.dataset,
             "dry_run":          args.dry_run,
         },
         "metrics": metrics,
@@ -238,7 +274,7 @@ def main() -> None:
 
     print("\n  === Thesis Summary ===")
     print(f"  AUC-ROC     : {metrics['auc_roc']:.4f}  "
-          f"({'→ genuine vulnerability' if metrics['auc_roc'] > 0.70 else '≈ no signal (run with Docker)'})")
+          f"({'→ genuine vulnerability' if metrics['auc_roc'] > 0.70 else '≈ no signal (AUC ≤ 0.70; see the diagnostics below for why)'})")
     print(f"  Accuracy    : {metrics['attack_accuracy']:.4f}")
     print(f"  Precision   : {metrics['precision']:.4f}")
     print(f"  Recall      : {metrics['recall']:.4f}")
