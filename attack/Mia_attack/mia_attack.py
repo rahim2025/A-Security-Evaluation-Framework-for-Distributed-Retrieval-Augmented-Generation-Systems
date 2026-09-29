@@ -953,6 +953,7 @@ class MIAAttack:
         if dataset not in ("pubmedqa", "healthcaremagic"):
             raise ValueError(f"unknown dataset {dataset!r}")
         self.dataset           = dataset
+        self._n_failed_docs: Dict[str, int] = {}
         if not _ST_AVAILABLE:
             raise ImportError(
                 "sentence-transformers is required.\n"
@@ -1031,6 +1032,7 @@ class MIAAttack:
         )
         metrics["dataset"] = self.dataset
         metrics["provenance"] = _provenance(self.corpus_jsonl)
+        metrics["n_failed_docs"] = dict(self._n_failed_docs)
         if self.dataset == "healthcaremagic":
             metrics["score_type"] = "retrieval_lift"
             metrics["mean_member_retrieval_lift"] = round(float(np.mean(member_scores)), 4)
@@ -1063,6 +1065,8 @@ class MIAAttack:
         """
         scores, matches, rag_sims, lens, certs, base_sims, degraded_rates = [], [], [], [], [], [], []
         n = len(documents)
+        n_failed = 0
+        consecutive_failed = 0
         for i, qa_list in enumerate(documents, 1):
             best = None
             deg = []
@@ -1070,11 +1074,22 @@ class MIAAttack:
                 rag_resp, degraded = _query_llm_raw(qa["question"], self.llm_service_url, self.api_key)
                 base_resp, _ = _query_llm_raw(qa["question"], self.llm_service_url, self.api_key,
                                               no_retrieval=True)
+                # An empty response means the request FAILED (connection error, HTTP 5xx,
+                # timeout) -- `degraded` cannot see that. Scoring it as similarity 0.0 silently
+                # produced fake lifts (e.g. +0.42 when only the no-RAG call failed). Retry once,
+                # then drop the document rather than score a failure.
+                if not rag_resp.strip() or not base_resp.strip():
+                    time.sleep(5.0)
+                    if not rag_resp.strip():
+                        rag_resp, degraded = _query_llm_raw(qa["question"], self.llm_service_url, self.api_key)
+                    if not base_resp.strip():
+                        base_resp, _ = _query_llm_raw(qa["question"], self.llm_service_url, self.api_key,
+                                                      no_retrieval=True)
+                if not rag_resp.strip() or not base_resp.strip():
+                    continue
                 emb_doc = self._encoder.encode([qa["context"]], convert_to_numpy=True)[0]
 
                 def _sim(text: str) -> float:
-                    if not text.strip():
-                        return 0.0
                     return _cosine_similarity(
                         self._encoder.encode([text], convert_to_numpy=True)[0], emb_doc)
 
@@ -1084,12 +1099,27 @@ class MIAAttack:
                         _certainty_score(rag_resp))
                 if best is None or cand[0] > best[0]:
                     best = cand
-            lift, rs, bs, lr, cert = best if best else (0.0, 0.0, 0.0, 0.0, 0.0)
+            if best is None:
+                n_failed += 1
+                consecutive_failed += 1
+                print(f"    [{label}] doc {i:>3}/{n}  FAILED (empty LLM response after retry) -- skipped")
+                if consecutive_failed >= 5:
+                    raise RuntimeError(
+                        f"LLM service returned empty responses for {consecutive_failed} consecutive "
+                        f"documents (at doc {i}/{n}). It is down or unresponsive -- check "
+                        "`docker compose ps` and `docker compose logs llm-service`. Aborting instead "
+                        "of scoring failures as data.")
+                continue
+            consecutive_failed = 0
+            lift, rs, bs, lr, cert = best
             scores.append(lift); matches.append(0.0); rag_sims.append(rs)
             lens.append(lr); certs.append(cert); base_sims.append(bs)
             degraded_rates.append(sum(deg) / len(deg) if deg else 0.0)
             print(f"    [{label}] doc {i:>3}/{n}  lift={lift:+.4f}  rag_sim={rs:.4f}  "
                   f"norag_sim={bs:.4f}  degraded={degraded_rates[-1]:.2f}")
+        self._n_failed_docs[label] = n_failed
+        if n_failed:
+            print(f"  [MIA] WARNING: {n_failed}/{n} {label} documents skipped (empty LLM responses)")
         return scores, matches, rag_sims, lens, certs, base_sims, degraded_rates
 
     def _probe_documents(
