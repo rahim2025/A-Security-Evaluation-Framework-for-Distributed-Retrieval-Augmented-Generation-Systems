@@ -656,6 +656,32 @@ def _decision_match(response: str, gold_decision: str) -> bool:
     return gold in words
 
 
+def _format_probe_question(question: str) -> str:
+    """
+    Revision 11 -- prompt/metric mismatch fix. `drag_llm_service`'s own
+    system prompt (`drag_llm_service/configs/config.yaml`) is generic
+    ("answer in at most three words, canonical form") and never asks for
+    a yes/no/maybe commitment -- that's the served system's own prompt,
+    out of scope to change (CLAUDE.md: do not modify the Reliable-dRAG
+    core system). Since `_decision_match()` greps the response's first
+    few words for the literal gold token, a response that answers the
+    substance correctly but never says "yes"/"no"/"maybe" verbatim (e.g.
+    a paraphrased clause) is undercounted as a non-match regardless of
+    whether the model was actually grounded -- this is the confirmed
+    "decision_match under-fires" gap. Steering the *query text* itself
+    toward a parseable format is a legitimate attacker-side choice
+    (exactly what a real adversary probing this system for a scorable
+    answer would do), not a modification of the victim system. Applied
+    to BOTH the RAG-mode and no_retrieval-mode probe so the two calls
+    remain identical apart from retrieval, preserving the calibration
+    baseline's validity.
+    """
+    q = question.strip().rstrip("?").strip()
+    if not q:
+        return question
+    return f"{q}? Answer with yes, no, or maybe."
+
+
 def _calibrated_decision_score(rag_match: bool, baseline_match: bool) -> float:
     """
     Revision 10 (see module docstring §(a)). Nets `_decision_match()` out
@@ -939,8 +965,9 @@ class MIAAttack:
         for i, qa_list in enumerate(documents, 1):
             sims, matches, lens, certs, calibrated, baseline_matches, degraded_flags = [], [], [], [], [], [], []
             for qa in qa_list:
+                probe_question = _format_probe_question(qa["question"])
                 response, degraded = _query_llm_raw(
-                    qa["question"], self.llm_service_url, self.api_key,
+                    probe_question, self.llm_service_url, self.api_key,
                 )
                 if response.strip():
                     emb_r = self._encoder.encode([response], convert_to_numpy=True)[0]
@@ -965,7 +992,7 @@ class MIAAttack:
                 # decision_match is 0.
                 if rag_match:
                     baseline_response, _ = _query_llm_raw(
-                        qa["question"], self.llm_service_url, self.api_key, no_retrieval=True,
+                        probe_question, self.llm_service_url, self.api_key, no_retrieval=True,
                     )
                     baseline_match = _decision_match(baseline_response, qa.get("decision", ""))
                 else:

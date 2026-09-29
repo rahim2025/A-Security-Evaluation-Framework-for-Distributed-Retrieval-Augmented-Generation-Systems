@@ -46,14 +46,24 @@ any of them) is an open empirical question this script is built to test,
 not an assumed result -- see the "what this does NOT claim" note at the
 bottom of this docstring.
 
-NOT YET MIGRATED to mia_attack.py's Revision 10 fix (pretraining-knowledge
+Migrated to mia_attack.py's Revision 10 fix (pretraining-knowledge
 calibration + rate-limit hardening -- see that module's docstring §(a)/§(b)
-and reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md): the
-`_decision_match(...)` call below (line ~305) is the raw, uncalibrated
-signal. Since this script has not been executed yet (see above), there is
-no existing result to invalidate -- flagged here so whoever runs it next
-knows to migrate to the calibrated scoring first, rather than discovering
-the mismatch after collecting live data.
+and reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md): `_query_llm_fast()`
+is now self-throttled via mia_attack.py's shared `_throttle_query()`/
+`MIN_QUERY_INTERVAL_S` pacing and retries once on HTTP 429 (honoring
+Retry-After), matching `_query_llm_raw()`'s hardening -- this script
+previously had NO pacing on its per-template probe loop, which is 5x the
+per-document call volume of tune_weights.py and would have re-triggered
+the exact 429 storm Revision 10 fixed elsewhere. Each probe's raw
+`decision_match` is still computed and reported (`decision_match_rate`,
+`decision_match_std`, diagnostic, unchanged meaning), but the primary
+signal is now `calibrated_rate`/`calibrated_std`: for probes where the
+RAG-grounded answer matched gold, a paired `no_retrieval=True` query on
+the same probe question nets that match against the model's own
+pretraining-knowledge baseline via `_calibrated_decision_score()`, exactly
+as `_probe_documents()` does for the main attack. This doubles the call
+cost for matching probes only (a non-match is already 0.0 regardless of
+baseline, so it's skipped there too).
 
 Design of the contrastive templates
 --------------------------------------
@@ -105,9 +115,16 @@ feature vector meant as a drop-in replacement for tune_weights.py's
                                                   the best-of-N value only)
   certainty_mean, certainty_max
   length_ratio_mean
-  decision_match_rate    (fraction of probes matching gold -- generalizes
-                           the existing best-of-N decision_match to a
-                           multi-probe agreement rate)
+  calibrated_rate         (PRIMARY, Rev10 migration: mean of
+                           _calibrated_decision_score() across probes --
+                           each RAG-matching probe netted against its own
+                           no_retrieval baseline, exactly as
+                           _probe_documents() does for the main attack)
+  calibrated_std          (0 if all probes agree on the calibrated score)
+  decision_match_rate    (diagnostic, uncalibrated: fraction of probes
+                           matching gold -- generalizes the existing
+                           best-of-N decision_match to a multi-probe
+                           agreement rate)
   decision_match_std     (0 if all probes agree; the literal "contrastive
                            consistency" signal the reviewer described --
                            NOT subject to Revision 8's negative finding,
@@ -149,11 +166,13 @@ from attack.Mia_attack.mia_attack import (  # noqa: E402
     HEDGE_WORDS,
     LLM_SERVICE_URL,
     _answer_length_ratio,
+    _calibrated_decision_score,
     _certainty_score,
     _cosine_similarity,
     _decision_match,
     _normalize_similarity,
     _parse_llm_response,
+    _throttle_query,
     load_membership_documents,
 )
 from attack.Mia_attack.tune_weights import DEV_SEEDS, TEST_SEEDS  # noqa: E402
@@ -238,19 +257,44 @@ def _wording_features(response: str) -> Dict[str, float]:
     }
 
 
-def _query_llm_fast(question: str, url: str, api_key: str = "") -> str:
+def _query_llm_fast(
+    question: str, url: str, api_key: str = "", no_retrieval: bool = False, max_retries: int = 1,
+) -> str:
+    """
+    Throttled via mia_attack.py's shared `_throttle_query()` pacing (see
+    module docstring's migration note) and retries once on HTTP 429,
+    honoring Retry-After -- mirroring `_query_llm_raw()`'s hardening, but
+    keeping this script's own short `_QUERY_TIMEOUT_SECONDS` (a handful of
+    PubMedQA questions are known to hang the live service for 120s+, and
+    this script queries far more times per document than mia_attack.py's
+    main probe loop).
+    """
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["X-API-Key"] = api_key
-    try:
-        r = requests.post(
-            f"{url}/query", json={"query": question}, headers=headers,
-            timeout=_QUERY_TIMEOUT_SECONDS,
-        )
+    payload: Dict[str, Any] = {"query": question}
+    if no_retrieval:
+        payload["no_retrieval"] = True
+
+    for attempt in range(max_retries + 1):
+        _throttle_query()
+        try:
+            r = requests.post(
+                f"{url}/query", json=payload, headers=headers,
+                timeout=_QUERY_TIMEOUT_SECONDS,
+            )
+        except Exception:
+            return ""
+
+        if r.status_code == 429 and attempt < max_retries:
+            retry_after = float(r.headers.get("Retry-After", 2.0))
+            time.sleep(retry_after)
+            continue
+
         if r.status_code == 200:
             return _parse_llm_response(r.json())
-    except Exception:
-        pass
+        return ""
+
     return ""
 
 
@@ -295,7 +339,7 @@ def _collect_contrastive_signals(
                 gold_decision = qa.get("decision", "")
                 templates = _generate_contrastive_probes(qa["question"])
 
-                sims, certs, lens_, matches, wordings = [], [], [], [], []
+                sims, certs, lens_, matches, wordings, calibrated = [], [], [], [], [], []
                 for probe_q in templates:
                     t0 = time.time()
                     response = _query_llm_fast(probe_q, llm_url, api_key)
@@ -311,8 +355,22 @@ def _collect_contrastive_signals(
                     sims.append(_normalize_similarity(sim))
                     certs.append(_certainty_score(response))
                     lens_.append(_answer_length_ratio(response, qa["answer"]))
-                    matches.append(1.0 if _decision_match(response, gold_decision) else 0.0)
+                    rag_match = _decision_match(response, gold_decision)
+                    matches.append(1.0 if rag_match else 0.0)
                     wordings.append(_wording_features(response))
+
+                    # Rev10 calibration migration (see module docstring):
+                    # only worth the paired no_retrieval call when the
+                    # RAG-grounded probe actually matched gold -- a
+                    # non-match is already 0.0 under _calibrated_decision_score()
+                    # regardless of the baseline.
+                    if rag_match:
+                        baseline_response = _query_llm_fast(probe_q, llm_url, api_key, no_retrieval=True)
+                        n_total_queries += 1
+                        baseline_match = _decision_match(baseline_response, gold_decision)
+                    else:
+                        baseline_match = False
+                    calibrated.append(_calibrated_decision_score(rag_match, baseline_match))
 
                 rows.append({
                     "seed": seed,
@@ -324,6 +382,8 @@ def _collect_contrastive_signals(
                     "certainty_mean": float(np.mean(certs)) if certs else 0.0,
                     "certainty_max": float(np.max(certs)) if certs else 0.0,
                     "length_ratio_mean": float(np.mean(lens_)) if lens_ else 0.0,
+                    "calibrated_rate": float(np.mean(calibrated)) if calibrated else 0.0,
+                    "calibrated_std": float(np.std(calibrated)) if len(calibrated) > 1 else 0.0,
                     "decision_match_rate": float(np.mean(matches)) if matches else 0.0,
                     "decision_match_std": float(np.std(matches)) if len(matches) > 1 else 0.0,
                     "hedge_fraction_mean": float(np.mean([w["hedge_fraction"] for w in wordings])) if wordings else 0.0,

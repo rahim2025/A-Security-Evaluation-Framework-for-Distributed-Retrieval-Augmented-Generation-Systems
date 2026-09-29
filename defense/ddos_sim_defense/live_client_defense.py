@@ -228,14 +228,28 @@ class LiveClientDefense:
     def _peer_health_score(self, peer_id: int) -> float:
         """Higher is healthier. Used only for ranking untried peers in
         backup_candidates() -- routing bypass itself is a hard boolean via
-        is_peer_blacklisted(), not this score."""
+        is_peer_blacklisted(), not this score.
+
+        BUG FIX: `bucket.tokens / bucket.capacity` divided by zero
+        whenever `rate_limit_capacity` is configured as 0 (a valid,
+        if extreme, config meaning "never allow any request through
+        this bucket") -- no bucket at all (`bucket is None`) is the
+        only case that should read as "healthy by default" (1.0); a
+        zero-capacity bucket is the opposite, permanently empty, so it
+        must score as the least healthy (0.0), not crash.
+        """
         breaker = self._breakers.get(peer_id)
         bucket = self._buckets.get(peer_id)
         circuit_penalty = {
             None: 0.0, _CircuitBreaker.CLOSED: 0.0,
             _CircuitBreaker.HALF_OPEN: 0.5, _CircuitBreaker.OPEN: 1.0,
         }[breaker.state if breaker else None]
-        tokens_frac = (bucket.tokens / bucket.capacity) if bucket else 1.0
+        if bucket is None:
+            tokens_frac = 1.0
+        elif bucket.capacity > 0:
+            tokens_frac = bucket.tokens / bucket.capacity
+        else:
+            tokens_frac = 0.0
         return tokens_frac - circuit_penalty
 
     def _is_circuit_or_rate_blocked(self, peer_id: int) -> bool:
@@ -259,7 +273,14 @@ class LiveClientDefense:
         threshold can't tell "this peer is genuinely unhealthy" from "the
         whole population is under load right now," so this defense must
         never let more than max_blacklist_fraction of the known population
-        look unavailable at once, however severe the real congestion is."""
+        look unavailable at once, however severe the real congestion is.
+
+        Can legitimately be 0 (e.g. a 1-peer population, or a very small
+        max_blacklist_fraction) -- see is_peer_blacklisted()'s "total
+        outage" branch for why that does NOT mean "never report anyone
+        blocked," only "never report SOME-but-not-all as blocked purely
+        to preserve an alternative that doesn't actually exist."
+        """
         if self._num_peers is None:
             return 10**9
         return max(0, min(int(self._num_peers * self.max_blacklist_fraction), self._num_peers - 1))
@@ -288,14 +309,41 @@ class LiveClientDefense:
         status is already self-healing over time (breaker `open_seconds`,
         bucket refill), so no separate recovery/backoff bookkeeping is
         needed here.
+
+        SECOND BUG FIX (quorum-cap self-defeat): the original per-peer
+        check above asked each raw-blocked peer independently "are enough
+        OTHER peers already raw-blocked to hit the cap" -- when MORE than
+        `cap` peers are raw-blocked at the same instant, every one of them
+        sees enough already-raw-blocked "others" to justify failing open
+        for ITSELF, so the whole population can end up reporting as
+        healthy simultaneously (confirmed: 2-of-3 peers rate-limited,
+        cap=1 -> both silently escaped, zero peers reported blocked).
+        That is worse than no cap at all, and the opposite of this
+        method's own stated purpose. Fixed by deciding once, per call to
+        this method, WHICH raw-blocked peers count against the cap:
+        deterministically the first `cap` of them in ascending peer-id
+        order; the rest fail open.
+
+        THIRD BUG FIX (total-outage honesty): if EVERY known peer is
+        simultaneously raw-blocked, there is no alternative left to
+        preserve access to -- failing some of them open in that case
+        doesn't recover any real capacity, it just fabricates apparent
+        availability that isn't there (confirmed against this module's
+        own test_backup_candidates_excludes_blacklisted_and_tried: 3/3
+        peers genuinely and permanently at zero rate-limit capacity must
+        report as 3/3 blacklisted, not 1/3). The quorum cap only matters
+        -- and only fires -- when it is actually preserving access to a
+        peer that would otherwise still be usable.
         """
         if not self._is_circuit_or_rate_blocked(peer_id):
             return False
-        others_blocked = sum(
-            1 for pid in self._breakers
-            if pid != peer_id and self._is_circuit_or_rate_blocked(pid)
+        raw_blocked = sorted(
+            pid for pid in self._breakers if self._is_circuit_or_rate_blocked(pid)
         )
-        if others_blocked >= self._quorum_cap():
+        if self._num_peers is not None and len(raw_blocked) >= self._num_peers:
+            return True
+        cap = self._quorum_cap()
+        if peer_id not in raw_blocked[:cap]:
             self._total_quorum_overrides += 1
             return False
         return True

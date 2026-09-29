@@ -78,20 +78,33 @@ Detection modes (`detection_mode`)
    some runs at streak_required=2; raising streak_required to 3 (this
    module's default) cut false positives roughly 3x across the same
    seeds with similar recall. This is a real, measured trade-off, not a
-   guarantee of zero false positives -- `_binomial_should_blacklist()`
-   re-tests on every growing (n, raw_rate) pair rather than a proper
-   fixed-size sliding window (contrast with the sibling module's
-   `SFADetector`, which re-tests over a rolling last-WINDOW sample), so
-   consecutive tests for the same peer are correlated rather than
-   independent, which inflates the effective false-positive rate versus
-   the nominal `binom_alpha`. Tune `streak_required` upward further, or
-   implement a true sliding window, if false positives matter more than
-   detection latency for your use case.
+   guarantee of zero false positives.
+
+   BUG FIX (true sliding window, was growing window): `_binomial_should_
+   blacklist()` used to re-test the significance of a peer's CUMULATIVE
+   (n, raw_rate) pair every interaction -- n only ever grew, never reset
+   or bounded -- unlike the sibling module's `SFADetector`, which re-tests
+   over a rolling last-`binom_window` sample (`deque(maxlen=WINDOW)`).
+   Two compounding problems with the growing-window version: (1) as n
+   grows without bound, even a tiny, noise-level deviation from the
+   honest baseline eventually reads as "significant" under a fixed
+   `binom_alpha` (classic sequential-testing / "peeking" inflation of the
+   false-positive rate as the sample keeps accumulating), and (2) an
+   early unlucky patch of misses is diluted rather than aged out by
+   later good behavior, so old evidence never leaves the test. Both
+   `_binomial_should_blacklist()` (the subject peer's own test) and
+   `_effective_honest_miss_rate()` (the other-peers baseline) now draw
+   from a fixed-size rolling window (`self._binom_obs`, `binom_window`
+   samples per peer, default 40 to match `SFADetector.WINDOW`) instead of
+   the cumulative `_query_count`/`_response_count` totals -- those totals
+   are unchanged and still drive reputation (Layer 1) and "threshold"
+   mode, only the binomial test's own (n, rate) inputs changed.
 """
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional, Set
+from collections import deque
+from typing import Any, Deque, Dict, List, Optional, Set
 
 
 class SelectiveForwardingDefense:
@@ -152,6 +165,12 @@ class SelectiveForwardingDefense:
         self.min_peers_for_auto_calibration = int(cfg.get("min_peers_for_auto_calibration", 2))
         self.binom_alpha = float(cfg.get("binom_alpha", 0.05))
         self.streak_required = int(cfg.get("streak_required", 3))
+        # True sliding window for the binomial test (see module docstring
+        # "BUG FIX"), default 40 to match the sibling module's
+        # SFADetector.WINDOW. Independent of min_queries_before_blacklist,
+        # which only gates *when* testing starts.
+        self.binom_window = int(cfg.get("binom_window", 40))
+        self._binom_obs: Dict[int, Deque[int]] = {}
         self._streak: Dict[int, int] = {}
         self.suspicion_level: Dict[int, int] = {}
 
@@ -176,6 +195,7 @@ class SelectiveForwardingDefense:
         self._response_count.setdefault(peer_id, 0)
         if responded:
             self._response_count[peer_id] += 1
+        self._binom_obs.setdefault(peer_id, deque(maxlen=self.binom_window)).append(0 if responded else 1)
 
         n = self._query_count[peer_id]
         raw_rate = self._response_count[peer_id] / n
@@ -187,7 +207,7 @@ class SelectiveForwardingDefense:
             return
 
         if self.detection_mode == "binomial":
-            should_blacklist = self._binomial_should_blacklist(peer_id, raw_rate, n)
+            should_blacklist = self._binomial_should_blacklist(peer_id)
         else:
             should_blacklist = raw_rate < self.blacklist_threshold
 
@@ -227,22 +247,28 @@ class SelectiveForwardingDefense:
         Returns None if fewer than `min_peers_for_auto_calibration` other
         peers currently have enough data to trust the estimate -- callers
         must treat None as "can't test yet," not as "assume 0."
+
+        Uses each other peer's own rolling `binom_window` sample (see
+        module docstring "BUG FIX"), not their all-time cumulative rate,
+        so the baseline reflects recent honest behavior rather than
+        stale, unboundedly-aged data.
         """
         others = [
             pid for pid in self._query_count
             if pid != exclude_peer_id
             and pid not in self.blacklisted_peers
             and self._query_count[pid] >= self.min_queries_before_blacklist
+            and self._binom_obs.get(pid)
         ]
         if len(others) < self.min_peers_for_auto_calibration:
             return None
-        rates = sorted(1.0 - (self._response_count[pid] / self._query_count[pid]) for pid in others)
+        rates = sorted(sum(self._binom_obs[pid]) / len(self._binom_obs[pid]) for pid in others)
         mid = len(rates) // 2
         if len(rates) % 2 == 1:
             return rates[mid]
         return (rates[mid - 1] + rates[mid]) / 2.0
 
-    def _binomial_should_blacklist(self, peer_id: int, raw_rate: float, n: int) -> bool:
+    def _binomial_should_blacklist(self, peer_id: int) -> bool:
         """
         One-sided binomial significance test: is this peer's miss rate
         significantly above the honest baseline (either the pinned
@@ -252,9 +278,13 @@ class SelectiveForwardingDefense:
         only recommends blacklisting once the streak reaches
         `streak_required` -- a single unlucky window on an honest peer
         isn't enough, mirroring attack/selective_forward's SFADetector.
-        Growing-window test on cumulative (n, raw_rate) rather than that
-        module's fixed-size sliding window -- a deliberate simplification
-        for this smaller, simpler defense.
+
+        Tests over this peer's rolling `binom_window` sample
+        (`self._binom_obs`), a true fixed-size sliding window matching
+        `SFADetector`'s design (see module docstring "BUG FIX") -- not
+        the peer's all-time cumulative (n, raw_rate), which is still
+        tracked separately in `_query_count`/`_response_count` for
+        reputation (Layer 1) and "threshold" mode.
         """
         honest_miss_rate = self.honest_miss_rate
         if honest_miss_rate is None:  # "auto" mode
@@ -269,8 +299,10 @@ class SelectiveForwardingDefense:
                 self.suspicion_level[peer_id] = min(3, self._streak[peer_id])
                 return False
 
-        miss_rate = 1.0 - raw_rate
-        p_value = self._binom_p(miss_rate, n, honest_miss_rate)
+        window = self._binom_obs.get(peer_id, deque())
+        window_n = len(window)
+        miss_rate = (sum(window) / window_n) if window_n else 0.0
+        p_value = self._binom_p(miss_rate, window_n, honest_miss_rate)
         if p_value < self.binom_alpha:
             self._streak[peer_id] = self._streak.get(peer_id, 0) + 1
         else:
@@ -385,6 +417,7 @@ class SelectiveForwardingDefense:
         self._reputation.clear()
         self.blacklisted_peers.clear()
         self._streak.clear()
+        self._binom_obs.clear()
         self.suspicion_level.clear()
         self._total_bypasses = 0
         self._total_blacklistings = 0
