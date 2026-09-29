@@ -29,6 +29,19 @@ Two commands:
   python tune_weights.py search                  # grid-search weights on the saved DEV_SEEDS data, print + save the winner
   python tune_weights.py collect --split test     # fetch + save raw per-document signals for TEST_SEEDS
   python tune_weights.py evaluate                 # score TEST_SEEDS data with the locked-in weights -- run this exactly once
+
+NOT YET MIGRATED to mia_attack.py's Revision 10 fix (pretraining-knowledge
+calibration + rate-limit hardening -- see that module's docstring §(a)/§(b)
+and reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md). This
+script's `_decision_match(...)` call at line ~165 (below) collects the raw,
+uncalibrated Revision-7 signal, via its own independent per-document
+collection loop rather than `MIAAttack._probe_documents()`. The DECISION_
+WEIGHT=1.0 winner this script already locked in remains the production
+default, but it was searched against the uncalibrated signal -- Revision
+10's calibration changes what that signal measures, so a fresh grid search
+against the calibrated signal is recommended before treating the current
+weights as validated for the calibrated composite (see mia_attack.py's
+module docstring, "Disclosed, not yet re-validated"). Not re-run here.
 """
 from __future__ import annotations
 
@@ -58,6 +71,7 @@ from attack.Mia_attack.mia_attack import (  # noqa: E402
     _certainty_score,
     _cosine_similarity,
     _decision_match,
+    _throttle_query,
     _normalize_similarity,
     _parse_llm_response,
     load_membership_documents,
@@ -77,19 +91,28 @@ from attack.Mia_attack.mia_attack import (  # noqa: E402
 _QUERY_TIMEOUT_SECONDS = 20
 
 
-def _query_llm_fast(question: str, url: str, api_key: str = "") -> str:
+def _query_llm_fast(question: str, url: str, api_key: str = "", max_retries: int = 1) -> str:
+    """Throttled via mia_attack's shared `_throttle_query()` (same pacing as
+    contrastive_probes.py) and retries once on HTTP 429. Previously unthrottled,
+    which re-triggers the 429 storm at scale (current_gaps_overview.md, MIA)."""
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["X-API-Key"] = api_key
-    try:
-        r = requests.post(
-            f"{url}/query", json={"query": question}, headers=headers,
-            timeout=_QUERY_TIMEOUT_SECONDS,
-        )
+    for attempt in range(max_retries + 1):
+        _throttle_query()
+        try:
+            r = requests.post(
+                f"{url}/query", json={"query": question}, headers=headers,
+                timeout=_QUERY_TIMEOUT_SECONDS,
+            )
+        except Exception:
+            return ""
+        if r.status_code == 429 and attempt < max_retries:
+            time.sleep(float(r.headers.get("Retry-After", 2.0)))
+            continue
         if r.status_code == 200:
             return _parse_llm_response(r.json())
-    except Exception:
-        pass
+        return ""
     return ""
 
 try:

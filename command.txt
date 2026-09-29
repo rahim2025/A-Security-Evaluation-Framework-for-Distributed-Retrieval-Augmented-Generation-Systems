@@ -1,0 +1,116 @@
+Reliable-dRAG — how to run the project, the attacks, and the defenses
+=======================================================================
+
+Fastest path: run everything with one script
+----------------------------------------------
+  ./run_tanzim_experiments.sh
+
+This does steps 1-4 below automatically, for MIA + SFA + DoS (attack, then
+defense, for each), and copies each run's log file into:
+
+  attack_logs/tanzim/mia/attack/
+  attack_logs/tanzim/mia/defense/
+  attack_logs/tanzim/sfa/attack/
+  attack_logs/tanzim/sfa/defense/
+  attack_logs/tanzim/dos/attack/
+  attack_logs/tanzim/dos/defense/
+
+(That attack_logs/tanzim/ folder is gitignored — it's your personal run
+output, it never gets committed.)
+
+Optional environment variables:
+  SEED=0 ./run_tanzim_experiments.sh          run with a different seed (default 42)
+  MODE=mock ./run_tanzim_experiments.sh       SFA/DoS in mock mode, no Docker needed for those two
+  SKIP_DOCKER=1 ./run_tanzim_experiments.sh   stack is already up, skip starting it
+
+The steps below are exactly what that script does, written out by hand —
+use these if you want to run just one attack, re-run one seed, or the
+script hits something it can't handle on your machine.
+
+
+STEP 1 — Start the stack
+-------------------------
+  docker compose up -d
+
+Wait until every container is healthy:
+  docker compose ps
+
+You should see hardhat-node, data-source-0, data-source-20, data-source-100,
+and llm-service all listed as "healthy" (or "running" for the ones with no
+healthcheck). This also deploys the smart contract fresh, in-memory, on the
+Hardhat node every time it starts.
+
+
+STEP 2 — Membership Inference Attack (MIA)
+--------------------------------------------
+Attack only:
+  python3 attack/Mia_attack/run_attack.py --seed 42
+  -> writes to attack_logs/mia/
+
+Defense evaluation:
+  python3 defense/mia_defense/run_defense.py --seed 42
+  -> writes to defense_logs/
+
+MIA has no mock mode — it always talks to the real LLM service.
+
+
+STEP 3 — Selective Forwarding Attack (SFA)
+---------------------------------------------
+Attack only:
+  python3 attack/selective_forward_sim/run_attack.py --mode live --seed 42
+  -> writes to attack_logs/selective_forward_sim/
+
+Defense evaluation (this one also re-runs the attack internally, once
+without the defense and once with it, so it can report the recovery):
+  python3 defense/sfa_sim_defense/run_defense.py --mode live --seed 42
+  -> writes to defense_logs/sfa_sim_defense/
+
+Swap --mode live for --mode mock to run an offline simulation with no
+Docker containers needed at all — useful for a quick sanity check.
+
+
+STEP 4 — DoS attack
+----------------------
+Attack only:
+  python3 attack/ddos_sim/run_attack.py --mode live --seed 42
+  -> writes to attack_logs/ddos_sim/
+
+Defense evaluation (also re-runs attack_only + attack_plus_defense
+internally):
+  python3 defense/ddos_sim_defense/run_defense.py --mode live --seed 42
+  -> writes to defense_logs/ddos_sim_defense/
+
+Same as SFA: --mode mock works offline, no Docker required.
+
+There is also a defense built specifically for a REAL concurrent HTTP
+flood (not just the simulated one above):
+  python3 defense/ddos_sim_defense/run_live_defense_eval.py --severity high
+  -> writes to defense_logs/
+
+
+STEP 5 — Copy your logs into the tanzim/ folder (only needed if you ran
+the commands above by hand instead of the script)
+--------------------------------------------------------------------------
+mkdir -p attack_logs/tanzim/mia/attack attack_logs/tanzim/mia/defense
+mkdir -p attack_logs/tanzim/sfa/attack attack_logs/tanzim/sfa/defense
+mkdir -p attack_logs/tanzim/dos/attack attack_logs/tanzim/dos/defense
+
+cp attack_logs/mia/*.json                    attack_logs/tanzim/mia/attack/
+cp defense_logs/defense_*_mia_*.json         attack_logs/tanzim/mia/defense/
+cp attack_logs/selective_forward_sim/*.json  attack_logs/tanzim/sfa/attack/
+cp defense_logs/sfa_sim_defense/*.json       attack_logs/tanzim/sfa/defense/
+cp attack_logs/ddos_sim/*.json               attack_logs/tanzim/dos/attack/
+cp defense_logs/ddos_sim_defense/*.json      attack_logs/tanzim/dos/defense/
+
+
+Notes
+-----
+- Running the same seed twice does not overwrite anything — every log
+  filename has a timestamp in it, so re-runs just add more files.
+- For a real thesis number, run more than one seed (e.g. 0, 42, 123) and
+  look at the mean/variance across the resulting logs, not a single run.
+- If a live run hits a lot of "429 Too Many Requests" errors, the stack
+  is being queried faster than its rate limit allows — see
+  reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md for the fix
+  already applied to MIA/SSM's client pacing, and check whether the
+  script/command you're running has the same pacing.
