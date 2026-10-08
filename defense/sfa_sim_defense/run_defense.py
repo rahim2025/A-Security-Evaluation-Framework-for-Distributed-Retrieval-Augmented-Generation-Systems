@@ -71,6 +71,15 @@ ATTACK_CONFIG = "selective_forwarding_sim.yaml"
 DEFENSE_CONFIG = "sfa_sim_defense.yaml"
 
 
+def _float_or_auto(raw: str):
+    """argparse type= for --honest_miss_rate: accepts the literal string
+    'auto' (passed through as-is, so SelectiveForwardingDefense.__init__
+    treats it as the auto-calibration default) or any float string."""
+    if raw.strip().lower() == "auto":
+        return "auto"
+    return float(raw)
+
+
 def _run_once(
     build_network, questions: List[str], threshold: float, max_ttl: int,
     ratio: float, strategy: str, seed: int, defense_cfg: Dict[str, Any], with_defense: bool,
@@ -180,8 +189,15 @@ def main() -> None:
                     help="'threshold' (default): fixed response-rate floor, blind to a stealthy "
                          "attacker. 'binomial': one-sided significance test vs honest_miss_rate, "
                          "catches a stealthy (10-30%%) dropper -- see selective_forwarding_defense.py")
-    p.add_argument("--honest_miss_rate", type=float, default=None,
-                    help="binomial mode only: measured honest-peer miss rate to test against")
+    p.add_argument("--honest_miss_rate", type=_float_or_auto, default=None,
+                    help="binomial mode only: 'auto' (default, recommended -- see "
+                         "selective_forwarding_defense.py's _effective_honest_miss_rate() for the "
+                         "miscalibration bug this replaced) to measure the honest baseline live from "
+                         "the current population, or a float to pin a specific pre-measured value")
+    p.add_argument("--min_peers_for_auto_calibration", type=int, default=None,
+                    help="binomial mode + honest_miss_rate=auto only: minimum other tracked, "
+                         "not-yet-blacklisted peers required before the auto-calibrated median "
+                         "baseline is trusted (default 2)")
     p.add_argument("--binom_alpha", type=float, default=None, help="binomial mode only: significance threshold")
     p.add_argument("--streak_required", type=int, default=None,
                     help="binomial mode only: consecutive significant windows required before blacklisting")
@@ -220,6 +236,8 @@ def main() -> None:
         defense_cfg["detection_mode"] = args.detection_mode
     if args.honest_miss_rate is not None:
         defense_cfg["honest_miss_rate"] = args.honest_miss_rate
+    if args.min_peers_for_auto_calibration is not None:
+        defense_cfg["min_peers_for_auto_calibration"] = args.min_peers_for_auto_calibration
     if args.binom_alpha is not None:
         defense_cfg["binom_alpha"] = args.binom_alpha
     if args.streak_required is not None:

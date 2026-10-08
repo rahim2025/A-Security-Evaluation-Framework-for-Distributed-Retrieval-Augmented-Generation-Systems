@@ -38,6 +38,7 @@ INSTALL_VLLM=true docker compose up --build -d
 If you use a gated HuggingFace model (e.g., Llama), set your token first:
 ```bash
 HF_TOKEN=hf_your_token_here docker compose up --build -d
+
 ```
 
 This will:

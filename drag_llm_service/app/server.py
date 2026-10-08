@@ -7,7 +7,8 @@ DS_API_KEY = os.getenv("API_KEY", "")
 import yaml
 import re
 import random
-from typing import Dict, List, Optional
+import time
+from typing import Dict, List, Optional, Tuple
 import requests
 import numpy as np
 import logging
@@ -162,54 +163,120 @@ def initialize_sentence_importance(sentence_importance_config: Dict) -> None:
     else:
         raise ValueError(f"Unknown sentence importance method: {method}. Must be 'mc_shap' or 'rora'")
 
-def query_data_sources(query: str, n_contexts: int, selected_sources: Optional[Dict[str, tuple]] = None) -> List[Dict]:
+def _post_data_source_with_retry(
+    url: str, payload: Dict, headers: Dict, timeout: int = 10, max_retries: int = 2,
+) -> Optional[requests.Response]:
+    """
+    POST to one data source with bounded retry-with-backoff on HTTP 429 and
+    transient 5xx, mirroring the pattern already validated live in
+    attack/selective_forward_sim/live_network.py's LivePeer.query() (one
+    retry after respecting a 429's Retry-After header; see
+    reports/SFA_Security_Analysis_Report.md sec 12.9 for the confirmed
+    root-cause writeup this pattern was built to fix).
+
+    Why this matters here, specifically: every prior caller of this endpoint
+    treated a 429/5xx exactly like "this source has nothing relevant" --
+    both silently produce zero candidates from that source, with no
+    distinction visible to the caller. For an attack/eval module that
+    infers meaning from *which* source's content made it into the LLM's
+    context (membership inference, SSM grounding-farming, KB extraction),
+    that ambiguity is not cosmetic: if a member document's real content
+    lives on a source that got rate-limited away, the LLM answers without
+    it -- indistinguishable, in the resulting metrics, from a genuine
+    non-member. See problems/mia_attack_gaps.md and
+    reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md.
+
+    Never raises. Returns the final `requests.Response` (whatever its status
+    code), or `None` if every attempt failed at the network/transport level
+    (timeout, connection error, etc.).
+    """
+    last_response = None
+    for attempt in range(max_retries + 1):
+        try:
+            last_response = requests.post(url, json=payload, headers=headers, timeout=timeout)
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error POSTing to {url} (attempt {attempt + 1}/{max_retries + 1}): {e}")
+            last_response = None
+            continue
+
+        if last_response.status_code == 429 and attempt < max_retries:
+            retry_after = float(last_response.headers.get("Retry-After", 1.5))
+            logger.warning(
+                f"{url} rate-limited (429) on attempt {attempt + 1}/{max_retries + 1}; "
+                f"retrying after {retry_after:.1f}s (Retry-After honored)."
+            )
+            time.sleep(retry_after)
+            continue
+
+        if last_response.status_code >= 500 and attempt < max_retries:
+            backoff = 0.5 * (2 ** attempt)
+            logger.warning(
+                f"{url} returned {last_response.status_code} on attempt "
+                f"{attempt + 1}/{max_retries + 1}; retrying after {backoff:.1f}s."
+            )
+            time.sleep(backoff)
+            continue
+
+        return last_response
+    return last_response
+
+
+def query_data_sources(
+    query: str, n_contexts: int, selected_sources: Optional[Dict[str, tuple]] = None,
+) -> Tuple[List[Dict], Dict[str, str]]:
     """Query all configured data sources and return candidates.
-    
+
     Args:
         query: Search query string
         n_contexts: Number of contexts to retrieve per source
         selected_sources: Optional dict mapping source_id to (usefulness, reliability) tuple
                          If provided, will be sent to data sources for validation and signing
-    
+
     Returns:
-        List of candidate dictionaries with id, text, score, and meta
+        (candidates, source_status) where source_status maps each configured
+        source's name to "ok", "empty" (clean 200, zero results), or
+        "failed:<reason>" (rate-limited, HTTP error, or connection failure)
+        -- callers that need to know whether retrieval was *complete* (not
+        just non-empty) should inspect source_status rather than assuming
+        a non-empty candidates list means every source was actually reached.
     """
     candidates: List[Dict] = []
-    
+    source_status: Dict[str, str] = {}
+
     for src_config in data_source_configs:
-        try:
-            url = f"{src_config['url']}/query"
-            payload = {"query": query, "k": n_contexts}
-            
-            # Include selected_sources if provided
-            if selected_sources:
-                payload["selected_sources"] = selected_sources
-            
-            response = requests.post(url, json=payload, timeout=10, headers={"X-API-Key": DS_API_KEY})
-            
-            if response.status_code == 200:
-                response_data = response.json()
-                results = response_data.get('results', [])
-                
-                for result in results:
-                    candidates.append({
-                        "id": f"{src_config['name']}::{result['id']}",
-                        "text": result['text'],
-                        "score": result['score'],
-                        "meta": {**(result.get('meta', {})), "source": src_config['name']}
-                    })
-                
-                # Log signature if present (for debugging)
-                if 'signature' in response_data:
-                    logger.debug(f"Received signature from {src_config['name']}: {response_data['signature'][:20]}...")
-            else:
-                logger.warning(f"Failed to query {src_config['name']}: {response.status_code}")
-                if response.text:
-                    logger.warning(f"Error response: {response.text[:200]}")
-        except Exception as e:
-            logger.error(f"Error querying {src_config['name']}: {str(e)}")
-    
-    return candidates
+        url = f"{src_config['url']}/query"
+        payload = {"query": query, "k": n_contexts}
+
+        # Include selected_sources if provided
+        if selected_sources:
+            payload["selected_sources"] = selected_sources
+
+        response = _post_data_source_with_retry(url, payload, {"X-API-Key": DS_API_KEY}, timeout=10)
+
+        if response is not None and response.status_code == 200:
+            response_data = response.json()
+            results = response_data.get('results', [])
+
+            for result in results:
+                candidates.append({
+                    "id": f"{src_config['name']}::{result['id']}",
+                    "text": result['text'],
+                    "score": result['score'],
+                    "meta": {**(result.get('meta', {})), "source": src_config['name']}
+                })
+            source_status[src_config['name']] = "ok" if results else "empty"
+
+            # Log signature if present (for debugging)
+            if 'signature' in response_data:
+                logger.debug(f"Received signature from {src_config['name']}: {response_data['signature'][:20]}...")
+        else:
+            status = str(response.status_code) if response is not None else "connection_error"
+            logger.warning(f"Failed to query {src_config['name']}: {status}")
+            if response is not None and response.text:
+                logger.warning(f"Error response: {response.text[:200]}")
+            source_status[src_config['name']] = f"failed:{status}"
+
+    return candidates, source_status
 
 
 def get_scores_from_blockchain(source_names: List[str]) -> Dict[str, Dict[str, float]]:
@@ -539,31 +606,68 @@ def get_score_events():
 @app.route('/query', methods=['POST'])
 def query():
     """Query endpoint that returns just the response.
-    
+
     Request body:
         {
-            "query": "search query string"
+            "query": "search query string",
+            "no_retrieval": false   # optional; see below
         }
-    
+
+    `no_retrieval` (optional, default false): when true, skips retrieval and
+    reranking entirely and asks the model to answer from an empty context
+    (i.e. from its own pretraining knowledge alone). Added specifically so
+    membership-inference-style evaluation code can measure, through this
+    exact same model/prompt-template path, what the LLM would have answered
+    *without* any grounding -- the "no-RAG baseline" needed to tell a
+    genuinely retrieval-grounded answer apart from one the model would have
+    produced anyway. See reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md.
+    This never touches the data sources, so it also carries zero rate-limit
+    cost -- useful for calibration passes that would otherwise multiply
+    request volume against the data sources.
+
     Returns:
         {
-            "response": "answer text"
+            "response": "answer text",
+            "sources_used": {"sources_0": "ok", "sources_20": "empty", "sources_100": "failed:429"},
+            "degraded": true,        # true if any configured source did not return "ok"
+            "no_retrieval": false
         }
+    `sources_used`/`degraded` are additive fields (existing consumers that
+    only read `response` are unaffected). They exist so a caller can detect
+    when the answer was generated from incomplete retrieval (e.g. a source
+    rate-limited away) rather than silently treating it the same as a
+    complete, fully-grounded retrieval.
     """
     try:
         data = request.get_json()
-        
+
         if not data or 'query' not in data:
             return jsonify({"error": "Missing required field 'query'"}), 400
-        
+
         query_text = data['query']
+        no_retrieval = bool(data.get('no_retrieval', False))
         n_contexts = retrieval_config['n_contexts']
         top_k = retrieval_config['top_k']
-        
+
+        if no_retrieval:
+            # Bypass retrieval/reranking entirely -- answer from an empty
+            # context, exactly like a member/non-member document whose
+            # retrieval turned up nothing. Same prompt template as the
+            # grounded path below, so the only variable being isolated is
+            # "was any retrieved context present at all".
+            prompt = "Question: " + query_text + "\n\nAnswer: "
+            response_text = model.generate(prompt)
+            return jsonify({
+                "response": response_text,
+                "sources_used": {},
+                "degraded": False,
+                "no_retrieval": True,
+            }), 200
+
         # Get scores from blockchain to pass to data sources
         source_names = [src['name'] for src in data_source_configs]
         scores = get_scores_from_blockchain(source_names)
-        
+
         # Format selected_sources as dict mapping source_id to (usefulness, reliability) tuples
         selected_sources = {}
         for name in source_names:
@@ -571,13 +675,17 @@ def query():
             usefulness = int(score_data.get('usefulness', 0.0))
             reliability = int(score_data.get('reliability', 0.0))
             selected_sources[name] = (usefulness, reliability)
-        
+
         # Query all data sources with blockchain scores
-        candidates = query_data_sources(query_text, n_contexts, selected_sources=selected_sources)
-        
+        candidates, source_status = query_data_sources(query_text, n_contexts, selected_sources=selected_sources)
+        degraded = any(status != "ok" for status in source_status.values())
+
         if not candidates:
-            return jsonify({"error": "No candidates retrieved from data sources"}), 500
-        
+            return jsonify({
+                "error": "No candidates retrieved from data sources",
+                "sources_used": source_status,
+            }), 500
+
         # Rerank
         defense_cfg = retrieval_config.get('defense', {})
         if defense_cfg.get('enabled', False):
@@ -627,9 +735,14 @@ def query():
         
         # Generate response using the model
         response_text = model.generate(prompt)
-        
-        return jsonify({"response": response_text}), 200
-        
+
+        return jsonify({
+            "response": response_text,
+            "sources_used": source_status,
+            "degraded": degraded,
+            "no_retrieval": False,
+        }), 200
+
     except Exception as e:
         logger.error(f"Error during query: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -679,55 +792,62 @@ def _query_analyze(query_text: str, ground_truth: List[str], update_scores: bool
     # Query sampled data sources with blockchain scores
     candidates = []
     source_signatures = {}  # Store signatures from data sources for score updates
+    source_status: Dict[str, str] = {}
     for src_config in data_source_configs:
         if src_config['name'] in sampled_sources:
-            try:
+            if stream_mode:
+                yield _format_sse_event('querying_sources', {'source': src_config['name'], 'status': 'querying'})
+            url = f"{src_config['url']}/query"
+            payload = {"query": query_text, "k": n_contexts}
+
+            # Include selected_sources for validation and signing
+            if selected_sources:
+                payload["selected_sources"] = selected_sources
+
+            # Retry-with-backoff on 429/5xx -- see _post_data_source_with_retry's
+            # docstring for why silently treating a rate-limited source the same
+            # as "this source has nothing" corrupts every downstream consumer
+            # that cares which source's content actually reached the LLM
+            # (grounding-credit scoring here, membership inference in the MIA
+            # attack module).
+            response = _post_data_source_with_retry(url, payload, {"X-API-Key": DS_API_KEY}, timeout=10)
+
+            if response is not None and response.status_code == 200:
+                response_data = response.json()
+                results = response_data.get('results', [])
+
+                for result in results:
+                    candidates.append({
+                        "id": f"{src_config['name']}::{result['id']}",
+                        "text": result['text'],
+                        "score": result['score'],
+                        "meta": {**(result.get('meta', {})), "source": src_config['name']}
+                    })
+                source_status[src_config['name']] = "ok" if results else "empty"
+
+                # Store signature if present (needed for score updates)
+                if 'signature' in response_data and update_scores:
+                    signature_hex = response_data['signature']
+                    # Convert hex string to bytes
+                    if signature_hex.startswith('0x'):
+                        source_signatures[src_config['name']] = bytes.fromhex(signature_hex[2:])
+                    else:
+                        source_signatures[src_config['name']] = bytes.fromhex(signature_hex)
+                    logger.debug(f"Received signature from {src_config['name']}: {signature_hex[:20]}...")
+
                 if stream_mode:
-                    yield _format_sse_event('querying_sources', {'source': src_config['name'], 'status': 'querying'})
-                url = f"{src_config['url']}/query"
-                payload = {"query": query_text, "k": n_contexts}
-                
-                # Include selected_sources for validation and signing
-                if selected_sources:
-                    payload["selected_sources"] = selected_sources
-                
-                response = requests.post(url, json=payload, timeout=10, headers={"X-API-Key": DS_API_KEY})
-                
-                if response.status_code == 200:
-                    response_data = response.json()
-                    results = response_data.get('results', [])
-                    
-                    for result in results:
-                        candidates.append({
-                            "id": f"{src_config['name']}::{result['id']}",
-                            "text": result['text'],
-                            "score": result['score'],
-                            "meta": {**(result.get('meta', {})), "source": src_config['name']}
-                        })
-                    
-                    # Store signature if present (needed for score updates)
-                    if 'signature' in response_data and update_scores:
-                        signature_hex = response_data['signature']
-                        # Convert hex string to bytes
-                        if signature_hex.startswith('0x'):
-                            source_signatures[src_config['name']] = bytes.fromhex(signature_hex[2:])
-                        else:
-                            source_signatures[src_config['name']] = bytes.fromhex(signature_hex)
-                        logger.debug(f"Received signature from {src_config['name']}: {signature_hex[:20]}...")
-                    
-                    if stream_mode:
-                        yield _format_sse_event('querying_sources', {'source': src_config['name'], 'status': 'success', 'results_count': len(results)})
-                else:
-                    logger.warning(f"Failed to query {src_config['name']}: {response.status_code}")
-                    if stream_mode:
-                        yield _format_sse_event('querying_sources', {'source': src_config['name'], 'status': 'error', 'error': f"HTTP {response.status_code}"})
-                    if response.text:
-                        logger.warning(f"Error response: {response.text[:200]}")
-            except Exception as e:
-                logger.error(f"Error querying {src_config['name']}: {str(e)}")
+                    yield _format_sse_event('querying_sources', {'source': src_config['name'], 'status': 'success', 'results_count': len(results)})
+            else:
+                status = str(response.status_code) if response is not None else "connection_error"
+                logger.warning(f"Failed to query {src_config['name']}: {status}")
                 if stream_mode:
-                    yield _format_sse_event('querying_sources', {'source': src_config['name'], 'status': 'error', 'error': str(e)})
-    
+                    yield _format_sse_event('querying_sources', {'source': src_config['name'], 'status': 'error', 'error': f"HTTP {status}"})
+                if response is not None and response.text:
+                    logger.warning(f"Error response: {response.text[:200]}")
+                source_status[src_config['name']] = f"failed:{status}"
+
+    degraded = any(status != "ok" for status in source_status.values())
+
     if not candidates:
         error_msg = 'No candidates retrieved from data sources'
         if stream_mode:
@@ -1016,7 +1136,15 @@ def _query_analyze(query_text: str, ground_truth: List[str], update_scores: bool
         "response": response_text,
         "correctness": correctness,
         "sampled_sources": sampled_sources,
-        "importance_score": importance_score
+        "importance_score": importance_score,
+        # Additive fields (existing consumers reading only the keys above are
+        # unaffected): lets a caller distinguish "answered with complete
+        # retrieval" from "one or more sampled sources were rate-limited/
+        # errored away and the model answered on partial or no grounding" --
+        # see _post_data_source_with_retry's docstring and
+        # reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md.
+        "sources_used": source_status,
+        "degraded": degraded,
     }
     
     # Include updated scores if scores were updated

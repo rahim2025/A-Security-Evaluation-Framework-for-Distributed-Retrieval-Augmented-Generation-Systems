@@ -214,9 +214,58 @@ def get_current_scores(source_ids):
 
 
 # ── Query the orchestrator exactly as a normal user would ────────────────────
-def query_analyze(question, gold_answer, update_scores):
+# Self-throttle + retry (mirrors attack/selective_forward_sim/live_network.py's
+# LivePeer.query() and attack/Mia_attack/mia_attack.py's Revision 10
+# _query_llm_raw()). Root cause, confirmed live: every /query_analyze call
+# fans out server-side to n_retrievers=3 drag_data_source containers
+# (drag_llm_service/configs/config.yaml) -- one HTTP request to EACH
+# distinct source per external call, so each source's own 60-requests/
+# minute-per-IP cap (drag_data_source/app/server.py's RATE_LIMIT_DEFAULT)
+# tracks this script's external call rate directly, not a multiple of it.
+# `measure_accuracy()` below previously looped over every eval item with NO
+# pacing at all (unlike the round loop's 0.2s sleep, which was still faster
+# than this cap allows) -- a 100-item eval run this way produced a measured
+# 64% HTTP 429 rate across the three data sources within a 30-minute window
+# (see problems/safin_faced_problems/ and problems/mia_attack_gaps.md's
+# identical finding for the MIA module -- same root cause, same fix).
+# MIN_QUERY_INTERVAL_S=1.3s matches the pacing already validated live
+# against this exact limit by this project's other live-mode attack clients:
+# attack/selective_forward_sim/live_network.py (1.1s) and this attack's own
+# sibling variant attack/ssm_score/run_attack.py's QUERY_DELAY (1.3s).
+MIN_QUERY_INTERVAL_S = float(os.getenv("SSM_MIN_QUERY_INTERVAL_S", "1.3"))
+_last_query_time = 0.0
+
+
+def _throttle_query() -> None:
+    global _last_query_time
+    elapsed = time.monotonic() - _last_query_time
+    wait = MIN_QUERY_INTERVAL_S - elapsed
+    if wait > 0:
+        time.sleep(wait)
+    _last_query_time = time.monotonic()
+
+
+def query_analyze(question, gold_answer, update_scores, max_retries=2):
+    """
+    POST /query_analyze, self-throttled and retrying once on HTTP 429
+    (honoring the server's Retry-After header) before giving up and raising
+    -- previously a single unthrottled, unretried call, so a rate-limited
+    response propagated straight up as an unhandled requests.HTTPError
+    (raise_for_status()), which is the exact 429/500 failure mode reported
+    while running this attack (see problems/safin_faced_problems/).
+    """
     payload = {"query": question, "ground_truth": [gold_answer], "update_scores": update_scores}
-    r = requests.post(f"{LLM_SERVICE_URL}/query_analyze", json=payload, timeout=120)
+    for attempt in range(max_retries + 1):
+        _throttle_query()
+        r = requests.post(f"{LLM_SERVICE_URL}/query_analyze", json=payload, timeout=120)
+        if r.status_code == 429 and attempt < max_retries:
+            retry_after = float(r.headers.get("Retry-After", 2.0))
+            print(f"    [rate-limited] /query_analyze returned 429 on attempt "
+                  f"{attempt + 1}/{max_retries + 1}; retrying after {retry_after:.1f}s")
+            time.sleep(retry_after)
+            continue
+        r.raise_for_status()
+        return r.json()
     r.raise_for_status()
     return r.json()
 
@@ -350,7 +399,11 @@ def main():
                   f"farm_selected={farm_selected} "
                   f"R[{TARGET_SOURCE}]={current_scores.get(TARGET_SOURCE, {}).get('reliability')} "
                   f"U[{TARGET_SOURCE}]={current_scores.get(TARGET_SOURCE, {}).get('usefulness')}")
-            time.sleep(0.2)
+            # Rate-limit pacing now lives inside query_analyze()'s own
+            # _throttle_query() (MIN_QUERY_INTERVAL_S=1.3s -- see that
+            # function's docstring). The fixed 0.2s sleep previously here
+            # was, on its own, too fast to stay under the data sources'
+            # 60/min-per-source cap.
 
         # 6. Snapshot on-chain scores AFTER
         scores_after = get_current_scores(all_source_ids)

@@ -75,6 +75,22 @@ retrieval:
     consensus_weight: 0.25            # 0 disables; blended like reliability_weight
     consensus_min_sources: 2          # skip consensus if fewer distinct sources in pool
 
+    # Similarity-only Laplace noise defense against Membership Inference
+    # Attacks (attack/Mia_attack/). Perturbs the raw dense cosine-similarity
+    # score (range [-1,1]) with Laplace(0, similarity_noise_sensitivity /
+    # similarity_noise_epsilon) noise, per candidate, before the existing
+    # _minmax/fusion/dedup/consensus pipeline above runs unchanged on the
+    # noisy values. Does NOT touch reliability_weight, BM25 scores,
+    # orig_score_weight's prior, blockchain values, or SSM logic -- see
+    # drag_llm_service/src/retriever/defense.py's
+    # add_laplace_noise_to_similarity() docstring.
+    # similarity_noise_enabled: false reverts to the exact pre-this-defense
+    # behavior (a true no-op, not just "small noise").
+    similarity_noise_enabled: false
+    similarity_noise_epsilon: 1.0       # Laplace privacy parameter; smaller = more noise = stronger defense
+    similarity_noise_sensitivity: 2.0   # cosine similarity range is [-1,1] -> sensitivity 2.0; see defense.py
+    similarity_noise_seed: 42           # reuses this file's model.seed convention; independent RNG stream
+
 # Reranker settings
 reranker:
   method: "hybrid"
