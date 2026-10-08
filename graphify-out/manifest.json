@@ -48,28 +48,28 @@
     "hash": "d4822ff90b07e5ff615246cbcfaf7282"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/attack/Mia_attack/run_ablation_eval.py": {
-    "mtime": 1788882167.7612052,
-    "hash": "3b85078016ce7cb9fc28b941d72718ce"
+    "mtime": 1789641364.634651,
+    "hash": "d145ea5af3cfd178cabc1ca901b0880f"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/attack/Mia_attack/mia_attack.py": {
-    "mtime": 1788882167.7607872,
-    "hash": "26dc5497cb653574d487f6c5145cf11a"
+    "mtime": 1790012695.5953488,
+    "hash": "e228081899034f09d50fe0db8d111c95"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/attack/Mia_attack/certainty_weight_ablation.py": {
-    "mtime": 1788882167.760546,
-    "hash": "ed6f1cead757c1114d2ffff6eb26ec82"
+    "mtime": 1789641337.6301348,
+    "hash": "8d0a2e001a15066232d64f3d3167ffd2"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/attack/Mia_attack/contrastive_probes.py": {
-    "mtime": 1789227800.109254,
-    "hash": "59d7a01637eaad9d65fa5dcea48070c2"
+    "mtime": 1790012605.2730286,
+    "hash": "d0a8fb31ed3dd9d63cc4dbbf56b8cd0b"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/attack/Mia_attack/tune_weights.py": {
-    "mtime": 1788882167.7618182,
-    "hash": "c17bd5e426f75b29de70d4056235c024"
+    "mtime": 1789641374.4343264,
+    "hash": "b0a29b7e01b593f446ee8306558dda98"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/attack/ssm_score/run_grounding_farming.py": {
-    "mtime": 1788882167.767992,
-    "hash": "cb4c7fce8e319c8e5fcd5be8fc3e68ee"
+    "mtime": 1789641543.5298553,
+    "hash": "ef90dc63d79bd6379da1500f4f3d29bb"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/attack/ssm_score/__init__.py": {
     "mtime": 1788882167.7672384,
@@ -228,8 +228,8 @@
     "hash": "c39ffddfcaf1de65e64646cdaabd7c57"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/drag_llm_service/app/server.py": {
-    "mtime": 1788882168.9370205,
-    "hash": "57393bbb573f3cacc459d81c577c8f75"
+    "mtime": 1789640981.8171911,
+    "hash": "1c88ed058810f265dd2339a981ee84cf"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/drag_llm_service/app/__init__.py": {
     "mtime": 1788882168.936786,
@@ -376,8 +376,8 @@
     "hash": "b7e3255c6725fabd1cb1cd06337c18c5"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/defense/mia_defense/mia_defense.py": {
-    "mtime": 1788882168.9172494,
-    "hash": "f0b1a581ec0216fb612bff1435cef0b5"
+    "mtime": 1789641356.4561203,
+    "hash": "534706fc5df5208fabfd8ffb3dbf27d3"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/defense/mia_defense/__init__.py": {
     "mtime": 1788882168.9169576,
@@ -396,16 +396,16 @@
     "hash": "3b254eedf809492dd3a3b7d5739d1c6a"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/defense/sfa_sim_defense/run_defense.py": {
-    "mtime": 1788882168.918776,
-    "hash": "642034a3e0eb7c1173be16c3d6357115"
+    "mtime": 1789642697.0217485,
+    "hash": "84e74420b0cffabb434a9c303d7dced6"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/defense/sfa_sim_defense/run_realistic_defense_eval.py": {
     "mtime": 1789229183.954556,
     "hash": "fcf8c95dbe81b44ddb9f2f3bf5b10161"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/defense/sfa_sim_defense/selective_forwarding_defense.py": {
-    "mtime": 1788882168.9189563,
-    "hash": "226823ffb613a43ff485435d5105d0c5"
+    "mtime": 1790012823.5794175,
+    "hash": "e871795d461c857a0612473f5007d645"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/defense/sfa_sim_defense/__init__.py": {
     "mtime": 1788882168.9186232,
@@ -428,12 +428,12 @@
     "hash": "dd35d6e1d335c9acce7d6042b46df6a1"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/defense/ddos_sim_defense/run_live_defense_eval.py": {
-    "mtime": 1789231333.6338477,
-    "hash": "901cb9b3a4839037f15cd33ee43b7c63"
+    "mtime": 1789642473.5269864,
+    "hash": "331e2dcee6b36df0635a2e9b3b3badbf"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/defense/ddos_sim_defense/live_client_defense.py": {
-    "mtime": 1789231272.0149913,
-    "hash": "d30a3ab424e4c5f14b457a3ee45cb22c"
+    "mtime": 1790676686.2426026,
+    "hash": "1b9a2aa14cbe700221bd5c44353b925e"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/defense/ddos_sim_defense/test_live_client_defense.py": {
     "mtime": 1789232273.8393168,
@@ -475,6 +475,10 @@
     "mtime": 1788882168.9450924,
     "hash": "288353585dba309460d7956168beb3b0"
   },
+  "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/data/build_healthcaremagic_corpus.py": {
+    "mtime": 1790010856.6785717,
+    "hash": "2ceabdf0ff7bee0b27a9f73da74c5b1c"
+  },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/data/build_pubmedqa_corpus.py": {
     "mtime": 1788882167.8242168,
     "hash": "4dddd4eb5eb3b143afb74b776ee0ebe9"
@@ -506,6 +510,10 @@
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/docker-compose.yml": {
     "mtime": 1788882168.9298942,
     "hash": "33c536434d1dcf552bfc3988aa94cadf"
+  },
+  "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/command.txt": {
+    "mtime": 1789656525.4787922,
+    "hash": "869424f6a71105329a0da970a719f0b8"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/attack_figure/README.md": {
     "mtime": 1788882167.7684278,
@@ -540,8 +548,8 @@
     "hash": "37696bf4712fcc6849e86b288cb64a5a"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/config/sfa_sim_defense.yaml": {
-    "mtime": 1788882167.823959,
-    "hash": "015cd296220cc896e2607e57595c3a05"
+    "mtime": 1789642667.82572,
+    "hash": "239e3469aa910c8bc81b888fab97f48a"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/config/ddos_sim.yaml": {
     "mtime": 1788882167.8235302,
@@ -668,8 +676,8 @@
     "hash": "db4c180cbca45f464af2ab9f87ca2c66"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/defense/sfa_sim_defense/README.md": {
-    "mtime": 1788882168.9185584,
-    "hash": "220235e5b42957ce189b2e587c4b0086"
+    "mtime": 1789642739.721918,
+    "hash": "de3cba97b3bdb8b33650e73314657615"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/defense/ssm_defense/README.md": {
     "mtime": 1788882168.9191968,
@@ -719,17 +727,37 @@
     "mtime": 1789229227.0363185,
     "hash": "4f96dd260af6eeb1923ab740425ee1bb"
   },
+  "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/reports/updated_reports_safin/MIA_SCORE_MECHANISM_FIX.md": {
+    "mtime": 1789641647.3367105,
+    "hash": "7dd25ed652af99dcd0a92ad1472a4da4"
+  },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/reports/updated_reports_safin/DDOS.md": {
     "mtime": 1789231570.9391732,
     "hash": "cd021f3bd97f1da690563e949e5ab6b8"
+  },
+  "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/reports/updated_reports_safin/MIA_SFA_DDOS_FIXES_ROUND3.md": {
+    "mtime": 1790013414.6240337,
+    "hash": "c9d8571d522042231611442014001eca"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/reports/updated_reports_safin/SIMILARITY_NOISE_DEFENSE.md": {
     "mtime": 1789227069.892585,
     "hash": "173f21e4a1b5aee024bc70358179bb24"
   },
+  "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/reports/updated_reports_safin/MIA_SFA_DDOS_FIXES_ROUND2.md": {
+    "mtime": 1789642851.755309,
+    "hash": "c95c6c1698feac010155af25197434f3"
+  },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/reports/updated_reports_safin/README.md": {
     "mtime": 1789227916.5664537,
     "hash": "a92321d58bb476d79b10ec672f8c7b6f"
+  },
+  "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/reports/updated_reports_safin/VERIFICATION_STATUS.md": {
+    "mtime": 1789232322.100172,
+    "hash": "1198f5862a37d5482f1f51315a39bedc"
+  },
+  "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/reports/updated_reports_safin/plan/current_gaps_overview.md": {
+    "mtime": 1790009886.802351,
+    "hash": "bedac30e8b21db04c604711775212ccd"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/attack_figure/sfa_hit_rate_vs_ratio.png": {
     "mtime": 1788882167.773576,
@@ -762,6 +790,26 @@
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/attack_figure/mia_consistency_auc_by_seed.png": {
     "mtime": 1788882167.7721412,
     "hash": "2027b4e3c37a6920f2d3746afc547ba6"
+  },
+  "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/problems/safin_faced_problems/Screenshot 2026-09-15 at 2.01.54\u202fPM.png": {
+    "mtime": 1789459319.8116872,
+    "hash": "5eee8bbc0b90b88fc7dd5c3ae4588a53"
+  },
+  "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/problems/safin_faced_problems/Screenshot 2026-09-14 at 11.15.51\u202fPM.png": {
+    "mtime": 1789406157.2628777,
+    "hash": "68e2001479bdba65dd76df31ce04af7c"
+  },
+  "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/problems/safin_faced_problems/Screenshot 2026-09-15 at 1.03.56\u202fPM.png": {
+    "mtime": 1789455841.6917527,
+    "hash": "efd566f0942a57e90cf03bb7957f7c5b"
+  },
+  "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/problems/safin_faced_problems/Screenshot 2026-09-15 at 1.10.36\u202fPM.png": {
+    "mtime": 1789456242.02078,
+    "hash": "a18cf9f2045d467528e34f58ada0a761"
+  },
+  "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/problems/safin_faced_problems/Screenshot 2026-09-15 at 1.14.07\u202fPM.png": {
+    "mtime": 1789456452.83541,
+    "hash": "10aa8da38ceda7003e2a5de068df801a"
   },
   "/Users/tanzim_safin/Desktop/A-Security-Evaluation-Framework-for-Distributed-Retrieval-Augmented-Generation-Systems/figures/screen shot.jpg": {
     "mtime": 1788882168.9528067,
