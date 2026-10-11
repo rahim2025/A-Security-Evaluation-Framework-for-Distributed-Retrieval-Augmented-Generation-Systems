@@ -43,12 +43,12 @@ import requests
 
 # Fix import path regardless of where the script is called from
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from datapoisoning.data_poisoning_attack import DataPoisoningAttack, DEFAULT_DATA_SOURCES
+from datapoisoning.data_poisoning_attack import DataPoisoningAttack, DEFAULT_DATA_SOURCES, is_correct_answer
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-LLM_SERVICE_URL = "http://localhost:19000"
+LLM_SERVICE_URL = "http://localhost:9000"
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'polluted_token'))
 LOG_DIR  = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'attack_logs'))
 
@@ -105,8 +105,7 @@ def query_llm(question: str, timeout: int = 120) -> dict:
 
 
 def is_correct(response: str, answers: list) -> bool:
-    resp_lower = response.lower().strip()
-    return any(ans.lower().strip() in resp_lower for ans in answers)
+    return is_correct_answer(response, answers)
 
 
 def collect_responses() -> list:
@@ -259,8 +258,56 @@ def main():
         print("PHASE 2 — Executing attack")
         print("=" * 60)
         attack_result = attack.execute(data_points)
+        injected = attack_result['total_injected_docs']
+        expected = attack_result.get('total_expected_docs', injected)
+        injection_errors = attack_result.get('injection_errors', [])
         print(f"\n  Poisoned sources : {attack_result['poisoned_source_names']}")
-        print(f"  Total docs injected: {attack_result['total_injected_docs']}")
+        print(f"  Total docs injected: {injected}/{expected}")
+
+        # A non-200 /poison response or request exception used to be logged and
+        # silently swallowed, so a fully failed injection (bad/missing API key,
+        # service down) still fell through to Phase 3 and got reported as a
+        # normal (usually "unsuccessful") attack run -- indistinguishable from
+        # the defense actually working. Refuse to report a comparison when
+        # nothing was actually injected, and flag it loudly when only some of
+        # the requested volume made it through.
+        if expected > 0 and injected == 0:
+            print("\n" + "!" * 70)
+            print(f"ABORT: 0 of {expected} poisoned docs were injected -- every /poison")
+            print("request failed. This is not a valid attack run; proceeding would")
+            print("report a fake 'attack had no effect' result. See errors below:")
+            for err in injection_errors[:5]:
+                print(f"  - {err}")
+            if len(injection_errors) > 5:
+                print(f"  ... and {len(injection_errors) - 5} more (see saved log)")
+            print("!" * 70)
+            log = {
+                "timestamp": timestamp,
+                "attack_config": {
+                    "strategy": args.strategy,
+                    "poison_type": args.poison_type,
+                    "poisoning_ratio": args.ratio,
+                    "amplification_factor": args.amplify,
+                    "question_variants": args.variants,
+                    "target_sources": args.targets,
+                    "seed": args.seed,
+                    "query_aware": not args.no_query_aware,
+                    "intensity": args.intensity,
+                    "poisoning_density": poisoning_density,
+                },
+                "attack_result": attack_result,
+                "aborted": True,
+                "abort_reason": "zero documents injected; all /poison requests failed",
+            }
+            log_path = save_log(log)
+            print(f"\n  Failure log saved -> {log_path}")
+            sys.exit(1)
+        elif injected < expected:
+            shortfall = expected - injected
+            print(f"\n  WARNING: partial injection failure -- {shortfall}/{expected} poisoned")
+            print(f"  docs were never accepted (see 'injection_errors' in the saved log).")
+            print(f"  This run's numbers reflect a WEAKER attack than "
+                  f"'{args.strategy}/{args.poison_type}' at the requested volume implies.")
 
         print("\n" + "=" * 60)
         print("PHASE 3 — Attacked responses")
@@ -334,6 +381,12 @@ def main():
     # ── Attack-only mode (no evaluation) ──────────────────────────────────
     print("\n=== Executing Data Poisoning Attack ===")
     attack_result = attack.execute(data_points)
+    if attack_result.get('injection_errors'):
+        injected = attack_result['total_injected_docs']
+        expected = attack_result.get('total_expected_docs', injected)
+        print(f"\n  WARNING: {len(attack_result['injection_errors'])} injection batch(es) "
+              f"failed -- only {injected}/{expected} docs were actually injected. "
+              f"See 'injection_errors' in the saved log.")
 
     log = {
         "timestamp": timestamp,

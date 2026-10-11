@@ -22,6 +22,10 @@ COPY drag_python_client /app/drag_python_client
 # Copy drag_contract for ABI access
 COPY drag_contract /app/drag_contract
 
+# Copy the defense package (defense/datapoisoning_defense's content filter, imported
+# by app/server.py's /poison handler -- see defense/datapoisoning_defense/README.md)
+COPY defense /app/defense
+
 # Copy application code
 COPY drag_data_source /app
 

@@ -4,6 +4,11 @@ import json
 import sys
 import os
 DS_API_KEY = os.getenv("API_KEY", "")
+# The orchestrator is the one legitimate bulk reader of the data sources; it proves that with a
+# second credential so the data sources' KB-extraction guard (defense/kb_extraction_defense)
+# exempts it while still throttling every other holder of the shared API key.
+ORCHESTRATOR_TOKEN = os.getenv("ORCHESTRATOR_TOKEN", "")
+DS_HEADERS = {"X-API-Key": DS_API_KEY, "X-Orchestrator-Token": ORCHESTRATOR_TOKEN}
 import yaml
 import re
 import random
@@ -30,6 +35,16 @@ from src.mc_shap.base import ModelBase, LocalModel, OpenAIModel
 from src.mc_shap.mc_shap import TokenSHAP, StringSplitter
 from src.mc_shap.base import TfidfTextVectorizer
 from src.rora.rora import RORAModel
+
+# Add project root to path for the defense package (defense/ssm_defense)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+try:
+    from defense.ssm_defense.grounding_verifier import verify_grounding
+    GROUNDING_DEFENSE_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"defense.ssm_defense not available: {e}. Grounding-farming defense disabled.")
+    GROUNDING_DEFENSE_AVAILABLE = False
+    verify_grounding = None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -185,7 +200,7 @@ def query_data_sources(query: str, n_contexts: int, selected_sources: Optional[D
             if selected_sources:
                 payload["selected_sources"] = selected_sources
             
-            response = requests.post(url, json=payload, timeout=10, headers={"X-API-Key": DS_API_KEY})
+            response = requests.post(url, json=payload, timeout=10, headers=DS_HEADERS)
             
             if response.status_code == 200:
                 response_data = response.json()
@@ -691,7 +706,7 @@ def _query_analyze(query_text: str, ground_truth: List[str], update_scores: bool
                 if selected_sources:
                     payload["selected_sources"] = selected_sources
                 
-                response = requests.post(url, json=payload, timeout=10, headers={"X-API-Key": DS_API_KEY})
+                response = requests.post(url, json=payload, timeout=10, headers=DS_HEADERS)
                 
                 if response.status_code == 200:
                     response_data = response.json()
@@ -887,6 +902,22 @@ def _query_analyze(query_text: str, ground_truth: List[str], update_scores: bool
     norm_response = _norm_join(_normalize_for_match(response_text))
     selected_contexts_norm = [_norm_join(_normalize_for_match(c["text"])) for c in selected]
     grounded_by_sources = [norm_response in ctx for ctx in selected_contexts_norm]
+
+    # SSM grounding-farming defense: a literal substring match alone is gameable
+    # by broad, generic filler engineered to coincidentally contain many
+    # plausible short answers (see defense/ssm_defense/README.md).
+    # Require the matched candidate to ALSO have been a genuinely well-ranked,
+    # on-topic pick for this specific query using rerank_score/consensus_score
+    # the retrieval pipeline already computed -- no extra inference cost, and
+    # never turns a real grounded=False into True.
+    grounding_defense_cfg = retrieval_config.get('grounding_defense', {})
+    if GROUNDING_DEFENSE_AVAILABLE and grounding_defense_cfg.get('enabled', False):
+        grounded_by_sources = verify_grounding(
+            grounded_by_sources,
+            selected,
+            min_rerank_score=grounding_defense_cfg.get('min_rerank_score', 0.35),
+            min_consensus_score=grounding_defense_cfg.get('min_consensus_score', 0.35),
+        )
 
     # Prepare info for contract (JSON string with response, correctness, sampled_sources, importance_score)
     info_dict = {

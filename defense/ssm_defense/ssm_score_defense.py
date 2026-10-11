@@ -17,6 +17,13 @@ Two complementary layers close this off:
      - moves reliability/usefulness by more than MAX_DELTA_PER_UPDATE in a
        single transaction (ScoreDeltaTooLarge)
      - pushes a score outside [MIN_SCORE, MAX_SCORE] (ScoreOutOfBounds)
+     - moves a score's NET value by more than MAX_CUMULATIVE_DELTA_PER_EPOCH
+       within a rolling EPOCH_DURATION window (CumulativeDriftTooLarge) --
+       closes the gap where a *patient* attacker who throttles each update to
+       just under the delta/rate caps above could otherwise still drift a
+       score arbitrarily far, since no single step ever trips either check
+       (see .claude/ssm_grounding_farming_plan.md §7b, which found exactly
+       this: a defense-aware attacker fully defeats the original two checks).
    This is what actually stops the attack script's rounds from landing.
 
 2. Off-chain monitoring (this module): replays the ScoreRecordUpdated event
@@ -36,6 +43,8 @@ MAX_DELTA_PER_UPDATE = 5_000
 MIN_UPDATE_INTERVAL = 2  # seconds
 MAX_SCORE = 1_000_000
 MIN_SCORE = -1_000_000
+EPOCH_DURATION = 3_600  # seconds (1 hour)
+MAX_CUMULATIVE_DELTA_PER_EPOCH = 16_000
 
 BLOCKCHAIN_URL = "http://localhost:8545"
 
@@ -49,7 +58,7 @@ DEFAULT_DATA_SOURCES = {
 @dataclass
 class Anomaly:
     source_id: str
-    kind: str  # "delta_violation" | "rate_violation" | "bounds_violation"
+    kind: str  # "delta_violation" | "rate_violation" | "bounds_violation" | "cumulative_drift_violation"
     detail: str
     block_number: int
     transaction_hash: str
@@ -86,10 +95,14 @@ class SSMScoreDefense:
         project_root: Optional[str] = None,
         max_delta: int = MAX_DELTA_PER_UPDATE,
         min_update_interval: int = MIN_UPDATE_INTERVAL,
+        epoch_duration: int = EPOCH_DURATION,
+        max_cumulative_delta: int = MAX_CUMULATIVE_DELTA_PER_EPOCH,
     ):
         self.blockchain_url = blockchain_url
         self.max_delta = max_delta
         self.min_update_interval = min_update_interval
+        self.epoch_duration = epoch_duration
+        self.max_cumulative_delta = max_cumulative_delta
         self.project_root = project_root or os.path.abspath(
             os.path.join(os.path.dirname(__file__), '..', '..')
         )
@@ -145,7 +158,15 @@ class SSMScoreDefense:
             events.sort(key=lambda e: (e["blockNumber"], e["logIndex"]))
 
             prev = None
+            epoch_start_time: Optional[int] = None
+            epoch_anchor_reli: Optional[int] = None
+            epoch_anchor_use: Optional[int] = None
             for ev in events:
+                if epoch_start_time is None or ev["timestamp"] >= epoch_start_time + self.epoch_duration:
+                    epoch_start_time = ev["timestamp"]
+                    epoch_anchor_reli = prev["reliabilityScore"] if prev is not None else ev["reliabilityScore"]
+                    epoch_anchor_use = prev["usefulnessScore"] if prev is not None else ev["usefulnessScore"]
+
                 if prev is not None:
                     reli_delta = abs(ev["reliabilityScore"] - prev["reliabilityScore"])
                     use_delta = abs(ev["usefulnessScore"] - prev["usefulnessScore"])
@@ -174,6 +195,25 @@ class SSMScoreDefense:
                             block_number=ev["blockNumber"],
                             transaction_hash=ev["transactionHash"],
                         ))
+
+                # Patient-throttling check: net drift from this epoch's anchor,
+                # independent of whether any single step above tripped the
+                # per-tx delta/rate checks -- catches a throttled attacker who
+                # never does, by design (see module docstring / §7b).
+                net_reli_drift = abs(ev["reliabilityScore"] - epoch_anchor_reli)
+                net_use_drift = abs(ev["usefulnessScore"] - epoch_anchor_use)
+                if net_reli_drift > self.max_cumulative_delta or net_use_drift > self.max_cumulative_delta:
+                    report.anomalies.append(Anomaly(
+                        source_id=source_id,
+                        kind="cumulative_drift_violation",
+                        detail=(
+                            f"net reliability drift={net_reli_drift}, net usefulness drift={net_use_drift} "
+                            f"from epoch anchor exceed cap of {self.max_cumulative_delta} "
+                            f"within {self.epoch_duration}s"
+                        ),
+                        block_number=ev["blockNumber"],
+                        transaction_hash=ev["transactionHash"],
+                    ))
 
                 if ev["reliabilityScore"] < MIN_SCORE or ev["reliabilityScore"] > MAX_SCORE \
                         or ev["usefulnessScore"] < MIN_SCORE or ev["usefulnessScore"] > MAX_SCORE:

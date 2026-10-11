@@ -46,6 +46,10 @@ COPY drag_python_client /app/drag_python_client
 # Copy drag_contract for ABI access
 COPY drag_contract /app/drag_contract
 
+# Copy the defense package (defense/ssm_defense's grounding verifier,
+# imported by app/server.py -- see defense/ssm_defense/README.md)
+COPY defense /app/defense
+
 # Copy application code
 COPY drag_llm_service /app
 

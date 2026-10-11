@@ -11,7 +11,7 @@ AMPLIFY/INTER_ROUND_DELAY default to values that respect the deployed
 transaction-layer defense's MAX_DELTA_PER_UPDATE (5,000) and
 MIN_UPDATE_INTERVAL (2s) -- a defense-aware attacker throttles itself just
 under both caps rather than tripping ScoreDeltaTooLarge/UpdateTooFrequent
-on the first round. defense/ssm_defense/run_defense.py deliberately keeps
+on the first round. defense/ssm_defense/evaluation/run_defense.py deliberately keeps
 the old reckless defaults (999999 / 0.5s) to demonstrate the defense
 blocking that naive burst -- this script does not touch that scenario.
 

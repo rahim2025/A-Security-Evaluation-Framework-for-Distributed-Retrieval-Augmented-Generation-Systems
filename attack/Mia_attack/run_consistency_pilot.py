@@ -92,6 +92,7 @@ def main() -> None:
     print(f"\n=== Result ===\n{json.dumps(result, indent=2)}")
 
     out_path = os.path.join(_ROOT, "attack_logs", f"consistency_pilot_seed{args.seed}.json")
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(result, fh, indent=2)
     print(f"\nWrote {out_path}")

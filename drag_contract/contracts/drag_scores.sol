@@ -20,6 +20,12 @@ contract DragScores {
         string reserved; // ip address of the source
         int32 reliabilityScore;
         int32 usefulnessScore;
+        // Patient-throttling defense (see error CumulativeDriftTooLarge below):
+        // anchor values for the current rolling epoch, used to bound NET
+        // movement over many individually-small, individually-legal updates.
+        uint256 epochStart;
+        int32 epochStartReliabilityScore;
+        int32 epochStartUsefulnessScore;
     }
 
     mapping(string => ScoreRecord) public scoreRecords; // sourceID -> ScoreRecord
@@ -44,11 +50,24 @@ contract DragScores {
     error ScoreDeltaTooLarge(string sourceID, int32 requestedDelta, int32 cap);
     error UpdateTooFrequent(string sourceID, uint256 secondsRemaining);
     error ScoreOutOfBounds(string sourceID, int32 requestedScore);
+    // A patient attacker who throttles each update to just under
+    // MAX_DELTA_PER_UPDATE/MIN_UPDATE_INTERVAL defeats both checks above
+    // completely -- they only bound a single burst, not sustained abuse
+    // (see .claude/ssm_grounding_farming_plan.md §7b). This bounds the NET
+    // movement of a score over a rolling epoch, regardless of how many
+    // individually-legal steps it took to get there.
+    error CumulativeDriftTooLarge(string sourceID, int32 netDrift, int32 cap);
 
     int32 public constant MAX_SCORE = 1_000_000;
     int32 public constant MIN_SCORE = -1_000_000;
     int32 public constant MAX_DELTA_PER_UPDATE = 5_000; // largest single-tx move allowed
     uint256 public constant MIN_UPDATE_INTERVAL = 2; // seconds a source must wait between updates
+    uint256 public constant EPOCH_DURATION = 1 hours; // rolling window for the cumulative-drift cap
+    // 4x MAX_DELTA_PER_UPDATE -- deliberately set so the attack's own documented
+    // defense-aware default campaign (AMPLIFY=4000, ROUNDS=5, see attack/ssm_score/
+    // run_attack.py) is now genuinely interrupted (4 rounds land, the 5th reverts)
+    // rather than landing exactly at the cap with nothing visibly blocked.
+    int32 public constant MAX_CUMULATIVE_DELTA_PER_EPOCH = 16_000; // net move allowed per source per epoch
 
     address public owner;
     address public llmService; // only address allowed to call feedbackAndUpdateScoreRecords
@@ -130,7 +149,10 @@ contract DragScores {
             timestamp: block.timestamp,
             reserved: reserved,
             reliabilityScore: reliabilityScore,
-            usefulnessScore: usefulnessScore
+            usefulnessScore: usefulnessScore,
+            epochStart: block.timestamp,
+            epochStartReliabilityScore: reliabilityScore,
+            epochStartUsefulnessScore: usefulnessScore
         });
         isScoreRecordExists[sourceID] = true;
     }
@@ -197,6 +219,25 @@ contract DragScores {
             }
             if (updateUsefulnessScores[i] < MIN_SCORE || updateUsefulnessScores[i] > MAX_SCORE) {
                 revert ScoreOutOfBounds(sourceID, updateUsefulnessScores[i]);
+            }
+
+            // SSM-Score defense (patient-throttling fix): roll the epoch over
+            // if it has expired, then bound NET movement from the epoch's
+            // starting score. Closes the gap where a per-tx delta/rate-capped
+            // but patient attacker could still drift a score arbitrarily far
+            // by never tripping either check in a single transaction.
+            if (timestamp >= scoreRecord.epochStart + EPOCH_DURATION) {
+                scoreRecord.epochStart = timestamp;
+                scoreRecord.epochStartReliabilityScore = scoreRecord.reliabilityScore;
+                scoreRecord.epochStartUsefulnessScore = scoreRecord.usefulnessScore;
+            }
+            int32 netReliDrift = _abs32(updateReliabilityScores[i] - scoreRecord.epochStartReliabilityScore);
+            if (netReliDrift > MAX_CUMULATIVE_DELTA_PER_EPOCH) {
+                revert CumulativeDriftTooLarge(sourceID, netReliDrift, MAX_CUMULATIVE_DELTA_PER_EPOCH);
+            }
+            int32 netUseDrift = _abs32(updateUsefulnessScores[i] - scoreRecord.epochStartUsefulnessScore);
+            if (netUseDrift > MAX_CUMULATIVE_DELTA_PER_EPOCH) {
+                revert CumulativeDriftTooLarge(sourceID, netUseDrift, MAX_CUMULATIVE_DELTA_PER_EPOCH);
             }
 
             scoreRecord.reliabilityScore = updateReliabilityScores[i];

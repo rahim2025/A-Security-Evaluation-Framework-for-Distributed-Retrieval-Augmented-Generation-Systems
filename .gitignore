@@ -44,6 +44,10 @@ ENV/
 *.log
 logs/
 
+# Run output written by the attack/defense scripts
+attack_logs/
+defense_logs/
+
 # Environment variables
 .env
 .env.local

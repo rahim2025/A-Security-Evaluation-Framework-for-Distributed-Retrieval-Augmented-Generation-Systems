@@ -23,7 +23,7 @@ Because a real, deployed transaction-layer defense now exists
 =2s between updates to the same source), a naive single-shot massive
 amplify (the original AMPLIFY=999999 default) reverts immediately with
 `ScoreDeltaTooLarge` and does not demonstrate anything beyond "the defense
-blocks reckless bursts" (see defense/ssm_defense/run_defense.py, which
+blocks reckless bursts" (see defense/ssm_defense/evaluation/run_defense.py, which
 exercises exactly that scenario on purpose). `attack/ssm_score/run_attack.py`
 now throttles itself to stay just under both caps (a defense-aware
 attacker), which still succeeds every round and still proves the underlying

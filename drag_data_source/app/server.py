@@ -22,6 +22,98 @@ from flask_limiter.util import get_remote_address
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Add project root to path for the defense package (defense/datapoisoning_defense)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+try:
+    from defense.datapoisoning_defense.poison_filter import PoisonFilter
+    POISON_FILTER_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"defense.datapoisoning_defense not available: {e}. /poison will run unfiltered.")
+    POISON_FILTER_AVAILABLE = False
+    PoisonFilter = None
+
+# Content-integrity gate on /poison -- see defense/datapoisoning_defense/README.md.
+# Defaults to ON; set POISON_FILTER_ENABLED=0 to reproduce the undefended baseline
+# without code changes (e.g. to re-run attack/datapoisoning's own evaluation as the
+# "before" comparison point).
+POISON_FILTER_ENABLED = os.getenv("POISON_FILTER_ENABLED", "1") not in ("0", "false", "False")
+poison_filter = PoisonFilter() if (POISON_FILTER_AVAILABLE and POISON_FILTER_ENABLED) else None
+
+try:
+    from defense.ssm_defense.content_shape_detector import GroundingFarmDetector
+    from defense.ssm_defense.sentence_length_detector import SentenceLengthDetector
+    GROUNDING_FARM_DETECTOR_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"defense.ssm_defense not available: {e}. /poison will not screen for grounding-farming filler.")
+    GROUNDING_FARM_DETECTOR_AVAILABLE = False
+    GroundingFarmDetector = None
+    SentenceLengthDetector = None
+
+# Content-shape gates on /poison against SSM grounding-farming filler -- see
+# defense/ssm_defense/README.md. Independent of PoisonFilter above
+# (different attack, same injection endpoint). Two complementary signals:
+# hedge-attribution phrasing (catches the attack as implemented) and average
+# sentence length (catches an adaptive attacker who reworded the connective
+# phrases but still needs the same short-sentence, many-disconnected-facts
+# structure). Defaults to ON; set GROUNDING_FARM_DEFENSE_ENABLED=0 to
+# reproduce the undefended baseline.
+GROUNDING_FARM_DEFENSE_ENABLED = os.getenv("GROUNDING_FARM_DEFENSE_ENABLED", "1") not in ("0", "false", "False")
+grounding_farm_detector = (
+    GroundingFarmDetector() if (GROUNDING_FARM_DETECTOR_AVAILABLE and GROUNDING_FARM_DEFENSE_ENABLED) else None
+)
+sentence_length_detector = (
+    SentenceLengthDetector() if (GROUNDING_FARM_DETECTOR_AVAILABLE and GROUNDING_FARM_DEFENSE_ENABLED) else None
+)
+
+# --- KB-extraction guard on /query (see defense/kb_extraction_defense/README.md) ----------
+# Label-free, per-caller guard: discovery-velocity + query-dispersion flags that degrade the
+# result count, and a hard per-caller / global budget of distinct documents served per epoch.
+# Callers that present ORCHESTRATOR_TOKEN (the llm-service, the only legitimate bulk reader)
+# bypass it. Defaults to ON; set EXTRACTION_GUARD_ENABLED=0 to reproduce the undefended
+# baseline. Tunables: EXTRACTION_GUARD_CONFIG (JSON of GuardConfig fields).
+try:
+    from defense.kb_extraction_defense.extraction_guard import ExtractionGuard, GuardConfig, ALLOW, cluster_corpus
+    EXTRACTION_GUARD_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"defense.kb_extraction_defense not available: {e}. /query will run unguarded.")
+    EXTRACTION_GUARD_AVAILABLE = False
+    ExtractionGuard = None
+
+EXTRACTION_GUARD_ENABLED = os.getenv("EXTRACTION_GUARD_ENABLED", "1") not in ("0", "false", "False")
+EXTRACTION_GUARD_DEBUG = os.getenv("EXTRACTION_GUARD_DEBUG", "0") in ("1", "true", "True")
+ORCHESTRATOR_TOKEN = os.getenv("ORCHESTRATOR_TOKEN", "")
+
+
+def _build_extraction_guard():
+    if not (EXTRACTION_GUARD_AVAILABLE and EXTRACTION_GUARD_ENABLED):
+        return None
+    overrides = json.loads(os.getenv("EXTRACTION_GUARD_CONFIG", "{}") or "{}")
+    cfg = GuardConfig(**{**DEFAULT_GUARD_FIELDS, **overrides})
+    clusters = None
+    if cfg.breadth_thresh is not None and retriever is not None and getattr(retriever, "emb", None) is not None:
+        # Unsupervised pseudo-topics from this server's OWN corpus embeddings (no labels, no oracle).
+        labels = cluster_corpus(retriever.emb, cfg.n_clusters)
+        clusters = {d.id: int(l) for d, l in zip(retriever.docs, labels)}
+    return ExtractionGuard(cfg, doc_clusters=clusters)
+
+
+# Calibrated defaults (defense/kb_extraction_defense/offline_eval.py calibrate); see README.
+DEFAULT_GUARD_FIELDS = dict(window=30, min_queries=10, velocity_thresh=None, dispersion_thresh=None,
+                            breadth_thresh=6, n_clusters=10, degrade_k=1, cooldown_queries=20, escalate_after_flags=3,
+                            client_budget=202, global_budget=None, epoch_seconds=86400.0)
+retriever = None            # populated by initialize_retriever(); declared early for the guard
+extraction_guard = _build_extraction_guard()
+
+
+def _is_orchestrator(req) -> bool:
+    import hmac
+    sent = req.headers.get("X-Orchestrator-Token", "")
+    return bool(ORCHESTRATOR_TOKEN) and hmac.compare_digest(sent, ORCHESTRATOR_TOKEN)
+
+
+def _client_id(req) -> str:
+    return req.remote_addr or "unknown"
+
 # Import drag contract library
 try:
     from drag_python_client import DragScoresClient, sign_message_personal
@@ -114,6 +206,8 @@ def initialize_retriever(config: Dict) -> None:
     # Fit the retriever with documents
     retriever.fit(docs)
     logger.info("Retriever initialized successfully")
+    global extraction_guard
+    extraction_guard = _build_extraction_guard()  # needs the corpus embeddings (pseudo-topic clusters)
 
 
 def initialize_contract_client(config: Dict) -> None:
@@ -177,7 +271,9 @@ def inject_poison():
         }
 
     Returns:
-        {"status": "poisoned", "injected_count": N, "total_docs": M}
+        {"status": "poisoned", "injected_count": N, "total_docs": M,
+         "rejected_count": R, "rejections": [...]}  (rejected_count/rejections
+         only present when the content filter is enabled)
     """
     global retriever
     if retriever is None:
@@ -187,30 +283,136 @@ def inject_poison():
     if not data or 'documents' not in data:
         return jsonify({"error": "Missing 'documents' field"}), 400
 
+    incoming = data['documents']
+
+    rejections = []
+    if poison_filter is not None:
+        allowed_count, volume_reason = poison_filter.check_batch_volume(
+            requested_count=len(incoming), current_total_docs=len(retriever.docs)
+        )
+        if volume_reason:
+            dropped = incoming[allowed_count:]
+            incoming = incoming[:allowed_count]
+            for doc in dropped:
+                rejections.append({"id": doc.get('id'), "reasons": [volume_reason]})
+            logger.warning(f"[DEFENSE] {volume_reason}")
+
+        verdicts = poison_filter.classify_batch([str(doc.get('text', '')) for doc in incoming])
+        kept = []
+        for doc, verdict in zip(incoming, verdicts):
+            if verdict.accepted:
+                kept.append(doc)
+            else:
+                rejections.append({"id": doc.get('id'), "reasons": verdict.reasons})
+        incoming = kept
+
+    if grounding_farm_detector is not None:
+        shape_verdicts = grounding_farm_detector.classify_batch([str(doc.get('text', '')) for doc in incoming])
+        kept = []
+        for doc, verdict in zip(incoming, shape_verdicts):
+            if verdict.flagged:
+                rejections.append({
+                    "id": doc.get('id'),
+                    "reasons": [f"grounding_farm_shape(hedge_sentences={verdict.distinct_sentences_with_hedge})"],
+                })
+            else:
+                kept.append(doc)
+        incoming = kept
+
+    if sentence_length_detector is not None:
+        length_verdicts = sentence_length_detector.classify_batch([str(doc.get('text', '')) for doc in incoming])
+        kept = []
+        for doc, verdict in zip(incoming, length_verdicts):
+            if verdict.flagged:
+                rejections.append({
+                    "id": doc.get('id'),
+                    "reasons": [f"grounding_farm_short_sentences(avg_words={verdict.avg_sentence_length:.1f})"],
+                })
+            else:
+                kept.append(doc)
+        incoming = kept
+
     new_docs = []
-    for i, doc in enumerate(data['documents']):
+    for i, doc in enumerate(incoming):
         new_docs.append(Document(
             id=str(doc.get('id', f'poison_{len(retriever.docs) + i}')),
             text=str(doc.get('text', '')),
             meta={**(doc.get('meta', {})), 'poisoned': True, 'dataset_name': dataset_name}
         ))
 
-    retriever.add_documents(new_docs)
+    if new_docs:
+        retriever.add_documents(new_docs)
 
+    if rejections:
+        logger.warning(
+            f"[DEFENSE] Rejected {len(rejections)} candidate document(s) at /poison "
+            f"(see 'rejections' in response for reasons)."
+        )
     logger.warning(f"[ATTACK] Injected {len(new_docs)} poisoned documents. Total docs: {len(retriever.docs)}")
-    return jsonify({
+
+    response = {
         "status": "poisoned",
         "injected_count": len(new_docs),
-        "total_docs": len(retriever.docs)
+        "total_docs": len(retriever.docs),
+    }
+    if poison_filter is not None or grounding_farm_detector is not None or sentence_length_detector is not None:
+        response["rejected_count"] = len(rejections)
+        response["rejections"] = rejections
+    return jsonify(response), 200
+
+
+@app.route('/poison_filter/stats', methods=['GET'])
+def poison_filter_stats():
+    """Cumulative detection stats for this process's content-integrity gate."""
+    if poison_filter is None:
+        return jsonify({"enabled": False}), 200
+    return jsonify({"enabled": True, **poison_filter.get_stats()}), 200
+
+
+@app.route('/grounding_farm_defense/stats', methods=['GET'])
+def grounding_farm_defense_stats():
+    """Cumulative detection stats for this process's SSM grounding-farming gates
+    (hedge-attribution content-shape + average-sentence-length)."""
+    if grounding_farm_detector is None and sentence_length_detector is None:
+        return jsonify({"enabled": False}), 200
+    return jsonify({
+        "enabled": True,
+        "hedge_attribution": grounding_farm_detector.get_stats() if grounding_farm_detector else None,
+        "sentence_length": sentence_length_detector.get_stats() if sentence_length_detector else None,
     }), 200
+
+
+@app.route('/extraction_guard/stats', methods=['GET'])
+def extraction_guard_stats():
+    """Cumulative stats for this process's KB-extraction guard."""
+    if extraction_guard is None:
+        return jsonify({"enabled": False}), 200
+    return jsonify({"enabled": True, **extraction_guard.get_stats()}), 200
+
+
+@app.route('/extraction_guard/reset', methods=['POST'])
+def extraction_guard_reset():
+    """Clear per-caller guard state only (no corpus reload) -- for evaluation between runs."""
+    global extraction_guard
+    if extraction_guard is not None:
+        extraction_guard = _build_extraction_guard()
+    return jsonify({"status": "guard_reset", "enabled": extraction_guard is not None}), 200
 
 
 @app.route('/reset', methods=['POST'])
 def reset_retriever():
     """Reset the retriever to its original clean state (removes all poisoned docs)."""
+    global poison_filter, grounding_farm_detector, sentence_length_detector, extraction_guard
     config_path = os.getenv('CONFIG_PATH', 'configs/config.yaml')
     config = load_config(config_path)
     initialize_retriever(config)
+    if POISON_FILTER_AVAILABLE and POISON_FILTER_ENABLED:
+        poison_filter = PoisonFilter()  # fresh near-dup history/stats for the new clean corpus
+    if GROUNDING_FARM_DETECTOR_AVAILABLE and GROUNDING_FARM_DEFENSE_ENABLED:
+        grounding_farm_detector = GroundingFarmDetector()  # fresh stats
+        sentence_length_detector = SentenceLengthDetector()  # fresh stats
+    if extraction_guard is not None:
+        extraction_guard = _build_extraction_guard()  # fresh per-caller state
     logger.info(f"[RESET] Retriever restored to clean state with {len(retriever.docs)} docs")
     return jsonify({"status": "reset", "total_docs": len(retriever.docs)}), 200
 
@@ -295,14 +497,36 @@ def query():
                         logger.error(f"Error signing message: {str(e)}")
                         # Continue without signature - query can still proceed
         
-        # Perform search
-        results = retriever.search(query_text, k=k)
+        # Perform search -- through the KB-extraction guard for any non-orchestrator caller.
+        decision = None
+        guarded = extraction_guard is not None and not _is_orchestrator(request)
+        k = max(1, k)
+        if guarded:
+            cid = _client_id(request)
+            decision = extraction_guard.decide(cid, k)
+            # FREEZE needs the full top-k so already-served documents can still be re-read.
+            k_eff = k if decision.k is None else min(k, decision.k)
+            results = retriever.search(query_text, k=k if decision.allowed_ids is not None else k_eff)
+            results = extraction_guard.apply(decision, results)
+            q_emb = None
+            if extraction_guard.cfg.dispersion_thresh is not None:
+                q_emb = retriever.model.encode([query_text], convert_to_numpy=True, show_progress_bar=False)[0]
+            extraction_guard.observe(cid, [r["id"] for r in results], q_emb)
+            if decision.action != ALLOW:
+                logger.warning(f"[GUARD] client={cid} action={decision.action} reason={decision.reason} "
+                               f"signals={ {k_: round(v_, 2) for k_, v_ in decision.signals.items()} }")
+        else:
+            results = retriever.search(query_text, k=k)
         
         response = {"results": results}
         if signature:
             response["signature"] = signature
         
-        return jsonify(response), 200
+        resp = jsonify(response)
+        if guarded and EXTRACTION_GUARD_DEBUG:
+            resp.headers["X-Guard-Action"] = decision.action
+            resp.headers["X-Guard-Reason"] = decision.reason
+        return resp, 200
         
     except Exception as e:
         logger.error(f"Error during query: {str(e)}", exc_info=True)

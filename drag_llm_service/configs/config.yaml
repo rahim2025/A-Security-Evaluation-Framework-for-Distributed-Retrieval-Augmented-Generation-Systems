@@ -75,6 +75,25 @@ retrieval:
     consensus_weight: 0.25            # 0 disables; blended like reliability_weight
     consensus_min_sources: 2          # skip consensus if fewer distinct sources in pool
 
+  # Relevance-score-based SSM grounding-farming gate: a literal substring
+  # "grounded" match would only be honored if the matched candidate also
+  # scored as a well-ranked, on-topic pick (rerank_score/consensus_score).
+  # DISABLED BY DEFAULT -- offline validation against the real retrieval
+  # pipeline and real grounding-farming filler (defense/ssm_defense/
+  # offline_validation.py, 200 real SQuAD questions) found filler that
+  # survives retrieval scores, if anything, HIGHER on consensus_score than
+  # genuine content (median 1.00 vs 0.67) and indistinguishably on
+  # rerank_score -- this gate would have cost ~19% of genuinely grounded
+  # sources their credit while blocking ~0% of the actual attack. Left here,
+  # disabled, as a documented negative result rather than removed outright.
+  # The content-shape detector at ingestion time (defense/ssm_defense/
+  # content_shape_detector.py, wired into drag_data_source's /poison) is the
+  # actual effective defense -- see that module's README for real numbers.
+  grounding_defense:
+    enabled: false
+    min_rerank_score: 0.35      # [0,1], per-query-normalized
+    min_consensus_score: 0.35   # [0,1]; only applied when consensus scoring ran
+
 # Reranker settings
 reranker:
   method: "hybrid"
