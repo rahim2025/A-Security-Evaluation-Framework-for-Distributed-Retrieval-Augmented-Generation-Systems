@@ -21,7 +21,7 @@ We do **not** modify Reliable-dRAG's retrieval or scoring logic. We add a securi
 
 The thesis claim is that **one structured CIA-triad framework (six attacks, two per property) applies across structurally different distributed-RAG architectures.** Reliable-dRAG also has something DRAG does not: an on-chain reliability score (`R_i` / `U_i`) that decides which source is trusted, which gives the Source Selection Manipulation attack a concrete target.
 
-Attacks are the primary deliverable. Defenses for several of them were added afterwards and are documented separately (see [Defenses](#-defenses)).
+Attacks are the primary deliverable. Defenses for three of them were added afterwards and are documented separately (see [Defenses](#-defenses)).
 
 ---
 
@@ -180,16 +180,13 @@ Each script has `--help` for its full flags (targeting strategy, attack ratio an
 
 ## 🧱 Defenses
 
-Defenses are an extension beyond the original attack-only scope and cover a subset of the attacks. Each has one folder with a single README containing the design, the before/after results and its limitations. The index and layout convention are in [`defense/README.md`](defense/README.md).
+Defenses are an extension beyond the original attack-only scope. They are implemented for three attacks (data poisoning, SSM, KB extraction); MIA, DoS and selective forwarding are attack-only. Each has one folder with a single README containing the design, the before/after results and its limitations. The index and layout convention are in [`defense/README.md`](defense/README.md).
 
 | Attack | Defense folder | Run |
 |---|---|---|
 | Data poisoning | [`defense/datapoisoning_defense/`](defense/datapoisoning_defense) | `python defense/datapoisoning_defense/run_defense.py --seed 42 --intensity heavy` |
 | SSM | [`defense/ssm_defense/`](defense/ssm_defense) | `python defense/ssm_defense/evaluation/run_defense.py` (replays the attack on-chain; restart `hardhat-node` afterwards) |
 | KB extraction | [`defense/kb_extraction_defense/`](defense/kb_extraction_defense) | `python defense/kb_extraction_defense/evaluation/offline_eval.py all --source 1`, then `.../evaluation/live_eval.py --source 1` |
-| MIA | [`defense/mia_defense/`](defense/mia_defense) | `python defense/mia_defense/run_defense.py --seed 0` |
-| DoS | [`defense/ddos_sim_defense/`](defense/ddos_sim_defense) | `python defense/ddos_sim_defense/run_defense.py --mode mock` |
-| Selective forwarding | [`defense/sfa_sim_defense/`](defense/sfa_sim_defense), [`defense/sfa_defense/`](defense/sfa_defense) | see each README |
 
 The KB-extraction and SSM defenses are wired into the data sources and LLM service and are on by default (the grounding verifier in the SSM defense is disabled; its README explains why). Set `EXTRACTION_GUARD_ENABLED=0` to run the data sources without the extraction guard when you need the undefended behaviour.
 

@@ -17,9 +17,5 @@ Run output goes to `defense_logs/<name>/` (git-ignored).
 | `kb_extraction_defense/` | KB extraction (confidentiality) | `extraction_guard.py` | [README](kb_extraction_defense/README.md) |
 | `ssm_defense/` | SSM score manipulation (integrity) | `ssm_score_defense.py`, `content_shape_detector.py`, `sentence_length_detector.py`, `grounding_verifier.py` (disabled) | [README](ssm_defense/README.md) |
 | `datapoisoning_defense/` | data poisoning (integrity) | `poison_filter.py` | [README](datapoisoning_defense/README.md) |
-| `mia_defense/` | membership inference (confidentiality) | `mia_defense.py` | [README](mia_defense/README.md) |
-| `ddos_sim_defense/` | DoS, DRAG simulation (availability) | `ddos_defense.py` | [README](ddos_sim_defense/README.md) |
-| `sfa_sim_defense/` | selective forwarding, DRAG simulation (availability) | `selective_forwarding_defense.py` | [README](sfa_sim_defense/README.md) |
-| `sfa_defense/` | selective forwarding, live stack (availability) | none (`run_defense.py` only) | [README](sfa_defense/README.md) |
 
 Imports used by the Docker images (do not move without rebuilding): `defense.datapoisoning_defense.poison_filter`, `defense.ssm_defense.{content_shape_detector,sentence_length_detector,grounding_verifier}`, `defense.kb_extraction_defense.extraction_guard`.
